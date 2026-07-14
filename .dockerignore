@@ -1,0 +1,10 @@
+node_modules
+server/node_modules
+mobile
+.git
+.expo
+server/data
+server/.env
+.env
+*.log
+.DS_Store
