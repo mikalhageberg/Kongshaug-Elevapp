@@ -8,17 +8,23 @@
     "backgroundColor": "#1e3a5f",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "no.kongshaug.elevapp",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Appen bruker kamera for å skanne QR-koden til andakt.",
-        "NSLocationWhenInUseUsageDescription": "Appen bruker posisjon for å bekrefte at du er på skolen."
+        "NSLocationWhenInUseUsageDescription": "Appen bruker posisjon for å bekrefte at du er på skolen.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -37,7 +43,11 @@
       "expo-asset"
     ],
     "extra": {
-      "apiUrl": "https://kongshaug-elevapp-production.up.railway.app"
-    }
+      "apiUrl": "https://kongshaug-elevapp-production.up.railway.app",
+      "eas": {
+        "projectId": "316b5f66-d91b-46be-81e5-fb7b47b682ac"
+      }
+    },
+    "owner": "mikalhageberg"
   }
 }
