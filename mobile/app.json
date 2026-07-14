@@ -37,7 +37,7 @@
       "expo-asset"
     ],
     "extra": {
-      "apiUrl": ""
+      "apiUrl": "https://kongshaug-elevapp-production.up.railway.app"
     }
   }
 }

@@ -15,6 +15,9 @@ import dinnerRoutes from './routes/dinner.js';
 import menuRoutes from './routes/menus.js';
 import { getSettings } from './settings.js';
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
+import { ensureBootstrapAdmin } from './bootstrap.js';
+
+await ensureBootstrapAdmin();
 
 const app = express();
 app.disable('x-powered-by');
