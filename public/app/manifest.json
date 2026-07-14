@@ -1,0 +1,14 @@
+{
+  "name": "Kongshaug Elevapp",
+  "short_name": "Kongshaug",
+  "description": "Brannliste og andaktsregistrering for elever ved Kongshaug Musikkgymnas",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#1e3a5f",
+  "theme_color": "#1e3a5f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/app/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

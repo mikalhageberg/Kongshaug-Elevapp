@@ -1,0 +1,29 @@
+# Avhengigheter
+node_modules/
+
+# Hemmeligheter – skal ALDRI committes
+.env
+.env.*
+!.env.example
+server/.env
+
+# Ekte data: SQLite-database og opplastede meny-PDF-er.
+# I Railway ligger dette på et persistent volum, ikke i repoet.
+server/data/
+
+# Expo / mobil
+.expo/
+mobile/.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Diverse
+*.log
+.DS_Store
+
+# Ukjent/uklart innhold – ikke del av appen. Fjern denne linjen bevisst
+# hvis mappen faktisk skal være med i repoet.
+Internatskole – Brannliste & Andakt/

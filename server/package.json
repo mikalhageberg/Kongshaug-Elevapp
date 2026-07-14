@@ -1,0 +1,28 @@
+{
+  "name": "kongshaug-brannvakt",
+  "version": "1.0.0",
+  "description": "Brannliste og andaktsregistrering for Kongshaug Musikkgymnas",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "predev": "kill -9 $(lsof -ti tcp:3000) 2>/dev/null || true",
+    "dev": "node --watch src/index.js",
+    "seed": "node src/seed.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^6.46.0",
+    "pdf-to-img": "^6.2.0",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
+  }
+}

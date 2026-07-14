@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#16293f" />
+  <title>Kongshaug – Administrasjon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/styles.css" />
+  <style>
+    body { background: var(--surface); }
+    #root { min-height: 100dvh; }
+    .layout { display: flex; min-height: 100dvh; }
+    aside.side { width: 236px; background: var(--navy-dark); color: #9fb0c6; display: flex; flex-direction: column;
+      flex: 0 0 auto; padding: 20px 14px; position: sticky; top: 0; height: 100dvh; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 22px; }
+    .brand svg { width: 20px; height: 20px; }
+    .navitem { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 11px;
+      font-size: 14.5px; font-weight: 600; color: inherit; text-decoration: none; }
+    .navitem svg { width: 19px; height: 19px; }
+    .navitem.active { background: var(--navy-2); color: #fff; font-weight: 700; }
+    main.content { flex: 1; background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+    .topbar { height: 70px; background: #fff; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 32px; flex: 0 0 auto; }
+    .page { padding: 28px 32px; overflow: auto; }
+    .kpi { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+    .th { display: grid; padding: 14px 22px; background: #f7f8fa; border-bottom: 1px solid var(--line);
+      font-size: 12px; font-weight: 800; color: var(--muted-2); text-transform: uppercase; letter-spacing: .04em; }
+    .tr { display: grid; padding: 15px 22px; align-items: center; border-bottom: 1px solid #f0f2f4; }
+    .modal-bg { position: fixed; inset: 0; background: rgba(15,26,43,.42); display: flex; align-items: center;
+      justify-content: center; z-index: 40; }
+    .modal { width: 520px; max-width: calc(100vw - 32px); background: #fff; border-radius: 20px;
+      box-shadow: 0 30px 60px -20px rgba(15,26,43,.5); overflow: hidden; }
+    .field-sm { height: 46px; border-radius: 11px; font-size: 14.5px; }
+    @media (max-width: 720px) {
+      aside.side { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/admin/admin.js"></script>
+</body>
+</html>

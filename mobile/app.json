@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Kongshaug Elevapp",
+    "slug": "kongshaug-elevapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#1e3a5f",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Appen bruker kamera for å skanne QR-koden til andakt.",
+        "NSLocationWhenInUseUsageDescription": "Appen bruker posisjon for å bekrefte at du er på skolen."
+      }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Appen bruker kamera for å skanne QR-koden til andakt."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Appen bruker posisjon for å bekrefte at du er på skolen."
+        }
+      ],
+      "expo-asset"
+    ],
+    "extra": {
+      "apiUrl": ""
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Bygger fra repo-roten (ikke fra server/) fordi public/ (admin + elevapp)
+# ligger ved siden av server/, ikke inni den — server/src/config.js forventer
+# «../../public» relativt til server/src. Se README/deploy-notater.
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd server && npm ci"]
+
+[start]
+cmd = "cd server && node src/index.js"

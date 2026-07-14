@@ -1,0 +1,77 @@
+/* Kongshaug Brannvakt – felles designtokens og komponenter.
+   Matcher mockup-designet (Hanken Grotesk, marineblå + status­farger). */
+
+:root {
+  --navy: #1e3a5f;
+  --navy-dark: #16293f;
+  --navy-2: #22406a;
+  --green: #1f8a5b;
+  --green-bg: #e6f4ec;
+  --green-ink: #0f6b43;
+  --red: #d64545;
+  --red-bg: #fbeaea;
+  --red-ink: #a12a1f;
+  --amber: #d9a406;
+  --amber-bg: #fdf4e0;
+  --amber-ink: #8a6300;
+  --ink: #1a2230;
+  --muted: #6b7280;
+  --muted-2: #8a93a3;
+  --slate: #55607a;
+  --line: #e6e8ec;
+  --line-2: #dfe4ea;
+  --bg: #eceef1;
+  --surface: #f4f5f7;
+  --card: #ffffff;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
+a { color: inherit; }
+
+/* Knapper */
+.btn {
+  border: none; border-radius: 14px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+}
+.btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:active { background: var(--navy-dark); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-ghost { background: #fff; color: var(--slate); border: 1.5px solid #d3dae2; }
+.btn:disabled { background: #e7e9ed; color: #aab1bd; cursor: not-allowed; }
+
+/* Statuspiller */
+.pill { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; padding: 6px 13px; }
+.pill-green { background: var(--green-bg); color: var(--green-ink); }
+.pill-red { background: var(--red-bg); color: var(--red-ink); }
+.pill-amber { background: var(--amber-bg); color: var(--amber-ink); }
+.pill-grey { background: #eef1f5; color: var(--slate); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* Felt */
+.field-label { display: block; font-size: 13px; font-weight: 700; color: var(--slate); margin: 0 0 6px; }
+.field {
+  width: 100%; height: 52px; background: #fff; border: 1px solid var(--line-2);
+  border-radius: 14px; padding: 0 16px; font-size: 16px; color: var(--ink); outline: none;
+}
+.field:focus { border-color: var(--navy); }
+
+/* Skjul scrollbar men behold scroll */
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+.spin { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.fadein { animation: fadein .25s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
