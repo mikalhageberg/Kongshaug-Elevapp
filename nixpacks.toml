@@ -3,7 +3,7 @@
 # «../../public» relativt til server/src. Se README/deploy-notater.
 
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = ["cd server && npm ci"]
