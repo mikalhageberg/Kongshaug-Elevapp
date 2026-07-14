@@ -1,4 +1,4 @@
-# Kongshaug Brannvakt
+# Kongshaug Elevapp
 
 Brannliste og andaktsregistrering for **Kongshaug Musikkgymnas**.
 
