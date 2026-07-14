@@ -1,7 +1,9 @@
 # Bygges fra repo-roten (ikke fra server/) fordi public/ (admin + elevapp)
 # ligger ved siden av server/, ikke inni den — server/src/config.js forventer
 # «../../public» relativt til server/src.
-FROM node:20-slim
+# pdfjs-dist/pdf-to-img (meny-PDF-tolkning) krever Node >=20.19.0 || >=22.13.0
+# || >=24 (engineStrict). Bruker 22-slim for god margin.
+FROM node:22-slim
 
 WORKDIR /app
 
