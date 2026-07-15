@@ -10,7 +10,9 @@ const dbPath = path.join(paths.data, 'kongshaug.db');
 // lagres ikke data mellom utrullinger (volumet er ikke koblet riktig).
 const dbPreexisting = fs.existsSync(dbPath);
 fs.mkdirSync(paths.data, { recursive: true });
-console.log(`[db] sti=${dbPath} · fantes fra før=${dbPreexisting}`);
+let dirContents = '(kunne ikke lese)';
+try { const f = fs.readdirSync(paths.data); dirContents = f.length ? f.join(', ') : '(tom)'; } catch { /* ignorer */ }
+console.log(`[db] sti=${dbPath} · fantes fra før=${dbPreexisting} · innhold=${dirContents}`);
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');

@@ -77,6 +77,10 @@ function parseTimeToMinutes(hhmm) {
 
 export const paths = {
   root: path.join(__dirname, '..'),
-  data: path.join(__dirname, '..', 'data'),
+  // Datamappa (SQLite-db + opplastede meny-PDF-er). Kan overstyres med DATA_DIR,
+  // slik at et persistent volum kan monteres på en enkel topp-nivå-sti (f.eks.
+  // «/data») i stedet for en nøstet sti inni koden («server/data»). Lokalt/uten
+  // DATA_DIR beholdes den gamle plasseringen.
+  data: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, '..', 'data'),
   public: path.join(__dirname, '..', '..', 'public'),
 };
