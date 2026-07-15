@@ -3,9 +3,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { paths } from './config.js';
 
+const dbPath = path.join(paths.data, 'kongshaug.db');
+// Diagnostikk: skriver ut hvor databasen ligger og om filen fantes FØR denne
+// oppstarten. På et fungerende persistent volum skal «fantes fra før» være
+// true på alle oppstarter etter den aller første. Er den false hver gang,
+// lagres ikke data mellom utrullinger (volumet er ikke koblet riktig).
+const dbPreexisting = fs.existsSync(dbPath);
 fs.mkdirSync(paths.data, { recursive: true });
+console.log(`[db] sti=${dbPath} · fantes fra før=${dbPreexisting}`);
 
-const db = new Database(path.join(paths.data, 'kongshaug.db'));
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
