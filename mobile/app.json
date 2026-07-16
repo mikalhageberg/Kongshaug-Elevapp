@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#1e3a5f",
+    "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "no.kongshaug.elevapp",
@@ -17,6 +18,10 @@
       }
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#20303A"
+      },
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
