@@ -8,7 +8,12 @@ import Constants from 'expo-constants';
 //    telefonen når serveren på PC-en uten at du må skrive inn IP manuelt.
 function resolveBaseUrl() {
   const override = Constants.expoConfig?.extra?.apiUrl;
-  if (override) return override.replace(/\/$/, '');
+  if (override) {
+    const url = String(override).trim().replace(/\/$/, '');
+    // Tåler at apiUrl er satt uten protokoll («vert.example.com»): fetch krever
+    // en absolutt URL, så vi antar https når skjema mangler.
+    return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  }
   const hostUri =
     Constants.expoConfig?.hostUri ||
     Constants.expoGoConfig?.debuggerHost ||
