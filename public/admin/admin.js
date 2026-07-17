@@ -619,7 +619,7 @@ function printCredentialCards(students) {
 let andaktTimer = null;
 async function renderAndakt(main) {
   header(main, 'Andakt / QR-kode', formatDateLong(todayStr()),
-    `<button class="btn btn-ghost" id="exportAbsent" style="height:44px;padding:0 18px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter fravær (Excel)</button>`);
+    `<button class="btn btn-ghost" id="exportAbsent" style="height:44px;padding:0 18px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter ukens fravær (Excel)</button>`);
   const page = el(`
     <div class="page" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
       <div style="flex:0 0 380px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center">
@@ -653,27 +653,31 @@ async function renderAndakt(main) {
   const tabPresent = page.querySelector('#tabPresent');
   const tabAbsent = page.querySelector('#tabAbsent');
 
-  // Eksporter fravær + for sent til en ekte Excel-fil (.xlsx), fargekodet.
-  main.querySelector('#exportAbsent')?.addEventListener('click', () => {
-    const absent = data.absentList || [];
-    const late = (data.checkins || []).filter((c) => c.status === 'late');
-    if (!absent.length && !late.length) {
-      toast(data.andaktToday === false ? 'Ingen andakt i dag.' : 'Ingen fravær eller for sent å eksportere 🎉');
-      return;
-    }
-    // s: 1=overskrift, 2=rød (fravær), 3=gul (for sent)
-    const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Dato', 'Status', 'Hvor sent'].map((v) => ({ v, s: 1 }));
-    const rows = [header];
-    for (const s of absent) {
-      rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', data.sessionDate, 'Fravær', ''].map((v) => ({ v, s: 2 })));
-    }
-    for (const c of late) {
-      const how = c.minutesLate != null
-        ? `${c.minutesLate} min for sent (kl. ${formatTime(c.checkedAt)})`
-        : `kl. ${formatTime(c.checkedAt)}`;
-      rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', data.sessionDate, 'For sent', how].map((v) => ({ v, s: 3 })));
-    }
-    downloadBlob(`andakt-fravaer-${data.sessionDate}.xlsx`, buildXlsx({ rows, sheetName: 'Fravær og for sent', cols: [28, 11, 18, 8, 14, 12, 30] }));
+  // Eksporter fravær + for sent for HELE uken (mandag–søndag rundt i dag) til
+  // én samlet Excel-fil, siden admin uansett bare sjekker dette ukentlig.
+  main.querySelector('#exportAbsent')?.addEventListener('click', async () => {
+    const btn = main.querySelector('#exportAbsent'); btn.disabled = true;
+    try {
+      const week = await api('/api/andakt/week');
+      // s: 1=overskrift, 2=rød (fravær), 3=gul (for sent)
+      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Dato', 'Status', 'Hvor sent'].map((v) => ({ v, s: 1 }));
+      const rows = [header];
+      for (const day of week.days) {
+        for (const s of day.absentList || []) {
+          rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', day.sessionDate, 'Fravær', ''].map((v) => ({ v, s: 2 })));
+        }
+        for (const c of (day.checkins || []).filter((x) => x.status === 'late')) {
+          const how = c.minutesLate != null
+            ? `${c.minutesLate} min for sent (kl. ${formatTime(c.checkedAt)})`
+            : `kl. ${formatTime(c.checkedAt)}`;
+          rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', day.sessionDate, 'For sent', how].map((v) => ({ v, s: 3 })));
+        }
+      }
+      if (rows.length === 1) { toast('Ingen fravær eller for sent denne uken 🎉'); return; }
+      downloadBlob(`andakt-fravaer-${week.weekStart}-til-${week.weekEnd}.xlsx`,
+        buildXlsx({ rows, sheetName: 'Fravær og for sent', cols: [28, 11, 18, 8, 14, 12, 30] }));
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; }
   });
 
   function styleTabs() {

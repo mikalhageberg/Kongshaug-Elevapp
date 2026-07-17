@@ -129,9 +129,20 @@ router.post('/admin-checkin', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true, status });
 });
 
-// ── ADMIN: sanntidsliste over registrert oppmøte i dag ───────
-router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
-  const date = todayDate();
+// Hvor mange minutter etter fristen ble et oppmøte registrert (Europe/Oslo)?
+function lateMinutesFor(checkedAt, deadlineMin) {
+  if (!checkedAt) return null;
+  const dt = new Date(String(checkedAt).replace(' ', 'T') + 'Z');
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(dt);
+  const h = Number(parts.find((p) => p.type === 'hour').value);
+  const m = Number(parts.find((p) => p.type === 'minute').value);
+  const diff = h * 60 + m - deadlineMin;
+  return diff > 0 ? diff : 0;
+}
+
+// Oppmøte + fravær for én gitt dato. Delt mellom dagens sanntidsliste og
+// ukeeksporten, slik at de to alltid regner likt.
+function daySummary(date) {
   const rows = db
     .prepare(
       `SELECT u.id, u.full_name, u.class_name, u.dorm, u.room, a.status, a.checked_at
@@ -141,26 +152,13 @@ router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
        ORDER BY a.checked_at DESC`
     )
     .all(date);
-  const totalStudents = db
-    .prepare("SELECT COUNT(*) AS n FROM users WHERE role='student' AND active=1")
-    .get().n;
-
-  // Hvor mange minutter etter fristen ble et oppmøte registrert (Europe/Oslo)?
   const deadlineMin = hhmmToMinutes(getSettings().andaktDeadline);
-  const lateMinutes = (checkedAt) => {
-    if (!checkedAt) return null;
-    const dt = new Date(String(checkedAt).replace(' ', 'T') + 'Z');
-    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(dt);
-    const h = Number(parts.find((p) => p.type === 'hour').value);
-    const m = Number(parts.find((p) => p.type === 'minute').value);
-    const diff = h * 60 + m - deadlineMin;
-    return diff > 0 ? diff : 0;
-  };
 
-  // Elever som IKKE har registrert oppmøte i dag = fravær på andakt.
-  // På dager uten andakt (helg) er det ingen fravær.
-  const andaktToday = isAndaktDay();
-  const absentRows = andaktToday
+  // Elever som IKKE har registrert oppmøte denne dagen = fravær på andakt.
+  // På dager uten andakt (f.eks. helg) er det ingen fravær.
+  const [y, m, d] = date.split('-').map(Number);
+  const andaktDay = isAndaktDay(new Date(y, m - 1, d, 12));
+  const absentRows = andaktDay
     ? db
         .prepare(
           `SELECT u.id, u.full_name, u.class_name, u.dorm, u.room
@@ -172,16 +170,13 @@ router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
         .all(date)
     : [];
 
-  res.json({
+  return {
     sessionDate: date,
-    andaktToday,
-    count: rows.length,
-    totalStudents,
-    absent: absentRows.length,
+    andaktToday: andaktDay,
     checkins: rows.map((r) => ({
       id: r.id, fullName: r.full_name, className: r.class_name, dorm: r.dorm, room: r.room,
       status: r.status, checkedAt: r.checked_at,
-      minutesLate: r.status === 'late' ? lateMinutes(r.checked_at) : null,
+      minutesLate: r.status === 'late' ? lateMinutesFor(r.checked_at, deadlineMin) : null,
     })),
     absentList: absentRows.map((r) => ({
       id: r.id,
@@ -190,6 +185,46 @@ router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
       dorm: r.dorm,
       room: r.room,
     })),
+  };
+}
+
+// ── ADMIN: sanntidsliste over registrert oppmøte i dag ───────
+router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
+  const summary = daySummary(todayDate());
+  const totalStudents = db
+    .prepare("SELECT COUNT(*) AS n FROM users WHERE role='student' AND active=1")
+    .get().n;
+  res.json({
+    ...summary,
+    count: summary.checkins.length,
+    totalStudents,
+    absent: summary.absentList.length,
+  });
+});
+
+// ── ADMIN: hele uken (mandag–søndag) som daglige oppsummeringer ──
+// Brukes til å eksportere én samlet fil for uken i stedet for én per dag.
+// ?date=YYYY-MM-DD velger hvilken uke (default: uken rundt i dag).
+router.get('/week', requireAuth, requireAdmin, (req, res) => {
+  const anchor = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date)) ? String(req.query.date) : todayDate();
+  const [y, m, d] = anchor.split('-').map(Number);
+  const anchorDate = new Date(y, m - 1, d, 12);
+  // Mandag = start på uken (getDay(): 0=søndag..6=lørdag).
+  const mondayOffset = (anchorDate.getDay() + 6) % 7;
+  const monday = new Date(anchorDate);
+  monday.setDate(anchorDate.getDate() - mondayOffset);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate() + i);
+    days.push(daySummary(todayDate(dt)));
+  }
+
+  res.json({
+    weekStart: days[0].sessionDate,
+    weekEnd: days[6].sessionDate,
+    days,
   });
 });
 
