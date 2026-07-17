@@ -32,7 +32,16 @@ router.post('/login', loginLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Feil brukernavn eller passord' });
   }
 
-  const token = issueSession(res, user);
+  // Mobilappen sender client:'native' og får et langlevet Bearer-token (den er
+  // låst bak Face ID/kode ved hver åpning). Nettleseren får en 12-timers cookie.
+  //
+  // client-feltet kommer fra klienten og kan forfalskes, så rollen avgjør her:
+  // KUN elever kan få lang sesjon. Admin har tilgang til alle elevers data og
+  // bruker nettleser (som ikke kan låses bak Face ID) – de skal alltid ha 12
+  // timer, uansett hva som sendes inn.
+  const isNative = String(req.body?.client || '') === 'native' && user.role === 'student';
+  const token = isNative ? signToken(user, { native: true }) : issueSession(res, user);
+
   res.json({
     // token brukes av native app (Bearer). Nettleseren bruker cookien og kan ignorere den.
     token,

@@ -13,11 +13,13 @@ export async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
-export function signToken(user) {
+// native = mobilappen (Bearer-token, låst bak Face ID/kode ved hver åpning) og
+// får derfor lang levetid. Alt annet (nettleser, admin) får 12 timer.
+export function signToken(user, { native = false } = {}) {
   return jwt.sign(
     { sub: user.id, role: user.role, username: user.username },
     config.jwtSecret,
-    { expiresIn: '12h' }
+    { expiresIn: native ? `${config.nativeSessionDays}d` : '12h' }
   );
 }
 

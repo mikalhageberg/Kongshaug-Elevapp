@@ -45,6 +45,12 @@
           "locationWhenInUsePermission": "Appen bruker posisjon for å bekrefte at du er på skolen."
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Appen bruker Face ID for å låse opp når du åpner den."
+        }
+      ],
       "expo-asset"
     ],
     "extra": {

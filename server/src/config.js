@@ -66,8 +66,14 @@ export const config = {
     matchClaim: process.env.FEIDE_MATCH_CLAIM || 'email',
   },
 
-  // Sesjonens levetid
+  // Sesjonens levetid i nettleseren (elevapp + admin). Kort, fordi en nettleser
+  // ikke kan låses bak Face ID – en åpen maskin gir da full tilgang.
   sessionMaxAgeMs: 1000 * 60 * 60 * 12, // 12 timer
+
+  // Mobilappen bruker Bearer-token og er låst bak Face ID / kode ved hver
+  // åpning, så den kan ha lang sesjon uten at eleven må skrive passord ofte.
+  // Gjelder KUN native app – aldri nettleser eller admin.
+  nativeSessionDays: Number(process.env.NATIVE_SESSION_DAYS ?? 90),
 };
 
 function parseTimeToMinutes(hhmm) {

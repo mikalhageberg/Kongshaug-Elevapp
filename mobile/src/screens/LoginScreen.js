@@ -14,7 +14,9 @@ export default function LoginScreen({ onLoggedIn }) {
     setErr('');
     setLoading(true);
     try {
-      const data = await api('/api/auth/login', { method: 'POST', body: { username, password } });
+      // client:'native' -> serveren gir et langlevet token (appen er låst bak
+      // Face ID/kode), i stedet for nettleserens 12-timers cookie.
+      const data = await api('/api/auth/login', { method: 'POST', body: { username, password, client: 'native' } });
       await setToken(data.token);
       if (data.user.role === 'admin') {
         setErr('Denne appen er for elever. Administratorer bruker nettsiden.');
