@@ -266,7 +266,7 @@ async function renderUserList(main, cfg) {
   const isStudent = cfg.role === 'student';
   header(main, cfg.title, 'Laster…',
     `${isStudent ? `<button class="btn btn-ghost" id="bulk" style="height:44px;padding:0 18px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Legg til flere</button>` : ''}
-     <button class="btn btn-primary" id="add" style="height:44px;padding:0 20px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>${cfg.addLabel}</button>`);
+     ${!isStudent ? `<button class="btn btn-primary" id="add" style="height:44px;padding:0 20px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>${cfg.addLabel}</button>` : ''}`);
   const searchBar = cfg.search
     ? `<div style="margin-bottom:16px"><input id="search" class="field" placeholder="Søk navn eller brukernavn…" style="max-width:340px;height:42px;border-radius:12px" /></div>`
     : '';
@@ -356,7 +356,7 @@ async function renderUserList(main, cfg) {
   });
 
   if (cfg.search) page.querySelector('#search').addEventListener('input', draw);
-  main.querySelector('#add').addEventListener('click', () => userModal(null, load, cfg));
+  main.querySelector('#add')?.addEventListener('click', () => userModal(null, load, cfg));
   main.querySelector('#bulk')?.addEventListener('click', () => bulkAddModal(load));
   await load();
 }
