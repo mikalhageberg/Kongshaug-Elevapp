@@ -31,7 +31,7 @@ export const config = {
   andakt: {
     // "08:10" -> minutter etter midnatt
     deadlineMinutes: parseTimeToMinutes(process.env.ANDAKT_DEADLINE || '08:10'),
-    qrTtlSeconds: Number(process.env.ANDAKT_QR_TTL_SECONDS ?? 45),
+    qrTtlSeconds: Number(process.env.ANDAKT_QR_TTL_SECONDS ?? 30),
   },
 
   // OpenAI: leser ukemeny-PDF-er og gjør dem om til strukturert tekst i appen.
