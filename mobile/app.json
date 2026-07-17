@@ -18,6 +18,7 @@
       }
     },
     "android": {
+      "package": "no.kongshaug.elevapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#20303A"
