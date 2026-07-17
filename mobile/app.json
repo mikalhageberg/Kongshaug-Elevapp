@@ -55,7 +55,7 @@
       "expo-asset"
     ],
     "extra": {
-      "apiUrl": "https://kongshaug-elevapp-production-5804.up.railway.app",
+      "apiUrl": "https://elevapp.online",
       "eas": {
         "projectId": "316b5f66-d91b-46be-81e5-fb7b47b682ac"
       }
