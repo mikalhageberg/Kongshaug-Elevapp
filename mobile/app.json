@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "no.kongshaug.elevapp",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSCameraUsageDescription": "Appen bruker kamera for å skanne QR-koden til andakt.",
         "NSLocationWhenInUseUsageDescription": "Appen bruker posisjon for å bekrefte at du er på skolen.",
