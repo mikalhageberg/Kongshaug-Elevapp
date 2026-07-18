@@ -107,7 +107,7 @@ export default function App() {
       <View style={{ flex: 1 }}>
         {tab === 'home' && <DashboardScreen user={user} onLogout={logout} goTo={setTab} />}
         {tab === 'brann' && <BrannlisteScreen />}
-        {tab === 'andakt' && <AndaktScreen />}
+        {tab === 'andakt' && <AndaktScreen user={user} />}
         {tab === 'middag' && <MiddagScreen />}
       </View>
 

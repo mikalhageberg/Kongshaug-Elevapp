@@ -1,20 +1,14 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
 import { fireDeadlineForDay } from '../settings.js';
 import { getFireOverview } from '../fireReport.js';
-import { config } from '../config.js';
 
-// Sant kun for den ene, navngitte App/Play Store-reviewer-kontoen (om satt).
-// Se config.appReview – tomt = alltid false, altså av som standard.
-// Case-ufølsom sammenligning (brukernavn er alltid små bokstaver i praksis,
-// men sammenlign trygt uansett).
-function isReviewAccount(auth) {
-  return !!config.appReview.bypassUsername
-    && String(auth?.username || '').toLowerCase() === config.appReview.bypassUsername;
-}
+// Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
+// NaN havner i databasen når klienten sender manglende/ugyldig posisjon.
+const coordOrNull = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
 const router = Router();
 router.use(requireAuth);
@@ -36,7 +30,7 @@ function isScheduledAway(userId, night) {
 // ── ELEV: meld deg til stede på brannlisten i kveld ──────────
 router.post('/checkin', (req, res) => {
   const { lat, lng } = req.body || {};
-  const reviewBypass = isReviewAccount(req.auth);
+  const reviewBypass = isAppReviewUser(req.auth?.username);
   if (reviewBypass) console.warn(`[app-review-bypass] brannliste-innsjekk uten GPS-sjekk for «${req.auth.username}»`);
   const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
   if (!campus.ok) {
@@ -53,7 +47,7 @@ router.post('/checkin', (req, res) => {
      VALUES (@uid, @night, 'present', @lat, @lng)
      ON CONFLICT(user_id, night_date)
        DO UPDATE SET status = 'present', checked_at = datetime('now'), lat = @lat, lng = @lng`
-  ).run({ uid: req.auth.sub, night, lat: Number(lat), lng: Number(lng) });
+  ).run({ uid: req.auth.sub, night, lat: coordOrNull(lat), lng: coordOrNull(lng) });
 
   const row = db
     .prepare('SELECT checked_at FROM fire_checkins WHERE user_id = ? AND night_date = ?')

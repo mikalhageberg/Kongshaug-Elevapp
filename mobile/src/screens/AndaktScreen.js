@@ -5,14 +5,20 @@ import { api, getPosition, getPositionOnCampus } from '../api';
 import { C, formatTime, formatDateLong } from '../theme';
 import { Button, Banner } from '../ui';
 
-export default function AndaktScreen() {
+export default function AndaktScreen({ user }) {
   // status: loading | scanning | result
   const [status, setStatus] = useState('loading');
   const [result, setResult] = useState(null); // { kind:'present'|'late'|'error', ... }
   const [permission, requestPermission] = useCameraPermissions();
   const [geoText, setGeoText] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
+  const [bypassBusy, setBypassBusy] = useState(false);
   const coordsRef = useRef(null);
   const scannedRef = useRef(false);
+
+  // Kun App/Play Store-reviewer-kontoen (serveren bestemmer dette, ikke appen).
+  // En reviewer har ingen storskjerm å skanne QR fra, så uten dette ville de
+  // stått fast på kameraskjermen og aldri fått testet funksjonen.
+  const canSkipQr = !!user?.appReviewBypass;
 
   useEffect(() => {
     (async () => {
@@ -49,6 +55,23 @@ export default function AndaktScreen() {
     } catch (ex) {
       setResult({ kind: 'error', code: ex.code, message: ex.message });
     }
+    setStatus('result');
+  }
+
+  // Registrer uten å skanne QR. Serveren godtar dette KUN for reviewer-kontoen
+  // – for alle andre svarer den med "ugyldig QR-kode", som er riktig.
+  async function registerWithoutQr() {
+    setBypassBusy(true);
+    try {
+      const r = await api('/api/andakt/checkin', {
+        method: 'POST',
+        body: { token: 'app-review', ...(coordsRef.current || {}) },
+      });
+      setResult({ kind: r.status, checkedAt: r.checkedAt, date: r.sessionDate });
+    } catch (ex) {
+      setResult({ kind: 'error', code: ex.code, message: ex.message });
+    }
+    setBypassBusy(false);
     setStatus('result');
   }
 
@@ -105,6 +128,15 @@ export default function AndaktScreen() {
       </View>
 
       <Banner tone={geoText.tone} text={geoText.text} />
+
+      {canSkipQr ? (
+        <>
+          <View style={{ height: 10 }} />
+          <Button title="Registrer oppmøte uten QR (testkonto)" onPress={registerWithoutQr}
+            loading={bypassBusy} color="#fff" textColor={C.navy} fontSize={15}
+            style={{ height: 48, borderWidth: 1.5, borderColor: '#d3dae2' }} />
+        </>
+      ) : null}
     </View>
   );
 }

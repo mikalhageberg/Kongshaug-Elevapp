@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import QRCode from 'qrcode';
 import db from '../db.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { config } from '../config.js';
 import { getSettings, hhmmToMinutes, isAndaktDay } from '../settings.js';
@@ -20,14 +20,10 @@ function minutesNow(d = new Date()) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-// Sant kun for den ene, navngitte App/Play Store-reviewer-kontoen (om satt).
-// Se config.appReview – tomt = alltid false, altså av som standard.
-// Case-ufølsom sammenligning (brukernavn er alltid små bokstaver i praksis,
-// men sammenlign trygt uansett).
-function isReviewAccount(auth) {
-  return !!config.appReview.bypassUsername
-    && String(auth?.username || '').toLowerCase() === config.appReview.bypassUsername;
-}
+// Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
+// NaN havner i databasen når klienten sender manglende/ugyldig posisjon
+// (f.eks. reviewer-kontoen, som registrerer uten QR og uten GPS).
+const coordOrNull = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
 // ── ELEV: registrer oppmøte ved å sende skannet QR-token + GPS ──
 router.post('/checkin', (req, res) => {
@@ -38,7 +34,7 @@ router.post('/checkin', (req, res) => {
     return res.status(400).json({ error: 'no_andakt', message: 'Det er ikke andakt i dag.' });
   }
 
-  const reviewBypass = isReviewAccount(req.auth);
+  const reviewBypass = isAppReviewUser(req.auth?.username);
   if (reviewBypass) console.warn(`[app-review-bypass] andakt-innsjekk uten GPS/QR-sjekk for «${req.auth.username}»`);
 
   const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
@@ -69,7 +65,7 @@ router.post('/checkin', (req, res) => {
     `INSERT INTO andakt_checkins (user_id, session_date, status, lat, lng)
      VALUES (@uid, @date, @status, @lat, @lng)
      ON CONFLICT(user_id, session_date) DO NOTHING`
-  ).run({ uid: req.auth.sub, date, status, lat: Number(lat), lng: Number(lng) });
+  ).run({ uid: req.auth.sub, date, status, lat: coordOrNull(lat), lng: coordOrNull(lng) });
 
   const row = db
     .prepare('SELECT status, checked_at FROM andakt_checkins WHERE user_id = ? AND session_date = ?')

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import db from '../db.js';
-import { verifyPassword, hashPassword, issueSession, signToken, clearSession, requireAuth } from '../auth.js';
+import { verifyPassword, hashPassword, issueSession, signToken, clearSession, requireAuth, isAppReviewUser } from '../auth.js';
 
 const router = Router();
 
@@ -55,6 +55,9 @@ router.post('/login', loginLimiter, async (req, res) => {
       room: user.room,
       mustChangePassword: !!user.must_change_password,
       authProvider: user.auth_provider || 'local',
+      // true kun for App/Play Store-reviewer-kontoen: appen tilbyr da
+      // registrering uten QR-skanning (reviewer har ingen storskjerm å skanne).
+      appReviewBypass: isAppReviewUser(user.username),
     },
   });
 });
@@ -99,6 +102,9 @@ router.get('/me', requireAuth, (req, res) => {
       room: user.room,
       mustChangePassword: !!user.must_change_password,
       authProvider: user.auth_provider || 'local',
+      // true kun for App/Play Store-reviewer-kontoen: appen tilbyr da
+      // registrering uten QR-skanning (reviewer har ingen storskjerm å skanne).
+      appReviewBypass: isAppReviewUser(user.username),
     },
   });
 });

@@ -13,6 +13,14 @@ export async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
+// Er dette den ene, navngitte App/Play Store-reviewer-kontoen? Se
+// config.appReview – tom miljøvariabel = alltid false, altså av som standard.
+// Case-ufølsom: brukernavn lagres alltid med små bokstaver.
+export function isAppReviewUser(username) {
+  return !!config.appReview.bypassUsername
+    && String(username || '').toLowerCase() === config.appReview.bypassUsername;
+}
+
 // native = mobilappen (Bearer-token, låst bak Face ID/kode ved hver åpning) og
 // får derfor lang levetid. Alt annet (nettleser, admin) får 12 timer.
 export function signToken(user, { native = false } = {}) {
