@@ -2,7 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { todayDate } from '../andaktToken.js';
-import { getDinnerReport, parseAllergies, COMMON_ALLERGIES } from '../kitchenReport.js';
+import { getDinnerReport } from '../kitchenReport.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -29,26 +29,6 @@ router.delete('/optout', (req, res) => {
   const date = todayDate();
   db.prepare('DELETE FROM dinner_optouts WHERE user_id=? AND date=?').run(req.auth.sub, date);
   res.json({ date, optedOut: false });
-});
-
-// ── ELEV: mine allergier ─────────────────────────────────────
-router.get('/allergies', (req, res) => {
-  const u = db.prepare('SELECT allergies FROM users WHERE id=?').get(req.auth.sub);
-  res.json({ allergies: parseAllergies(u?.allergies), common: COMMON_ALLERGIES });
-});
-
-router.put('/allergies', (req, res) => {
-  const raw = Array.isArray(req.body?.allergies) ? req.body.allergies : [];
-  // Rens: strenger, trim, unike, maks lengde/antall.
-  const seen = new Set();
-  const clean = [];
-  for (const a of raw) {
-    const s = String(a || '').trim().slice(0, 60);
-    if (s && !seen.has(s.toLowerCase())) { seen.add(s.toLowerCase()); clean.push(s); }
-    if (clean.length >= 30) break;
-  }
-  db.prepare('UPDATE users SET allergies=? WHERE id=?').run(JSON.stringify(clean), req.auth.sub);
-  res.json({ allergies: clean });
 });
 
 // ── ADMIN: middagsoversikt for i dag ─────────────────────────

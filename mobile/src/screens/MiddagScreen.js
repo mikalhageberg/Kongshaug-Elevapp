@@ -1,60 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, TextInput, StyleSheet, Linking, Modal } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { api, fileUrl } from '../api';
 import { C, formatDateLong, todayStr } from '../theme';
 import { Button, Card } from '../ui';
 
-// Modal-«rullegardin» for allergivalg: én rad å trykke på i stedet for et
-// stort rutenett med chips. Utvalget lagres fortsatt kun når man trykker «Lagre».
-function AllergyPickerModal({ visible, onClose, common, customs, selected, onToggle, onAddCustom }) {
-  const [custom, setCustom] = useState('');
-  function submitCustom() {
-    const v = custom.trim();
-    if (v) { onAddCustom(v); setCustom(''); }
-  }
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <View style={styles.modalWrap}>
-        <View style={styles.modalHead}>
-          <Text style={styles.modalTitle}>Velg allergier</Text>
-          <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
-        </View>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-          {[...common, ...customs].map((label) => {
-            const on = selected.includes(label);
-            return (
-              <Pressable key={label} onPress={() => onToggle(label)} style={styles.optionRow}>
-                <Text style={styles.optionLabel}>{label}</Text>
-                <View style={[styles.checkbox, on && { backgroundColor: C.navy, borderColor: C.navy }]}>
-                  {on ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}
-                </View>
-              </Pressable>
-            );
-          })}
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-            <TextInput value={custom} onChangeText={setCustom} placeholder="Legg til egen…" placeholderTextColor={C.muted2} style={styles.input} onSubmitEditing={submitCustom} returnKeyType="done" />
-            <Button title="Legg til" color="#fff" textColor={C.navy} onPress={submitCustom} fontSize={15} style={{ paddingHorizontal: 18, borderWidth: 1.5, borderColor: '#d3dae2' }} />
-          </View>
-        </ScrollView>
-        <View style={styles.modalFooter}>
-          <Button title="Ferdig" onPress={onClose} />
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 export default function MiddagScreen() {
   const [dinner, setDinner] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState([]);
-  const [saved, setSaved] = useState([]);
-  const [common, setCommon] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [savedFlash, setSavedFlash] = useState(false);
   const [menus, setMenus] = useState([]);
   const [parsed, setParsed] = useState({}); // { [menuId]: { days, note } }
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const loadDinner = useCallback(async () => {
     setDinner(await api('/api/dinner/status').catch(() => null));
@@ -76,7 +30,6 @@ export default function MiddagScreen() {
 
   useEffect(() => {
     loadDinner();
-    api('/api/dinner/allergies').then((a) => { setSelected(a.allergies); setSaved(a.allergies); setCommon(a.common); }).catch(() => {});
     loadMenus();
   }, [loadDinner, loadMenus]);
 
@@ -86,24 +39,6 @@ export default function MiddagScreen() {
     try { await api('/api/dinner/optout', { method: dinner.optedOut ? 'DELETE' : 'POST' }); await loadDinner(); }
     catch { /* ignorer */ } finally { setBusy(false); }
   }
-
-  // Endringer lagres lokalt (utkast) – lagres først når man trykker «Lagre».
-  const toggleAllergy = (label) => setSelected((cur) => (cur.includes(label) ? cur.filter((x) => x !== label) : [...cur, label]));
-  function addCustom(value) {
-    const v = value.trim();
-    if (v && !selected.includes(v)) setSelected([...selected, v]);
-  }
-  async function saveAllergies() {
-    setSaving(true);
-    try {
-      const r = await api('/api/dinner/allergies', { method: 'PUT', body: { allergies: selected } });
-      setSelected(r.allergies); setSaved(r.allergies);
-      setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2500);
-    } catch { /* ignorer */ } finally { setSaving(false); }
-  }
-
-  const customs = selected.filter((x) => !common.includes(x));
-  const dirty = !(selected.length === saved.length && selected.every((x) => saved.includes(x)));
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.surface }} contentContainerStyle={{ padding: 22, paddingBottom: 40 }}>
@@ -165,27 +100,6 @@ export default function MiddagScreen() {
           </View>
         );
       }) : <Text style={[styles.sub, { marginTop: 8 }]}>Ingen meny lastet opp ennå.</Text>}
-
-      <Text style={[styles.h1, { fontSize: 19, marginTop: 26 }]}>Mine allergier</Text>
-      <Text style={styles.sub}>Meld inn det kjøkkenet må ta hensyn til. Vises for kjøkkenet på dagene du spiser.</Text>
-
-      <Pressable onPress={() => setPickerOpen(true)} style={styles.dropdown}>
-        <Text style={[styles.dropdownText, !selected.length && { color: C.muted2 }]} numberOfLines={1}>
-          {selected.length ? selected.join(', ') : 'Ingen valgt'}
-        </Text>
-        <Text style={{ color: C.muted2, fontSize: 13 }}>▾</Text>
-      </Pressable>
-
-      <AllergyPickerModal
-        visible={pickerOpen} onClose={() => setPickerOpen(false)}
-        common={common} customs={customs} selected={selected}
-        onToggle={toggleAllergy} onAddCustom={addCustom}
-      />
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 14, marginTop: 18 }}>
-        {savedFlash ? <Text style={{ color: C.greenInk, fontWeight: '700' }}>Lagret ✓</Text> : null}
-        <Button title="Lagre allergier" onPress={saveAllergies} loading={saving} disabled={!dirty} fontSize={15} style={{ paddingHorizontal: 24 }} />
-      </View>
     </ScrollView>
   );
 }
@@ -196,16 +110,6 @@ const styles = StyleSheet.create({
   sub: { fontSize: 14, color: C.muted, lineHeight: 20, marginTop: 6 },
   icon: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: C.ink },
-  dropdown: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 50, backgroundColor: '#fff', borderWidth: 1, borderColor: C.line2, borderRadius: 14, paddingHorizontal: 16, marginTop: 14 },
-  dropdownText: { flex: 1, fontSize: 15, fontWeight: '700', color: C.ink },
-  input: { flex: 1, height: 46, backgroundColor: '#fff', borderWidth: 1, borderColor: C.line2, borderRadius: 14, paddingHorizontal: 14, fontSize: 15, color: C.ink },
-  modalWrap: { flex: 1, backgroundColor: C.surface },
-  modalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 10 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
-  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 14, marginBottom: 8 },
-  optionLabel: { fontSize: 15, fontWeight: '700', color: C.ink },
-  checkbox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: C.line2, alignItems: 'center', justifyContent: 'center' },
-  modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: C.line },
   menuCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: C.line, borderRadius: 16, marginTop: 12, overflow: 'hidden' },
   menuHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   pdfBtn: { height: 38, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1.5, borderColor: '#d3dae2', alignItems: 'center', justifyContent: 'center' },

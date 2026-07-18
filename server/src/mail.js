@@ -106,16 +106,6 @@ export function buildKitchenEmailHtml(report) {
        <div style="font-size:30px;font-weight:bold;color:${color}">${n}</div>
        <div style="font-size:12px;color:#6b7280;font-weight:bold">${txt}</div></td>`;
 
-  const allergyBlock = report.allergyGroups.length
-    ? `<div style="margin-top:20px;border:1px solid #f0dca0;border-radius:10px;overflow:hidden">
-         <div style="background:#fdf4e0;color:#8a6300;font-weight:bold;padding:12px 16px;font-size:15px">Allergier å ta hensyn til (kun de som spiser)</div>
-         ${report.allergyGroups.map((g) => `<div style="padding:11px 16px;border-top:1px solid #f0dca0;font-size:14px">
-           <b>${esc(g.allergy)}</b> <span style="color:#8a93a3">(${g.count})</span><br>
-           <span style="color:#55607a;font-size:13px">${g.students.map(esc).join(', ')}</span></div>`).join('')}
-       </div>`
-    : `<div style="margin-top:20px;padding:14px 16px;background:#e6f4ec;color:#0f6b43;border-radius:10px;font-weight:bold">
-         Ingen registrerte allergier blant de som spiser i dag.</div>`;
-
   const notEating = report.notEating.length
     ? `<p style="margin:20px 0 0;font-size:13px;color:#8a93a3;line-height:1.6"><b>Spiser ikke:</b> ${report.notEating.map((n) => esc(n.name)).join(', ')}</p>`
     : '';
@@ -132,7 +122,6 @@ export function buildKitchenEmailHtml(report) {
           ${stat(report.eating, 'Spiser', '#1f8a5b')}
           ${stat(report.total - report.eating, 'Spiser ikke', '#d64545')}
         </tr></table>
-        ${allergyBlock}
         ${notEating}
         <p style="margin:20px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Brannvakt.</p>
       </div>
@@ -147,7 +136,7 @@ export async function sendKitchenEmail({ date, recipient } = {}) {
   const report = getDinnerReport(date);
   const r = await sendViaBrevo({
     recipient,
-    subject: `Middag ${dateLabel(date)} — ${report.eating} spiser${report.allergyGroups.length ? ', ' + report.allergyGroups.length + ' allergihensyn' : ''}`,
+    subject: `Middag ${dateLabel(date)} — ${report.eating} spiser`,
     htmlContent: buildKitchenEmailHtml(report),
     sender: {
       email: settings.kitchenEmailFrom || config.mail.from,

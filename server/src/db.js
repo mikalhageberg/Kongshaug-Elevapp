@@ -116,8 +116,18 @@ function ensureColumn(table, column, definition) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
+// Motsatt migrering: fjerner en kolonne (og dataen i den) for godt. Trygt å
+// kalle på hver oppstart – gjør ingenting når kolonnen allerede er borte.
+function dropColumn(table, column) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+  }
+}
 ensureColumn('fire_checkins', 'status', "TEXT NOT NULL DEFAULT 'present'");
-ensureColumn('users', 'allergies', 'TEXT'); // JSON-array med allergier eleven har meldt inn
+// Allergi-funksjonen er fjernet: kjøkkenet kjenner elevene ved navn, og lagring
+// av helseopplysninger (særlig kategori, GDPR art. 9) var unødvendig risiko.
+dropColumn('users', 'allergies');
 ensureColumn('fire_away_periods', 'no_dinner', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'auth_provider', "TEXT NOT NULL DEFAULT 'local'");

@@ -767,14 +767,6 @@ async function renderKitchen(main) {
       ${kpi(`${d.eating} <span style="font-size:18px;color:var(--muted-2)">/ ${d.total}</span>`, 'Spiser middag', 'var(--green)')}
       ${kpi(d.total - d.eating, 'Spiser ikke', 'var(--red)')}
     </div>
-    <div style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:22px">
-      <div style="padding:16px 22px;background:#f7f8fa;border-bottom:1px solid var(--line);font-size:16px;font-weight:800">Allergier å ta hensyn til <span style="font-weight:600;color:var(--muted-2);font-size:13px">(kun de som spiser)</span></div>
-      ${d.allergyGroups.length ? d.allergyGroups.map((g) => `
-        <div style="padding:14px 22px;border-bottom:1px solid #f2f4f6">
-          <div style="font-size:15px;font-weight:800">${g.allergy} <span style="color:var(--amber-ink);font-weight:700">· ${g.count}</span></div>
-          <div style="font-size:13.5px;color:var(--slate);margin-top:3px">${g.students.join(', ')}</div>
-        </div>`).join('') : '<div style="padding:22px;color:var(--green-ink);font-weight:700">Ingen registrerte allergier blant de som spiser i dag.</div>'}
-    </div>
     <div style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden">
       <div style="padding:16px 22px;background:#f7f8fa;border-bottom:1px solid var(--line);font-size:16px;font-weight:800">Spiser ikke i dag <span style="font-weight:600;color:var(--muted-2);font-size:13px">(${d.notEating.length})</span></div>
       ${d.notEating.length ? d.notEating.map((n) => `
@@ -1053,7 +1045,7 @@ async function renderSettings(main) {
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: middag (kjøkken)</div>
-      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send oversikt over hvor mange som spiser og hvilke allergier kjøkkenet må ta hensyn til.</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send oversikt over hvor mange som spiser i dag.</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
         <div><div style="font-size:15px;font-weight:700">Automatisk utsending</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Send hver dag på tidspunktet under.</div></div>
         <input type="checkbox" name="kitchenEmailEnabled" ${s.kitchenEmailEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />

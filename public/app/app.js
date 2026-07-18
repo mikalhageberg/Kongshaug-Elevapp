@@ -455,7 +455,7 @@ async function renderMenus(menusEl) {
   }
 }
 
-// ── Middag + allergier ───────────────────────────────────────
+// ── Middag ───────────────────────────────────────────────────
 async function renderMiddag() {
   root.innerHTML = '';
   const screen = el(`<div class="screen fadein"><div id="body" style="flex:1;overflow:auto" class="noscroll"></div></div>`);
@@ -471,11 +471,6 @@ async function renderMiddag() {
     <div style="margin-top:26px">
       <div class="h1" style="font-size:19px">Ukemeny</div>
       <div id="menus" style="margin-top:10px"></div>
-    </div>
-    <div style="margin-top:26px">
-      <div class="h1" style="font-size:19px">Mine allergier</div>
-      <p class="sub" style="line-height:1.5;margin:6px 0 12px">Meld inn det kjøkkenet må ta hensyn til. Vises for kjøkkenet på dagene du spiser.</p>
-      <div id="allergies"></div>
     </div>
   </div>`;
 
@@ -510,50 +505,6 @@ async function renderMiddag() {
     });
   }
   loadDinner();
-
-  const allEl = body.querySelector('#allergies');
-  let selected = [], saved = [], common = [], customText = '';
-  const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
-
-  function drawAllergies() {
-    const dirty = !sameSet(selected, saved);
-    const chip = (label, on) => `<button class="allchip" data-a="${encodeURIComponent(label)}" style="height:38px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:700;border:1.5px solid ${on ? 'var(--navy)' : 'var(--line-2)'};background:${on ? 'var(--navy)' : '#fff'};color:${on ? '#fff' : 'var(--slate)'};cursor:pointer;margin:0 8px 8px 0">${label}${on ? ' ✓' : ''}</button>`;
-    const customs = selected.filter((x) => !common.includes(x));
-    allEl.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap">${common.map((c) => chip(c, selected.includes(c))).join('')}${customs.map((c) => chip(c, true)).join('')}</div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="customAll" class="field" placeholder="Legg til egen…" style="flex:1;height:46px" />
-        <button class="btn btn-ghost" id="addAll" style="height:46px;padding:0 18px">Legg til</button>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:16px">
-        <span id="allmsg" style="color:var(--green-ink);font-weight:700;font-size:14px;display:none">Lagret ✓</span>
-        <button class="btn btn-primary" id="saveAll" style="height:50px;padding:0 26px" ${dirty ? '' : 'disabled'}>Lagre allergier</button>
-      </div>`;
-
-    const inp = allEl.querySelector('#customAll');
-    inp.value = customText;
-    inp.addEventListener('input', () => { customText = inp.value; });
-
-    allEl.querySelectorAll('.allchip').forEach((b) => b.addEventListener('click', () => {
-      const label = decodeURIComponent(b.dataset.a);
-      selected = selected.includes(label) ? selected.filter((x) => x !== label) : [...selected, label];
-      drawAllergies();
-    }));
-    allEl.querySelector('#addAll').addEventListener('click', () => {
-      const v = customText.trim();
-      if (v && !selected.includes(v)) selected = [...selected, v];
-      customText = ''; drawAllergies();
-    });
-    allEl.querySelector('#saveAll').addEventListener('click', async () => {
-      const btn = allEl.querySelector('#saveAll'); btn.disabled = true;
-      try {
-        const r = await api('/api/dinner/allergies', { method: 'PUT', body: { allergies: selected } });
-        selected = [...r.allergies]; saved = [...r.allergies]; drawAllergies();
-        const m = allEl.querySelector('#allmsg'); if (m) { m.style.display = 'inline'; setTimeout(() => { m.style.display = 'none'; }, 2500); }
-      } catch (ex) { toast(ex.message); btn.disabled = false; }
-    });
-  }
-  api('/api/dinner/allergies').then((a) => { selected = [...a.allergies]; saved = [...a.allergies]; common = a.common; drawAllergies(); }).catch(() => drawAllergies());
 }
 
 // ── Planlagt fravær ──────────────────────────────────────────
