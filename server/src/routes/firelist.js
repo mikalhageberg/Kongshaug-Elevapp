@@ -5,6 +5,13 @@ import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
 import { fireDeadlineForDay } from '../settings.js';
 import { getFireOverview } from '../fireReport.js';
+import { config } from '../config.js';
+
+// Sant kun for den ene, navngitte App/Play Store-reviewer-kontoen (om satt).
+// Se config.appReview – tomt = alltid false, altså av som standard.
+function isReviewAccount(auth) {
+  return !!config.appReview.bypassUsername && auth?.username === config.appReview.bypassUsername;
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -26,7 +33,9 @@ function isScheduledAway(userId, night) {
 // ── ELEV: meld deg til stede på brannlisten i kveld ──────────
 router.post('/checkin', (req, res) => {
   const { lat, lng } = req.body || {};
-  const campus = isOnCampus(Number(lat), Number(lng));
+  const reviewBypass = isReviewAccount(req.auth);
+  if (reviewBypass) console.warn(`[app-review-bypass] brannliste-innsjekk uten GPS-sjekk for «${req.auth.username}»`);
+  const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
   if (!campus.ok) {
     return res.status(403).json({
       error: 'offsite',

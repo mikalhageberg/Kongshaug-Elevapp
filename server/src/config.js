@@ -74,6 +74,17 @@ export const config = {
   // åpning, så den kan ha lang sesjon uten at eleven må skrive passord ofte.
   // Gjelder KUN native app – aldri nettleser eller admin.
   nativeSessionDays: Number(process.env.NATIVE_SESSION_DAYS ?? 90),
+
+  // App Store/Play Store-reviewere kan ikke fysisk være på skolen, så de kan
+  // ikke bestå GPS-sjekken (brannliste/andakt) eller skanne en ekte QR-kode
+  // (andakt). Med APPLE_REVIEW_USERNAME satt, hopper KUN den ene, eksakte
+  // kontoen over disse sjekkene – lag en dedikert testkonto til dette, aldri
+  // en ekte elevs konto. Tom (standard) = ingen unntak for noen.
+  // ⚠ Fjern miljøvariabelen igjen når appen er godkjent – dette er et reelt,
+  // om enn smalt avgrenset, unntak fra brannsikkerhets-verifiseringen.
+  appReview: {
+    bypassUsername: (process.env.APPLE_REVIEW_USERNAME || '').trim(),
+  },
 };
 
 function parseTimeToMinutes(hhmm) {

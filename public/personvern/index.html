@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personvernerklæring – Kongshaug Elevapp</title>
+  <link rel="stylesheet" href="/shared/styles.css" />
+  <style>
+    body { background: var(--surface); }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 40px 22px 80px; }
+    h1 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 6px; }
+    .updated { color: var(--muted-2); font-size: 14px; font-weight: 600; margin-bottom: 32px; }
+    h2 { font-size: 19px; font-weight: 800; margin: 36px 0 10px; letter-spacing: -.01em; }
+    p, li { font-size: 15px; line-height: 1.65; color: var(--ink); }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin-bottom: 6px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted-2); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+    a { color: var(--navy); font-weight: 600; }
+    .back { display: inline-block; margin-bottom: 24px; font-size: 14px; font-weight: 700; color: var(--muted-2); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/app/">← Tilbake til appen</a>
+    <h1>Personvernerklæring</h1>
+    <div class="updated">Gjelder Kongshaug Elevapp · sist oppdatert 18. juli 2026</div>
+
+    <p>
+      Denne appen brukes av elever og ansatte ved <b>Kongshaug Musikkgymnas</b> til brannliste
+      (oppmøteregistrering ved brannfare), andakt (daglig oppmøteregistrering) og middagsplanlegging.
+      Denne siden forklarer hvilke personopplysninger appen samler inn, hvorfor, og hvilke
+      rettigheter du har.
+    </p>
+
+    <h2>Behandlingsansvarlig</h2>
+    <p>
+      Kongshaug Musikkgymnas er behandlingsansvarlig for personopplysningene som samles inn i
+      appen. Spørsmål om personvern kan rettes til skolens administrasjon.
+    </p>
+
+    <h2>Hvilke opplysninger samles inn</h2>
+    <div class="card">
+      <table>
+        <tr><th>Kategori</th><th>Hva</th><th>Formål</th></tr>
+        <tr>
+          <td>Kontoopplysninger</td>
+          <td>Navn, brukernavn, passord (lagres kryptert/hashet, aldri i klartekst), klasse, internat, rom</td>
+          <td>Identifisere brukeren og administrere kontoen</td>
+        </tr>
+        <tr>
+          <td>Posisjon (GPS)</td>
+          <td>Koordinater, kun i det øyeblikket du melder deg til stede på brannliste eller andakt</td>
+          <td>Bekrefte at du faktisk er fysisk på skolens område – hindrer at noen melder seg til stede uten å være der</td>
+        </tr>
+        <tr>
+          <td>Oppmøtehistorikk</td>
+          <td>Dato, klokkeslett og status (til stede / borte / for sent) for brannliste og andakt</td>
+          <td>Brannsikkerhet (vite hvem som er på internatet om natten) og oppmøteoppfølging</td>
+        </tr>
+        <tr>
+          <td>Middagsvalg</td>
+          <td>Om du spiser middag en gitt dag, og eventuelt planlagt fravær</td>
+          <td>Kjøkkenet skal vite hvor mange som skal ha middag, og redusere matsvinn</td>
+        </tr>
+      </table>
+    </div>
+    <p style="margin-top:14px">
+      Appen samler <b>ikke</b> inn helseopplysninger, allergier eller andre særlige kategorier
+      personopplysninger. Posisjon lagres kun som et engangs-datapunkt ved registrering – appen
+      sporer ikke løpende hvor du befinner deg.
+    </p>
+
+    <h2>Rettslig grunnlag</h2>
+    <p>
+      Brannliste behandles på grunnlag av skolens berettigede interesse i, og ansvar for,
+      elevenes sikkerhet som internatskole. Andakt og middagsplanlegging behandles som del av
+      det ordinære skole-/internatoppholdet.
+    </p>
+
+    <h2>Hvem har tilgang</h2>
+    <p>
+      Kun skolens administrasjon (ansatte med administrator-tilgang) har innsyn i elevenes
+      registreringer. Elever ser kun sine egne data.
+    </p>
+
+    <h2>Databehandlere</h2>
+    <p>Appen bruker følgende tjenester til drift. Ingen av disse bruker dataen til egne formål.</p>
+    <ul>
+      <li><b>Railway</b> – hosting av server og database</li>
+      <li><b>OpenAI</b> – leser ukemeny-PDF-er og gjør dem om til tekst i appen. Kun menyens innhold sendes dit, aldri elevdata</li>
+      <li><b>Brevo</b> – sender automatiske e-postoversikter til ansatte (brannliste/kjøkken), hvis skolen har aktivert dette</li>
+    </ul>
+    <p>
+      Face ID / fingeravtrykk som brukes til å låse opp mobilappen, håndteres av telefonens eget
+      operativsystem og sendes aldri til appens server.
+    </p>
+
+    <h2>Lagringstid</h2>
+    <p>
+      Opplysninger lagres så lenge du er aktiv elev/ansatt ved skolen. Skolens administrasjon kan
+      slette en konto, som fjerner all tilhørende historikk (oppmøte, posisjon, middagsvalg)
+      permanent og umiddelbart.
+    </p>
+
+    <h2>Dine rettigheter</h2>
+    <p>Du har rett til å:</p>
+    <ul>
+      <li>Få innsyn i hvilke opplysninger som er registrert om deg</li>
+      <li>Få rettet feil opplysninger</li>
+      <li>Be om at kontoen og tilhørende data slettes</li>
+      <li>Klage til <a href="https://www.datatilsynet.no" target="_blank" rel="noopener">Datatilsynet</a> hvis du mener personopplysningene dine behandles i strid med regelverket</li>
+    </ul>
+    <p>Ta kontakt med skolens administrasjon for å benytte deg av disse rettighetene.</p>
+
+    <h2>Informasjonskapsler (cookies)</h2>
+    <p>
+      Nettleser-versjonen av appen bruker én nødvendig innloggings-cookie for å holde deg
+      innlogget. Den brukes ikke til sporing, analyse eller markedsføring.
+    </p>
+  </div>
+</body>
+</html>

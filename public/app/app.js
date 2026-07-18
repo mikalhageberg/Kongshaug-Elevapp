@@ -74,6 +74,7 @@ function renderLogin() {
           <button class="btn btn-primary" type="submit" style="width:100%;height:56px;font-size:17px;margin-top:22px">Logg inn</button>
         </form>
         <p style="font-size:13px;color:var(--muted-2);text-align:center;margin:16px 0 0;line-height:1.5">Elever får utdelt bruker av administrasjonen.</p>
+        <p style="font-size:12.5px;text-align:center;margin:12px 0 0"><a href="/personvern/" target="_blank" style="color:var(--muted-2);font-weight:600">Personvernerklæring</a></p>
       </div>
     </div>`);
   root.appendChild(screen);

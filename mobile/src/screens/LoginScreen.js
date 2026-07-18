@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { api, setToken } from '../api';
+import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { api, setToken, BASE_URL } from '../api';
 import { C } from '../theme';
 import { Button } from '../ui';
 
@@ -69,6 +69,9 @@ export default function LoginScreen({ onLoggedIn }) {
       <Text style={styles.foot}>
         Elever får utdelt bruker av administrasjonen.
       </Text>
+      <Pressable onPress={() => Linking.openURL(`${BASE_URL}/personvern/`)} hitSlop={8}>
+        <Text style={styles.privacyLink}>Personvernerklæring</Text>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
@@ -86,4 +89,5 @@ const styles = StyleSheet.create({
   },
   err: { color: C.redInk, fontSize: 14, fontWeight: '600', marginTop: 14 },
   foot: { fontSize: 13, color: C.muted2, textAlign: 'center', marginTop: 16, lineHeight: 20 },
+  privacyLink: { fontSize: 12.5, fontWeight: '700', color: C.muted2, textAlign: 'center', marginTop: 12 },
 });

@@ -105,6 +105,7 @@ function renderLogin() {
             <button class="btn btn-primary" style="width:100%;height:54px;margin-top:24px;font-size:16px">Logg inn</button>
           </form>
           <p style="font-size:13px;color:var(--muted-2);text-align:center;margin:18px 0 0">Problemer med innlogging? Kontakt IT-ansvarlig.</p>
+          <p style="font-size:12.5px;text-align:center;margin:10px 0 0"><a href="/personvern/" target="_blank" style="color:var(--muted-2);font-weight:600">Personvernerklæring</a></p>
         </div>
       </div>
     </div>`);

@@ -20,6 +20,12 @@ function minutesNow(d = new Date()) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
+// Sant kun for den ene, navngitte App/Play Store-reviewer-kontoen (om satt).
+// Se config.appReview – tomt = alltid false, altså av som standard.
+function isReviewAccount(auth) {
+  return !!config.appReview.bypassUsername && auth?.username === config.appReview.bypassUsername;
+}
+
 // ── ELEV: registrer oppmøte ved å sende skannet QR-token + GPS ──
 router.post('/checkin', (req, res) => {
   const { token, lat, lng } = req.body || {};
@@ -29,7 +35,10 @@ router.post('/checkin', (req, res) => {
     return res.status(400).json({ error: 'no_andakt', message: 'Det er ikke andakt i dag.' });
   }
 
-  const campus = isOnCampus(Number(lat), Number(lng));
+  const reviewBypass = isReviewAccount(req.auth);
+  if (reviewBypass) console.warn(`[app-review-bypass] andakt-innsjekk uten GPS/QR-sjekk for «${req.auth.username}»`);
+
+  const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
   if (!campus.ok) {
     return res.status(403).json({
       error: 'offsite',
@@ -37,7 +46,9 @@ router.post('/checkin', (req, res) => {
     });
   }
 
-  const check = verifyToken(token);
+  // Reviewer-kontoen har ingen storskjerm å skanne fra, så QR-tokenet
+  // sjekkes ikke for den – ellers uendret (må fortsatt være riktig dag/tid).
+  const check = reviewBypass ? { ok: true } : verifyToken(token);
   if (!check.ok) {
     return res.status(400).json({
       error: check.reason, // 'expired' | 'invalid'
