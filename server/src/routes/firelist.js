@@ -9,8 +9,11 @@ import { config } from '../config.js';
 
 // Sant kun for den ene, navngitte App/Play Store-reviewer-kontoen (om satt).
 // Se config.appReview – tomt = alltid false, altså av som standard.
+// Case-ufølsom sammenligning (brukernavn er alltid små bokstaver i praksis,
+// men sammenlign trygt uansett).
 function isReviewAccount(auth) {
-  return !!config.appReview.bypassUsername && auth?.username === config.appReview.bypassUsername;
+  return !!config.appReview.bypassUsername
+    && String(auth?.username || '').toLowerCase() === config.appReview.bypassUsername;
 }
 
 const router = Router();

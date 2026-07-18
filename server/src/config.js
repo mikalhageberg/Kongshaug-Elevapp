@@ -83,7 +83,10 @@ export const config = {
   // ⚠ Fjern miljøvariabelen igjen når appen er godkjent – dette er et reelt,
   // om enn smalt avgrenset, unntak fra brannsikkerhets-verifiseringen.
   appReview: {
-    bypassUsername: (process.env.APPLE_REVIEW_USERNAME || '').trim(),
+    // Brukernavn lagres alltid små bokstaver (users.js normaliserer ved
+    // opprettelse), så lowercase her også – ellers matcher aldri f.eks.
+    // «Apple.Reviewer» i miljøvariabelen mot den faktiske, lagrede kontoen.
+    bypassUsername: (process.env.APPLE_REVIEW_USERNAME || '').trim().toLowerCase(),
   },
 };
 
