@@ -1290,10 +1290,10 @@ window.addEventListener('hashchange', () => { if (!location.hash.includes('stors
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
-    d ? `<div style="display:flex;gap:10px;align-items:center">
-        <span id="hcPresent" class="pill" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px">Til stede: ${d.present} / ${d.total}</span>
-        <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px">${d.away} borte</span>
-        <span id="hcMissing" class="pill pill-red" style="padding:10px 16px">${d.missing} mangler</span>
+    d ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span id="hcPresent" class="pill" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px;white-space:nowrap">Til stede: ${d.present} / ${d.total}</span>
+        <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px;white-space:nowrap">${d.away} borte</span>
+        <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${d.missing} mangler</span>
         <button class="btn btn-ghost" id="exportPdf" style="height:40px;padding:0 16px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter PDF</button>
       </div>` : '');
   const page = el(`<div class="page"></div>`);
@@ -1303,8 +1303,10 @@ async function renderBrannliste(main) {
 
   const filters = ['Alle', ...d.dorms.map((x) => x.dorm)];
   let activeFilter = 'Alle';
-  const chips = el(`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px">${filters.map((f) => `<button class="chip" data-f="${f}" style="height:36px;padding:0 16px;border-radius:99px;font-size:13.5px;font-weight:700;border:1px solid var(--line-2);background:#fff;color:var(--slate);cursor:pointer">${f}</button>`).join('')}</div>`);
-  const grid = el(`<div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px"></div>`);
+  const chips = el(`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">${filters.map((f) => `<button class="chip" data-f="${esc(f)}" style="height:46px;padding:0 22px;border-radius:99px;font-size:15px;font-weight:700;border:1.5px solid var(--line-2);background:#fff;color:var(--slate);cursor:pointer;touch-action:manipulation">${esc(f)}</button>`).join('')}</div>`);
+  // Bredere minstebredde enn før: radene rommer nå 48px-knapper uten å bli trange.
+  // min() gjør at kolonnen krymper i stedet for å stikke utenfor på smale skjermer.
+  const grid = el(`<div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr));gap:20px"></div>`);
   page.appendChild(chips); page.appendChild(grid);
 
   function updateHeaderCounts() {
@@ -1323,25 +1325,27 @@ async function renderBrannliste(main) {
     } catch (ex) { toast(ex.message); }
   }
 
+  // Brannlisten krysses av på nettbrett, ofte i hui og hast. Knappene er derfor
+  // 48×48 – minste trykkflate som er komfortabel med finger (Apple HIG: 44pt).
   function statusBtn(uid, set, ic, activeColor, active, title) {
-    return `<button data-uid="${uid}" data-set="${set}" title="${title}" style="width:30px;height:30px;border-radius:8px;border:1px solid ${active ? activeColor : 'var(--line-2)'};background:${active ? activeColor : '#fff'};color:${active ? '#fff' : 'var(--muted-2)'};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0"><span style="width:15px;height:15px;display:block">${ic}</span></button>`;
+    return `<button data-uid="${uid}" data-set="${set}" title="${title}" style="width:48px;height:48px;border-radius:12px;border:1.5px solid ${active ? activeColor : 'var(--line-2)'};background:${active ? activeColor : '#fff'};color:${active ? '#fff' : 'var(--muted-2)'};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation"><span style="width:22px;height:22px;display:block">${ic}</span></button>`;
   }
 
   function draw() {
     const dorms = activeFilter === 'Alle' ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
     grid.innerHTML = dorms.map((dorm) => `
       <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:15px;font-weight:800">${dorm.dorm}</span><span style="font-size:13px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:17px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:14px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}</span></div>
         ${dorm.students.map((s) => {
           const dot = s.status === 'present' ? 'var(--green)' : s.status === 'away' ? 'var(--navy)' : 'var(--red)';
           const rowBg = s.status === 'missing' ? 'background:#fdf5f4' : (s.status === 'away' ? 'background:#f4f6fa' : '');
           const timeTitle = s.status === 'present' && s.checkedAt ? ' · ' + formatTime(s.checkedAt) : '';
           return `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 10px 20px;border-bottom:1px solid #f2f4f6;${rowBg}">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;${rowBg}">
             <span class="dot" style="background:${dot}"></span>
-            <span style="flex:1;font-size:14.5px;font-weight:700">${s.fullName}</span>
-            <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">Rom ${s.room ?? '–'}</span>
-            <div style="display:flex;gap:4px">
+            <span style="flex:1;font-size:16px;font-weight:700;min-width:0">${esc(s.fullName)}</span>
+            <span style="font-size:14px;color:var(--muted-2);font-weight:600;white-space:nowrap">Rom ${esc(s.room ?? '–')}</span>
+            <div style="display:flex;gap:8px;flex:0 0 auto">
               ${statusBtn(s.id, 'present', icon.check, 'var(--green)', s.status === 'present', 'Sett til stede' + timeTitle)}
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
               ${statusBtn(s.id, 'clear', icon.x, 'var(--red)', s.status === 'missing', 'Fjern (ikke registrert)')}

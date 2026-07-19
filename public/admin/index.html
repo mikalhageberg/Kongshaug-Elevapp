@@ -22,8 +22,11 @@
     .navitem svg { width: 19px; height: 19px; }
     .navitem.active { background: var(--navy-2); color: #fff; font-weight: 700; }
     main.content { flex: 1; background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
-    .topbar { height: 70px; background: #fff; border-bottom: 1px solid var(--line);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 32px; flex: 0 0 auto; }
+    /* min-height, ikke height: på nettbrett brekker tittel og statuspiller til
+       flere linjer, og med fast høyde ble innholdet klippet. */
+    .topbar { min-height: 70px; background: #fff; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      flex-wrap: wrap; padding: 12px 32px; flex: 0 0 auto; }
     .page { padding: 28px 32px; overflow: auto; }
     .kpi { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
     .th { display: grid; padding: 14px 22px; background: #f7f8fa; border-bottom: 1px solid var(--line);
