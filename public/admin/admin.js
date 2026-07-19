@@ -1335,7 +1335,7 @@ async function renderBrannliste(main) {
     const dorms = activeFilter === 'Alle' ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
     grid.innerHTML = dorms.map((dorm) => `
       <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:17px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:14px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}</span></div>
         ${dorm.students.map((s) => {
           const dot = s.status === 'present' ? 'var(--green)' : s.status === 'away' ? 'var(--navy)' : 'var(--red)';
           const rowBg = s.status === 'missing' ? 'background:#fdf5f4' : (s.status === 'away' ? 'background:#f4f6fa' : '');
@@ -1343,8 +1343,10 @@ async function renderBrannliste(main) {
           return `
           <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;${rowBg}">
             <span class="dot" style="background:${dot}"></span>
-            <span style="flex:1;font-size:16px;font-weight:700;min-width:0">${esc(s.fullName)}</span>
-            <span style="font-size:14px;color:var(--muted-2);font-weight:600;white-space:nowrap">Rom ${esc(s.room ?? '–')}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:19px;font-weight:700;line-height:1.25">${esc(s.fullName)}</div>
+              <div style="font-size:14px;color:var(--muted-2);font-weight:600;margin-top:2px">Rom ${esc(s.room ?? '–')}</div>
+            </div>
             <div style="display:flex;gap:8px;flex:0 0 auto">
               ${statusBtn(s.id, 'present', icon.check, 'var(--green)', s.status === 'present', 'Sett til stede' + timeTitle)}
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
