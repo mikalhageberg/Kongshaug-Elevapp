@@ -1,4 +1,4 @@
-import { api, getPosition, formatTime, formatDateLong, formatDateShort, formatWeekRange, icon } from '/shared/api.js';
+import { api, getPosition, formatTime, formatDateLong, formatDateShort, formatWeekRange, formatNightRange, countNights, icon } from '/shared/api.js';
 
 const root = document.getElementById('root');
 let user = null;
@@ -610,12 +610,17 @@ async function renderPlanlegg() {
   body.appendChild(el(`
     <div class="pad">
       <div class="h1" style="font-size:22px">Planlegg fravær</div>
-      <p class="sub" style="line-height:1.5;margin:8px 0 18px">Meld på forhånd hvilke netter du er borte fra internatet. Én dag = velg samme dato i begge felt.</p>
+      <p class="sub" style="line-height:1.5;margin:8px 0 12px">Meld på forhånd hvilke netter du er borte fra internatet. Én natt = velg samme dato i begge felt.</p>
+      <div style="background:#e7edf5;color:var(--navy);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:600;line-height:1.45;margin-bottom:18px">
+        🌙 Fraværet gjelder natten. Velger du <strong>19. juli</strong>, blir du meldt borte <strong>natt til 20. juli</strong>.
+      </div>
+      <div id="confirm" style="display:none;margin-bottom:14px"></div>
       <div class="card" style="border-radius:18px">
-        <label class="field-label">Fra og med</label>
+        <label class="field-label">Første kveld borte</label>
         <input class="field" type="date" id="from" />
-        <label class="field-label" style="margin-top:14px">Til og med</label>
+        <label class="field-label" style="margin-top:14px">Siste kveld borte</label>
         <input class="field" type="date" id="to" />
+        <div id="preview" style="display:none;margin-top:12px;font-size:14px;font-weight:700;color:var(--navy);background:#f2f5f9;border-radius:10px;padding:10px 12px"></div>
         <label style="display:flex;align-items:center;gap:12px;margin-top:16px;cursor:pointer">
           <input type="checkbox" id="noDinner" checked style="width:22px;height:22px;flex:0 0 auto" />
           <div style="font-size:14px;font-weight:700;color:var(--slate)">Jeg skal heller ikke ha middag i perioden</div>
@@ -634,7 +639,7 @@ async function renderPlanlegg() {
     listEl.innerHTML = d.periods.map((p) => `
       <div class="card" style="border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
         <div style="width:38px;height:38px;border-radius:11px;background:#e7edf5;color:var(--navy);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:20px;height:20px">${icon.home}</div></div>
-        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${p.startDate === p.endDate ? formatDateLong(p.startDate) : formatDateShort(p.startDate) + ' – ' + formatDateShort(p.endDate)}</div>${p.noDinner ? '<div class="sub" style="font-size:12.5px">🍽️ Uten middag</div>' : ''}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${formatNightRange(p.startDate, p.endDate)}</div><div class="sub" style="font-size:12.5px">${countNights(p.startDate, p.endDate)} ${countNights(p.startDate, p.endDate) === 1 ? 'natt' : 'netter'}${p.noDinner ? ' · 🍽️ uten middag' : ''}</div></div>
         <button data-del="${p.id}" style="background:none;border:none;color:var(--muted-2);padding:6px;cursor:pointer;flex:0 0 auto"><div style="width:20px;height:20px">${icon.x}</div></button>
       </div>`).join('');
     listEl.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
@@ -644,17 +649,44 @@ async function renderPlanlegg() {
     }));
   }
 
+  // Fortløpende forhåndsvisning: eleven ser hvilke NETTER valget dekker før de
+  // trykker, ikke bare hvilke datoer de har fylt inn.
+  const previewEl = body.querySelector('#preview');
+  function updatePreview() {
+    const from = body.querySelector('#from').value;
+    const to = body.querySelector('#to').value || from;
+    if (!from || to < from) { previewEl.style.display = 'none'; return; }
+    const n = countNights(from, to);
+    previewEl.textContent = `🌙 ${n} ${n === 1 ? 'natt' : 'netter'} · ${formatNightRange(from, to)}`;
+    previewEl.style.display = 'block';
+  }
+  body.querySelector('#from').addEventListener('change', updatePreview);
+  body.querySelector('#to').addEventListener('change', updatePreview);
+
+  const confirmEl = body.querySelector('#confirm');
   body.querySelector('#add').addEventListener('click', async () => {
     const from = body.querySelector('#from').value;
     const to = body.querySelector('#to').value || from;
     const perr = body.querySelector('#perr'); perr.style.display = 'none';
+    confirmEl.style.display = 'none';
     if (!from) { perr.textContent = 'Velg minst én dato.'; perr.style.display = 'block'; return; }
+    if (to < from) { perr.textContent = 'Siste kveld kan ikke være før den første.'; perr.style.display = 'block'; return; }
     const noDinner = body.querySelector('#noDinner').checked;
     const btn = body.querySelector('#add'); btn.disabled = true;
     try {
       await api('/api/firelist/away-period', { method: 'POST', body: { startDate: from, endDate: to, noDinner } });
+      // Kvitteringen gjentar nøyaktig hva som ble lagret, i «natt til»-form, så
+      // eleven kan se med én gang om de bommet med en dag.
+      const n = countNights(from, to);
+      confirmEl.innerHTML = `
+        <div class="card" style="border-radius:14px;border-color:var(--green);background:var(--green-bg);padding:14px 16px">
+          <div style="font-size:15.5px;font-weight:800;color:var(--green-ink)">✓ Fraværet er lagret</div>
+          <div style="font-size:13.5px;color:var(--green-ink);margin-top:3px;line-height:1.45">Du er meldt borte ${n} ${n === 1 ? 'natt' : 'netter'}: ${formatNightRange(from, to)}.${noDinner ? ' Du får ikke middag i perioden.' : ' Du får middag som vanlig.'}</div>
+        </div>`;
+      confirmEl.style.display = 'block';
       body.querySelector('#from').value = ''; body.querySelector('#to').value = '';
-      toast('Fravær lagt til'); load();
+      updatePreview();
+      load();
     } catch (ex) { perr.textContent = ex.message; perr.style.display = 'block'; }
     finally { btn.disabled = false; }
   });

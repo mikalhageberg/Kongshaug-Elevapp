@@ -42,6 +42,38 @@ export function formatDateShort(dstr) {
   return `${wd}. ${d}. ${MONTHS[m - 1].slice(0, 3)}`;
 }
 
+// ── Netter ───────────────────────────────────────────────────
+// Brannlisten gjelder NATTEN, og en dato står for natten som BEGYNNER den
+// kvelden: 19. juli = natt til 20. juli. Elevene tenker på fraværet sitt som
+// «natt til», så alt vi viser dem skrives slik – ellers er det lett å bomme
+// med én dag når man velger i kalenderen.
+export function formatNight(dstr) {
+  const [y, m, d] = dstr.split('-').map(Number);
+  const n = new Date(y, m - 1, d + 1);
+  return `natt til ${WEEKDAYS[n.getDay()]} ${n.getDate()}. ${MONTHS[n.getMonth()]}`;
+}
+
+export function formatNightShort(dstr) {
+  const [y, m, d] = dstr.split('-').map(Number);
+  const n = new Date(y, m - 1, d + 1);
+  return `natt til ${n.getDate()}. ${MONTHS[n.getMonth()]}`;
+}
+
+// Én natt: «natt til mandag 20. juli». Flere: «natt til 20. – natt til 22. juli».
+export function formatNightRange(startStr, endStr) {
+  if (!endStr || startStr === endStr) return formatNight(startStr);
+  return `${formatNightShort(startStr)} – ${formatNightShort(endStr)}`;
+}
+
+// Antall netter i en periode (inklusiv begge ender).
+export function countNights(startStr, endStr) {
+  if (!endStr || startStr === endStr) return 1;
+  const [y1, m1, d1] = startStr.split('-').map(Number);
+  const [y2, m2, d2] = endStr.split('-').map(Number);
+  const ms = new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1);
+  return Math.round(ms / 86400000) + 1;
+}
+
 // Datointervallet for en uke, så kort som mulig uten å bli tvetydig:
 // «20.–26. juli» · «29. juni – 5. juli» · «29. desember 2025 – 4. januar 2026»
 export function formatWeekRange(startStr, endStr) {

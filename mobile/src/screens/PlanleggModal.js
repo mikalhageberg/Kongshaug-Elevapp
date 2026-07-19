@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet, Switch } from 'react-native';
 import { api } from '../api';
-import { C, ymd, todayStr, formatDateShort, formatDateLong } from '../theme';
+import { C, ymd, todayStr, formatNight, formatNightRange, countNights } from '../theme';
 import { Button } from '../ui';
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -26,6 +26,8 @@ export default function PlanleggModal({ visible, onClose }) {
   const [periods, setPeriods] = useState([]);
   const [busy, setBusy] = useState(false);
   const [noDinner, setNoDinner] = useState(true);
+  const [confirmation, setConfirmation] = useState(null);
+  const [error, setError] = useState(null);
   const today = todayStr();
 
   const load = useCallback(async () => {
@@ -36,13 +38,15 @@ export default function PlanleggModal({ visible, onClose }) {
   useEffect(() => {
     if (!visible) return;
     load();
-    setStart(null); setEnd(null);
+    setStart(null); setEnd(null); setConfirmation(null); setError(null);
     const n = new Date();
     setView({ y: n.getFullYear(), m: n.getMonth() });
   }, [visible, load]);
 
   function tapDay(d) {
     if (!d || d < today) return;
+    // Nytt valg = forrige kvittering er ikke lenger det man ser på.
+    setConfirmation(null); setError(null);
     if (!start || end) { setStart(d); setEnd(null); }     // start nytt valg
     else if (d < start) { setStart(d); setEnd(null); }    // før start -> ny start
     else { setEnd(d); }                                   // sett slutt (periode)
@@ -67,10 +71,21 @@ export default function PlanleggModal({ visible, onClose }) {
   async function add() {
     if (!start) return;
     setBusy(true);
+    setError(null);
+    const from = start, to = end || start;
     try {
-      await api('/api/firelist/away-period', { method: 'POST', body: { startDate: start, endDate: end || start, noDinner } });
+      await api('/api/firelist/away-period', { method: 'POST', body: { startDate: from, endDate: to, noDinner } });
+      // Kvitteringen gjentar nøyaktig hva som ble lagret, i «natt til»-form, så
+      // eleven kan se med én gang om de bommet med en dag.
+      setConfirmation({
+        nights: countNights(from, to),
+        range: formatNightRange(from, to),
+        noDinner,
+      });
       setStart(null); setEnd(null); load();
-    } catch { /* ignorer */ } finally { setBusy(false); }
+    } catch (ex) {
+      setError(ex.message || 'Kunne ikke lagre fraværet');
+    } finally { setBusy(false); }
   }
   async function del(id) {
     await api(`/api/firelist/away-period/${id}`, { method: 'DELETE' }).catch(() => {});
@@ -78,9 +93,10 @@ export default function PlanleggModal({ visible, onClose }) {
   }
 
   const cells = monthCells(view.y, view.m);
-  const summary = !start ? 'Ingen dager valgt'
-    : end && end !== start ? `${formatDateShort(start)} – ${formatDateShort(end)}`
-      : formatDateLong(start);
+  const nights = start ? countNights(start, end || start) : 0;
+  const summary = !start
+    ? 'Ingen netter valgt'
+    : `${nights} ${nights === 1 ? 'natt' : 'netter'} · ${formatNightRange(start, end || start)}`;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
@@ -89,7 +105,12 @@ export default function PlanleggModal({ visible, onClose }) {
           <Text style={styles.title}>Planlagt fravær</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
         </View>
-        <Text style={styles.hint}>Trykk startdag, deretter sluttdag for en periode. Én dag = trykk samme dag to ganger.</Text>
+        <Text style={styles.hint}>Trykk kvelden du reiser, deretter den siste kvelden du er borte. Én natt = trykk samme dag to ganger.</Text>
+        <View style={styles.nightNote}>
+          <Text style={styles.nightNoteText}>
+            🌙 Fraværet gjelder natten. Velger du <Text style={{ fontWeight: '800' }}>19. juli</Text>, blir du meldt borte <Text style={{ fontWeight: '800' }}>natt til 20. juli</Text>.
+          </Text>
+        </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           <View style={styles.monthNav}>
@@ -124,10 +145,11 @@ export default function PlanleggModal({ visible, onClose }) {
               {periods.map((p) => (
                 <View key={p.id} style={styles.period}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: '700', color: C.ink }}>
-                      {p.startDate === p.endDate ? formatDateLong(p.startDate) : `${formatDateShort(p.startDate)} – ${formatDateShort(p.endDate)}`}
+                    <Text style={{ fontWeight: '700', color: C.ink }}>{formatNightRange(p.startDate, p.endDate)}</Text>
+                    <Text style={{ fontSize: 12.5, color: C.muted2, marginTop: 2 }}>
+                      {countNights(p.startDate, p.endDate)} {countNights(p.startDate, p.endDate) === 1 ? 'natt' : 'netter'}
+                      {p.noDinner ? ' · 🍽️ uten middag' : ''}
                     </Text>
-                    {p.noDinner ? <Text style={{ fontSize: 12.5, color: C.muted2, marginTop: 2 }}>🍽️ Uten middag</Text> : null}
                   </View>
                   <Pressable onPress={() => del(p.id)} hitSlop={8}><Text style={{ color: C.redInk, fontWeight: '700' }}>Slett</Text></Pressable>
                 </View>
@@ -137,6 +159,19 @@ export default function PlanleggModal({ visible, onClose }) {
         </ScrollView>
 
         <View style={styles.footer}>
+          {confirmation ? (
+            <View style={styles.confirm}>
+              <Text style={styles.confirmTitle}>✓ Fraværet er lagret</Text>
+              <Text style={styles.confirmBody}>
+                Du er meldt borte {confirmation.nights} {confirmation.nights === 1 ? 'natt' : 'netter'}: {confirmation.range}.
+                {confirmation.noDinner ? ' Du får ikke middag i perioden.' : ' Du får middag som vanlig.'}
+              </Text>
+            </View>
+          ) : null}
+          {error ? (
+            <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View>
+          ) : null}
+
           <View style={styles.dinnerRow}>
             <Text style={{ flex: 1, fontWeight: '700', color: C.ink }}>Jeg skal heller ikke ha middag i perioden</Text>
             <Switch value={noDinner} onValueChange={setNoDinner} trackColor={{ true: C.navy }} />
@@ -168,4 +203,11 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: C.line },
   summary: { fontSize: 14, fontWeight: '700', color: C.slate, textAlign: 'center', marginBottom: 10 },
   dinnerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12, marginBottom: 12 },
+  nightNote: { marginHorizontal: 20, marginBottom: 8, backgroundColor: '#e7edf5', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  nightNoteText: { fontSize: 13.5, color: C.navy, fontWeight: '600', lineHeight: 19 },
+  confirm: { backgroundColor: C.greenBg, borderWidth: 1, borderColor: C.green, borderRadius: 12, padding: 14, marginBottom: 12 },
+  confirmTitle: { fontSize: 15.5, fontWeight: '800', color: C.greenInk },
+  confirmBody: { fontSize: 13.5, color: C.greenInk, marginTop: 3, lineHeight: 19 },
+  errorBox: { backgroundColor: C.redBg, borderWidth: 1, borderColor: C.red, borderRadius: 12, padding: 14, marginBottom: 12 },
+  errorText: { fontSize: 14, fontWeight: '700', color: C.redInk },
 });
