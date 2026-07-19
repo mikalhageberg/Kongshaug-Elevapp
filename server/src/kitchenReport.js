@@ -20,7 +20,13 @@ export function getDinnerReport(date = todayDate()) {
   let eating = 0;
   const notEating = [];
   for (const s of students) {
-    if (optedOut.has(s.id)) { notEating.push({ name: s.full_name }); continue; }
+    // Klasse og internat blir med: kjøkkenet lagrer ingen allergiopplysninger
+    // i appen (se db.js), så de må kjenne igjen eleven på navnet. Med to som
+    // heter det samme er navnet alene ikke nok.
+    if (optedOut.has(s.id)) {
+      notEating.push({ name: s.full_name, className: s.class_name, dorm: s.dorm });
+      continue;
+    }
     eating++;
   }
 

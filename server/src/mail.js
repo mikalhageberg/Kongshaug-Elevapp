@@ -7,6 +7,11 @@ import { todayDate } from './andaktToken.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
+// Uten denne avhenger æ/ø/å av at e-postklienten stoler på MIME-headeren.
+// Deklarasjonen i selve dokumentet gjør at navnene også vises riktig når
+// e-posten videresendes eller lagres som fil og headeren blir borte.
+const MAIL_HEAD = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+
 const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 function dateLabel(dstr) {
@@ -64,7 +69,7 @@ export function buildFireEmailHtml(overview) {
     : `<div style="margin-top:20px;padding:14px 16px;background:#e6f4ec;color:#0f6b43;border-radius:10px;font-weight:bold">
          ✓ Alle elever er gjort rede for.</div>`;
 
-  return `<!DOCTYPE html><html><body style="margin:0;background:#eceef1;padding:24px">
+  return `<!DOCTYPE html><html><head>${MAIL_HEAD}</head><body style="margin:0;background:#eceef1;padding:24px">
     <div style="font-family:Arial,Helvetica,sans-serif;color:#1a2230;max-width:600px;margin:0 auto">
       <div style="background:#1e3a5f;color:#fff;padding:20px 24px;border-radius:12px 12px 0 0">
         <div style="font-size:13px;opacity:.85">Kongshaug Musikkgymnas</div>
@@ -106,11 +111,21 @@ export function buildKitchenEmailHtml(report) {
        <div style="font-size:30px;font-weight:bold;color:${color}">${n}</div>
        <div style="font-size:12px;color:#6b7280;font-weight:bold">${txt}</div></td>`;
 
+  // Navnene er det viktigste i denne e-posten: appen lagrer bevisst ingen
+  // allergiopplysninger (helseopplysninger, GDPR art. 9), så kjøkkenet må
+  // kjenne igjen eleven på navnet. Da må navnet være lett å lese – ikke
+  // liten, grå løpende tekst.
   const notEating = report.notEating.length
-    ? `<p style="margin:20px 0 0;font-size:13px;color:#8a93a3;line-height:1.6"><b>Spiser ikke:</b> ${report.notEating.map((n) => esc(n.name)).join(', ')}</p>`
-    : '';
+    ? `<div style="margin-top:20px;border:1px solid #e6e8ec;border-radius:10px;overflow:hidden">
+         <div style="background:#f7f8fa;color:#1a2230;font-weight:bold;padding:12px 16px;font-size:15px">
+           Spiser ikke i dag (${report.notEating.length})</div>
+         ${report.notEating.map((n) => `<div style="padding:11px 16px;border-top:1px solid #eef0f3;font-size:17px;font-weight:bold;color:#1a2230">
+           ${esc(n.name)}${n.className || n.dorm ? `<span style="font-size:13px;font-weight:normal;color:#6b7280"> · ${esc([n.className, n.dorm].filter(Boolean).join(' · '))}</span>` : ''}</div>`).join('')}
+       </div>`
+    : `<div style="margin-top:20px;padding:14px 16px;background:#e6f4ec;color:#0f6b43;border-radius:10px;font-weight:bold">
+         ✓ Alle elever spiser middag i dag.</div>`;
 
-  return `<!DOCTYPE html><html><body style="margin:0;background:#eceef1;padding:24px">
+  return `<!DOCTYPE html><html><head>${MAIL_HEAD}</head><body style="margin:0;background:#eceef1;padding:24px">
     <div style="font-family:Arial,Helvetica,sans-serif;color:#1a2230;max-width:600px;margin:0 auto">
       <div style="background:#1e3a5f;color:#fff;padding:20px 24px;border-radius:12px 12px 0 0">
         <div style="font-size:13px;opacity:.85">Kongshaug Musikkgymnas · kjøkken</div>
