@@ -1,17 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { api, fileUrl } from '../api';
-import { C, formatDateLong, todayStr } from '../theme';
-import { Button, Card } from '../ui';
+import { C, formatDateLong, formatWeekRange, todayStr } from '../theme';
+import { Button, Card, Pill } from '../ui';
 
-export default function MiddagScreen() {
+export default function MiddagScreen({ user }) {
   const [dinner, setDinner] = useState(null);
   const [busy, setBusy] = useState(false);
   const [menus, setMenus] = useState([]);
   const [parsed, setParsed] = useState({}); // { [menuId]: { days, note } }
+  const [duty, setDuty] = useState(null);   // ukens kjøkkentjeneste
 
   const loadDinner = useCallback(async () => {
     setDinner(await api('/api/dinner/status').catch(() => null));
+  }, []);
+
+  const loadDuty = useCallback(async () => {
+    const d = await api('/api/dinner/kitchen-duty').catch(() => null);
+    setDuty(d?.weeks?.[0] || null);
   }, []);
 
   const loadMenus = useCallback(async () => {
@@ -31,7 +37,8 @@ export default function MiddagScreen() {
   useEffect(() => {
     loadDinner();
     loadMenus();
-  }, [loadDinner, loadMenus]);
+    loadDuty();
+  }, [loadDinner, loadMenus, loadDuty]);
 
   async function toggleDinner() {
     if (!dinner) return;
@@ -67,6 +74,24 @@ export default function MiddagScreen() {
           />
         </Card>
       ))}
+
+      {duty ? (
+        <View style={{ marginTop: 26 }}>
+          <Text style={[styles.h1, { fontSize: 19 }]}>Kjøkkentjeneste</Text>
+          <Text style={styles.date}>Uke {duty.isoWeek} · {formatWeekRange(duty.weekStart, duty.weekEnd)}</Text>
+          <Card style={{ marginTop: 10, padding: 0, paddingVertical: 6 }}>
+            {duty.students.length ? duty.students.map((s, i) => (
+              <View key={s.id} style={[styles.dutyRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}>
+                <Text style={styles.dutyName}>{s.fullName}</Text>
+                {s.id === user?.id ? <Pill tone="amber" text="Deg" /> : null}
+                <Text style={styles.dutyClass}>{s.className || ''}</Text>
+              </View>
+            )) : (
+              <Text style={[styles.sub, { paddingHorizontal: 18, paddingVertical: 10, marginTop: 0 }]}>Ingen satt opp denne uken.</Text>
+            )}
+          </Card>
+        </View>
+      ) : null}
 
       <Text style={[styles.h1, { fontSize: 19, marginTop: 26 }]}>Ukemeny</Text>
       {menus.length ? menus.map((m) => {
@@ -117,4 +142,7 @@ const styles = StyleSheet.create({
   dayName: { fontSize: 13, fontWeight: '800', color: C.red, letterSpacing: 0.4, textTransform: 'uppercase' },
   dayDishes: { fontSize: 15, fontWeight: '600', color: C.navy, marginTop: 3, lineHeight: 21 },
   dayNote: { fontSize: 12.5, color: C.muted, marginTop: 3, lineHeight: 18 },
+  dutyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 11 },
+  dutyName: { flex: 1, fontSize: 15, fontWeight: '700', color: C.ink },
+  dutyClass: { fontSize: 13, fontWeight: '600', color: C.muted2 },
 });

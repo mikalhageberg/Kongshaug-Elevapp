@@ -1,4 +1,4 @@
-import { api, getPosition, formatTime, formatDateLong, formatDateShort, icon } from '/shared/api.js';
+import { api, getPosition, formatTime, formatDateLong, formatDateShort, formatWeekRange, icon } from '/shared/api.js';
 
 const root = document.getElementById('root');
 let user = null;
@@ -175,6 +175,7 @@ async function renderDashboard() {
       <div style="width:42px;height:42px;border-radius:50%;background:#dbe4ef;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto">${initials(user.fullName)}</div>
     </div>
     <div style="padding:0 22px"><div id="geo" class="banner pill-grey">Sjekker posisjon…</div></div>
+    <div id="kitchenDuty" style="padding:0 22px"></div>
     <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:16px">
       <div class="card" data-go="/brannliste" style="cursor:pointer">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
@@ -218,8 +219,39 @@ async function renderDashboard() {
       : `<span class="pill pill-grey"><span class="dot" style="background:var(--muted-2)"></span> Ikke registrert ennå</span>`;
   });
 
+  // Kjøkkentjeneste: tydelig kort i tjenesteuken, diskret varsel uken før.
+  api('/api/dinner/kitchen-duty/me').then((d) => {
+    const box = body.querySelector('#kitchenDuty');
+    if (d.thisWeek) {
+      box.innerHTML = `
+        <div class="card" data-go="/middag" style="cursor:pointer;margin-top:14px;border-color:var(--amber);background:var(--amber-bg)">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:50px;height:50px;border-radius:15px;background:var(--amber-ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.food}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:17px;font-weight:800;color:var(--amber-ink)">Du har kjøkkentjeneste denne uken</div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--amber-ink);opacity:.85;margin-top:2px">Uke ${d.thisWeek.isoWeek} · ${formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}${dutyPartners(d.thisWeek)}</div>
+            </div>
+          </div>
+        </div>`;
+    } else if (d.nextWeek) {
+      box.innerHTML = `
+        <div class="banner pill-grey" data-go="/middag" style="cursor:pointer;margin-top:12px;background:#e7edf5;color:var(--navy)">
+          ${icon.food} Du har kjøkkentjeneste neste uke · uke ${d.nextWeek.isoWeek}
+        </div>`;
+    } else { return; }
+    box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
+  }).catch(() => {});
+
   // GPS-banner
   updateGeoBanner(body.querySelector('#geo'));
+}
+
+// «sammen med X og Y» – hvem eleven deler tjenesteuken med.
+function dutyPartners(week, meId = user.id) {
+  const others = week.students.filter((s) => s.id !== meId).map((s) => s.fullName);
+  if (!others.length) return '';
+  const list = others.length === 1 ? others[0] : `${others.slice(0, -1).join(', ')} og ${others[others.length - 1]}`;
+  return ` · sammen med ${esc(list)}`;
 }
 
 async function updateGeoBanner(node) {
@@ -456,6 +488,24 @@ async function renderMenus(menusEl) {
   }
 }
 
+// Hvem har kjøkkentjeneste denne uken – alle elever ser listen.
+async function renderDutyWeek(node) {
+  const d = await api('/api/dinner/kitchen-duty').catch(() => null);
+  const w = d?.weeks?.[0];
+  if (!w) return;
+  node.innerHTML = `
+    <div class="h1" style="font-size:19px">Kjøkkentjeneste</div>
+    <div class="sub" style="font-weight:700;color:var(--muted-2);margin-top:2px">Uke ${w.isoWeek} · ${formatWeekRange(w.weekStart, w.weekEnd)}</div>
+    <div class="card" style="border-radius:18px;margin-top:10px;padding:6px 0">
+      ${w.students.length ? w.students.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;${i ? 'border-top:1px solid var(--line)' : ''}">
+          <span style="flex:1;font-size:15px;font-weight:700">${esc(s.fullName)}${s.id === user.id ? ' <span class="pill pill-amber" style="margin-left:6px">Deg</span>' : ''}</span>
+          <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
+        </div>`).join('')
+      : '<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">Ingen satt opp denne uken.</div>'}
+    </div>`;
+}
+
 // ── Middag ───────────────────────────────────────────────────
 async function renderMiddag() {
   root.innerHTML = '';
@@ -469,6 +519,7 @@ async function renderMiddag() {
     <div class="h1" style="font-size:24px">Middag</div>
     <div class="sub" style="font-weight:700;color:var(--muted-2)">${formatDateLong(today)}</div>
     <div id="dinner" style="margin-top:16px"></div>
+    <div id="duty" style="margin-top:26px"></div>
     <div style="margin-top:26px">
       <div class="h1" style="font-size:19px">Ukemeny</div>
       <div id="menus" style="margin-top:10px"></div>
@@ -477,6 +528,7 @@ async function renderMiddag() {
 
   const menusEl = body.querySelector('#menus');
   renderMenus(menusEl);
+  renderDutyWeek(body.querySelector('#duty'));
 
   const dinnerEl = body.querySelector('#dinner');
   async function loadDinner() {

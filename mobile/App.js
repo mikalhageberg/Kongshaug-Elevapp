@@ -108,7 +108,7 @@ export default function App() {
         {tab === 'home' && <DashboardScreen user={user} onLogout={logout} goTo={setTab} />}
         {tab === 'brann' && <BrannlisteScreen />}
         {tab === 'andakt' && <AndaktScreen user={user} />}
-        {tab === 'middag' && <MiddagScreen />}
+        {tab === 'middag' && <MiddagScreen user={user} />}
       </View>
 
       <View style={styles.tabbar}>

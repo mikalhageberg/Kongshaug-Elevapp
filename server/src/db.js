@@ -107,6 +107,17 @@ db.exec(`
     UNIQUE (user_id, date)
   );
   CREATE INDEX IF NOT EXISTS idx_dinner_date ON dinner_optouts(date);
+
+  -- Kjøkkentjeneste: elevene som har tjeneste en gitt uke (rundgang).
+  -- Uken identifiseres av mandagsdatoen, se isoWeek.js. Én rad per elev per uke.
+  CREATE TABLE IF NOT EXISTS kitchen_duties (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    week_start TEXT    NOT NULL,   -- 'YYYY-MM-DD' mandagen i uken
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, week_start)
+  );
+  CREATE INDEX IF NOT EXISTS idx_kitchen_duty_week ON kitchen_duties(week_start);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

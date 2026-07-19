@@ -1,4 +1,4 @@
-import { api, formatTime, formatDateLong, icon } from '/shared/api.js';
+import { api, formatTime, formatDateLong, formatWeekRange, icon } from '/shared/api.js';
 
 const root = document.getElementById('root');
 let user = null;
@@ -763,7 +763,15 @@ async function renderKitchen(main) {
   });
 
   const kpi = (n, txt, color) => `<div class="kpi"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">${txt}</div><div style="font-size:38px;font-weight:800;color:${color}">${n}</div></div>`;
+  const duty = d.kitchenDuty;
   page.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;margin-bottom:18px">
+      <div style="width:42px;height:42px;border-radius:12px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.food}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em">Kjøkkentjeneste · uke ${duty.isoWeek}</div>
+        <div style="font-size:15px;font-weight:700;margin-top:2px;color:${duty.students.length ? 'inherit' : 'var(--muted-2)'}">${duty.students.length ? esc(duty.students.map((s) => s.fullName).join(', ')) : 'Ingen elever satt opp denne uken'}</div>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:22px">
       ${kpi(`${d.eating} <span style="font-size:18px;color:var(--muted-2)">/ ${d.total}</span>`, 'Spiser middag', 'var(--green)')}
       ${kpi(d.total - d.eating, 'Spiser ikke', 'var(--red)')}
@@ -773,10 +781,139 @@ async function renderKitchen(main) {
       ${d.notEating.length ? d.notEating.map((n) => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid #f2f4f6">
           <span class="dot" style="background:var(--red)"></span>
-          <span style="flex:1;font-size:14.5px;font-weight:700">${n.name}</span>
+          <span style="flex:1;font-size:14.5px;font-weight:700">${esc(n.name)}</span>
           <span class="pill pill-red">Meldt av</span>
         </div>`).join('') : '<div style="padding:22px;color:var(--muted-2)">Alle spiser middag i dag.</div>'}
     </div>`;
+
+  mountKitchenDuty(page);
+}
+
+// ── Kjøkkentjeneste ──────────────────────────────────────────
+// Elevene har tjeneste én uke av gangen, på rundgang. Admin blar mellom uker og
+// legger til eksisterende elever; uken identifiseres av mandagsdatoen.
+function mountKitchenDuty(container) {
+  const card = el(`
+    <div style="margin-top:26px">
+      <div style="font-size:17px;font-weight:800;margin-bottom:2px">Kjøkkentjeneste</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">Legg til elevene som har tjeneste, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen tjenesteuke på hjemskjermen i appen.</div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f7f8fa;border-bottom:1px solid var(--line)">
+          <button class="btn btn-ghost" id="prevWeek" title="Forrige uke" style="height:38px;width:38px;padding:0;font-size:16px">‹</button>
+          <div style="flex:1;text-align:center">
+            <div id="weekTitle" style="font-size:16px;font-weight:800">Uke –</div>
+            <div id="weekRange" style="font-size:12.5px;color:var(--muted-2);font-weight:600"></div>
+          </div>
+          <button class="btn btn-ghost" id="nextWeek" title="Neste uke" style="height:38px;width:38px;padding:0;font-size:16px">›</button>
+        </div>
+        <div id="dutyList"></div>
+        <div style="padding:14px 18px;border-top:1px solid var(--line);position:relative">
+          <input type="text" id="dutySearch" class="field" placeholder="Søk opp elev å legge til…" autocomplete="off" style="height:44px" />
+          <div id="dutyResults" style="display:none;position:absolute;left:18px;right:18px;bottom:62px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.14);z-index:20"></div>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin:22px 0 10px">Kommende uker</div>
+      <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"></div>
+    </div>`);
+  container.appendChild(card);
+
+  const shiftWeek = (ws, n) => {
+    const [y, m, d] = ws.split('-').map(Number);
+    return ymd(new Date(y, m - 1, d + n * 7));
+  };
+
+  const listEl = card.querySelector('#dutyList');
+  const searchEl = card.querySelector('#dutySearch');
+  const resultsEl = card.querySelector('#dutyResults');
+  const upcomingEl = card.querySelector('#dutyUpcoming');
+
+  let weekStart = null;      // uken som vises nå (mandagsdato)
+  let currentStart = null;   // uken vi faktisk er i – for «Denne uken»-merket
+  let students = [];         // alle aktive elever, til søket
+  let assigned = [];         // elevene på uken som vises
+
+  api('/api/users')
+    .then((d) => { students = d.users.filter((u) => u.role === 'student' && u.active); })
+    .catch(() => {});
+
+  async function loadWeek(ws) {
+    const q = ws ? `?from=${ws}` : '';
+    const d = await api(`/api/dinner/kitchen-duty${q}`).catch(() => null);
+    if (!d) { listEl.innerHTML = '<div style="padding:22px;color:var(--muted-2)">Kunne ikke laste kjøkkentjenesten.</div>'; return; }
+    currentStart = d.currentWeek.weekStart;
+    renderWeek(d.weeks[0]);
+  }
+
+  function renderWeek(w) {
+    weekStart = w.weekStart;
+    assigned = w.students;
+    card.querySelector('#weekTitle').textContent = `Uke ${w.isoWeek}${w.isCurrent ? ' · denne uken' : ''}`;
+    card.querySelector('#weekRange').textContent = formatWeekRange(w.weekStart, w.weekEnd);
+    listEl.innerHTML = w.students.length ? w.students.map((s) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #f2f4f6">
+        <span style="flex:1;font-size:14.5px;font-weight:700">${esc(s.fullName)}</span>
+        <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
+        <button class="btn btn-ghost" data-remove="${s.id}" title="Fjern fra uken" style="height:34px;padding:0 12px;font-size:13px">Fjern</button>
+      </div>`).join('') : '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen elever satt opp denne uken ennå.</div>';
+
+    listEl.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        const r = await api(`/api/dinner/kitchen-duty/${weekStart}/${b.dataset.remove}`, { method: 'DELETE' });
+        renderWeek(r.week); loadUpcoming();
+      } catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+  }
+
+  async function addStudent(id) {
+    try {
+      const r = await api('/api/dinner/kitchen-duty', { method: 'POST', body: { weekStart, userIds: [id] } });
+      searchEl.value = ''; resultsEl.style.display = 'none';
+      renderWeek(r.week); loadUpcoming();
+    } catch (ex) { toast(ex.message); }
+  }
+
+  function renderResults() {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q) { resultsEl.style.display = 'none'; return; }
+    const taken = new Set(assigned.map((s) => s.id));
+    const hits = students
+      .filter((u) => !taken.has(u.id) && (u.fullName.toLowerCase().includes(q) || (u.className || '').toLowerCase().includes(q)))
+      .slice(0, 8);
+    resultsEl.innerHTML = hits.length ? hits.map((u) => `
+      <button type="button" data-add="${u.id}" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:11px 14px;cursor:pointer">
+        <span style="flex:1;font-size:14px;font-weight:700">${esc(u.fullName)}</span>
+        <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${esc([u.className, u.dorm].filter(Boolean).join(' · '))}</span>
+      </button>`).join('') : '<div style="padding:14px;color:var(--muted-2);font-size:13.5px">Ingen treff.</div>';
+    resultsEl.style.display = 'block';
+    resultsEl.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => addStudent(Number(b.dataset.add))));
+  }
+
+  // Oversikt over rundgangen framover, så admin ser hull før de oppstår.
+  async function loadUpcoming() {
+    const d = await api('/api/dinner/kitchen-duty?weeks=8').catch(() => null);
+    if (!d) { upcomingEl.innerHTML = ''; return; }
+    upcomingEl.innerHTML = d.weeks.map((w) => `
+      <button type="button" data-week="${w.weekStart}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:12px 18px;cursor:pointer">
+        <span style="flex:0 0 76px;font-size:14px;font-weight:800">Uke ${w.isoWeek}</span>
+        <span style="flex:0 0 auto;font-size:12.5px;color:var(--muted-2);font-weight:600;min-width:130px">${formatWeekRange(w.weekStart, w.weekEnd)}</span>
+        <span style="flex:1;font-size:14px;font-weight:600;color:${w.students.length ? 'var(--ink, #1a2230)' : 'var(--muted-2)'}">${w.students.length ? esc(w.students.map((s) => s.fullName).join(', ')) : 'Ingen satt opp'}</span>
+        ${w.isCurrent ? '<span class="pill pill-green">Nå</span>' : ''}
+      </button>`).join('');
+    upcomingEl.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => loadWeek(b.dataset.week)));
+  }
+
+  card.querySelector('#prevWeek').addEventListener('click', () => loadWeek(shiftWeek(weekStart, -1)));
+  card.querySelector('#nextWeek').addEventListener('click', () => loadWeek(shiftWeek(weekStart, 1)));
+  searchEl.addEventListener('input', renderResults);
+  searchEl.addEventListener('focus', renderResults);
+  // Klikk utenfor lukker trefflisten (uten å spise klikket på et treff).
+  document.addEventListener('click', (e) => {
+    if (!card.contains(e.target)) resultsEl.style.display = 'none';
+  });
+
+  loadWeek();
+  loadUpcoming();
 }
 
 // ── Ukemeny (PDF): opplasting, OpenAI-tolkning, forhåndsvis + rediger ──

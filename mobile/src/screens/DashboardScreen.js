@@ -1,23 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { api, getPositionOnCampus } from '../api';
-import { C, formatTime, formatDateLong, initials, todayStr, greeting } from '../theme';
+import { C, formatTime, formatDateLong, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button } from '../ui';
+
+// «sammen med X og Y» – hvem eleven deler tjenesteuken med.
+function dutyPartners(week, meId) {
+  const others = week.students.filter((s) => s.id !== meId).map((s) => s.fullName);
+  if (!others.length) return '';
+  const list = others.length === 1 ? others[0] : `${others.slice(0, -1).join(', ')} og ${others[others.length - 1]}`;
+  return ` · sammen med ${list}`;
+}
 
 export default function DashboardScreen({ user, onLogout, goTo }) {
   const [fire, setFire] = useState(null);
   const [andakt, setAndakt] = useState(null);
+  const [duty, setDuty] = useState(null);
   const [geo, setGeo] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
   const [refreshing, setRefreshing] = useState(false);
   const today = todayStr();
 
   const load = useCallback(async () => {
-    const [f, a] = await Promise.all([
+    const [f, a, k] = await Promise.all([
       api('/api/firelist/status').catch(() => null),
       api('/api/andakt/status').catch(() => null),
+      api('/api/dinner/kitchen-duty/me').catch(() => null),
     ]);
     setFire(f);
     setAndakt(a);
+    setDuty(k);
   }, []);
 
   useEffect(() => {
@@ -63,6 +74,26 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
       <View style={{ marginBottom: 16 }}><Banner tone={geo.tone} text={geo.text} /></View>
 
+      {/* Kjøkkentjeneste: tydelig kort i tjenesteuken, diskret varsel uken før. */}
+      {duty?.thisWeek ? (
+        <Card style={styles.dutyCard} onPress={() => goTo('middag')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={[styles.cardIcon, { backgroundColor: C.amberInk }]}><Text style={{ fontSize: 24 }}>🍽️</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: C.amberInk }]}>Du har kjøkkentjeneste denne uken</Text>
+              <Text style={styles.dutySub}>
+                Uke {duty.thisWeek.isoWeek} · {formatWeekRange(duty.thisWeek.weekStart, duty.thisWeek.weekEnd)}
+                {dutyPartners(duty.thisWeek, user.id)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : duty?.nextWeek ? (
+        <View style={{ marginBottom: 14 }}>
+          <Banner text={`🍽️ Du har kjøkkentjeneste neste uke · uke ${duty.nextWeek.isoWeek}`} />
+        </View>
+      ) : null}
+
       <Card style={{ marginBottom: 14 }} onPress={() => goTo('brann')}>
         <View style={styles.cardHead}>
           <View style={styles.cardIcon}><Text style={{ fontSize: 24 }}>🔥</Text></View>
@@ -100,4 +131,6 @@ const styles = StyleSheet.create({
   cardIcon: { width: 50, height: 50, borderRadius: 15, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 18, fontWeight: '800', color: C.ink },
   cardSub: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 2 },
+  dutyCard: { marginBottom: 14, backgroundColor: C.amberBg, borderColor: C.amber },
+  dutySub: { fontSize: 13, color: C.amberInk, fontWeight: '600', marginTop: 3, lineHeight: 18 },
 });

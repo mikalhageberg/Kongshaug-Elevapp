@@ -55,6 +55,16 @@ export function formatDateShort(dstr) {
   return `${wd}. ${d}. ${MONTHS[m - 1].slice(0, 3)}`;
 }
 
+// Datointervallet for en uke, så kort som mulig uten å bli tvetydig:
+// «20.–26. juli» · «29. juni – 5. juli» · «29. desember 2025 – 4. januar 2026»
+export function formatWeekRange(startStr, endStr) {
+  const [y1, m1, d1] = startStr.split('-').map(Number);
+  const [y2, m2, d2] = endStr.split('-').map(Number);
+  if (y1 !== y2) return `${d1}. ${MONTHS[m1 - 1]} ${y1} – ${d2}. ${MONTHS[m2 - 1]} ${y2}`;
+  if (m1 !== m2) return `${d1}. ${MONTHS[m1 - 1]} – ${d2}. ${MONTHS[m2 - 1]}`;
+  return `${d1}.–${d2}. ${MONTHS[m1 - 1]}`;
+}
+
 // Icon-hjelper (Feather-lignende SVG-er brukt i designet).
 export const icon = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>',

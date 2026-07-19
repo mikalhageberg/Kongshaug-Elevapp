@@ -42,6 +42,16 @@ export function formatDateShort(dstr) {
   return `${wd}. ${d}. ${MONTHS[m - 1].slice(0, 3)}`;
 }
 
+// Datointervallet for en uke, så kort som mulig uten å bli tvetydig:
+// «20.–26. juli» · «29. juni – 5. juli» · «29. desember 2025 – 4. januar 2026»
+export function formatWeekRange(startStr, endStr) {
+  const [y1, m1, d1] = startStr.split('-').map(Number);
+  const [y2, m2, d2] = endStr.split('-').map(Number);
+  if (y1 !== y2) return `${d1}. ${MONTHS[m1 - 1]} ${y1} – ${d2}. ${MONTHS[m2 - 1]} ${y2}`;
+  if (m1 !== m2) return `${d1}. ${MONTHS[m1 - 1]} – ${d2}. ${MONTHS[m2 - 1]}`;
+  return `${d1}.–${d2}. ${MONTHS[m1 - 1]}`;
+}
+
 // Formater et Date-objekt som 'YYYY-MM-DD' i LOKAL tid (ikke UTC).
 // Viktig: toISOString() ville brukt UTC og gitt feil dato nær midnatt.
 export function ymd(dt) {
