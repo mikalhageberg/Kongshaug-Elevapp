@@ -13,9 +13,8 @@ import settingsRoutes from './routes/settings.js';
 import historyRoutes from './routes/history.js';
 import dinnerRoutes from './routes/dinner.js';
 import menuRoutes from './routes/menus.js';
-import { getSettings } from './settings.js';
-import { sendFireListEmail, sendKitchenEmail } from './mail.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
+import { startEmailSchedulers } from './emailScheduler.js';
 
 await ensureBootstrapAdmin();
 
@@ -87,28 +86,3 @@ app.listen(config.port, () => {
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);
   startEmailSchedulers();
 });
-
-// Sjekker hvert minutt om klokka er lik et innstilt sendetidspunkt, og sender da
-// den aktuelle e-posten – én gang per dag. Robust mot at innstillinger endres.
-function startEmailSchedulers() {
-  let lastFire = null, lastKitchen = null;
-  setInterval(async () => {
-    let s;
-    try { s = getSettings(); } catch { return; }
-    const now = new Date();
-    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const dateKey = now.toISOString().slice(0, 10);
-
-    if (s.fireEmailEnabled && s.fireEmailRecipient && hhmm === s.fireEmailTime && lastFire !== dateKey) {
-      lastFire = dateKey;
-      try { const r = await sendFireListEmail(); console.log(`  ✉  Brannliste sendt til ${r.recipient} (natt ${r.nightDate})`); }
-      catch (ex) { console.error('  ✉  Brannliste-epost feilet:', ex.message); }
-    }
-
-    if (s.kitchenEmailEnabled && s.kitchenEmailRecipient && hhmm === s.kitchenEmailTime && lastKitchen !== dateKey) {
-      lastKitchen = dateKey;
-      try { const r = await sendKitchenEmail(); console.log(`  ✉  Middagsoversikt sendt til ${r.recipient} (${r.eating} spiser)`); }
-      catch (ex) { console.error('  ✉  Middags-epost feilet:', ex.message); }
-    }
-  }, 60 * 1000);
-}

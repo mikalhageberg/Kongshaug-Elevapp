@@ -59,6 +59,19 @@ export function setSettings(partial) {
   return getSettings();
 }
 
+// Intern tilstand for e-postplanleggeren: hvilken dato e-posten sist ble sendt.
+// Ligger i samme tabell, men holdes utenfor getSettings() – dette er ikke noe
+// admin skal endre. Lagres i databasen, ikke i minnet, slik at en omstart av
+// serveren rundt sendetidspunktet ikke fører til at e-posten sendes to ganger.
+export function getLastSent(key) {
+  return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value ?? null;
+}
+export function setLastSent(key, dateKey) {
+  db.prepare(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).run(key, dateKey);
+}
+
 // Hvilken brannliste-frist gjelder for en gitt dag? Lørdag (getDay()===6) har egen.
 export function fireDeadlineForDay(date = new Date(), settings = getSettings()) {
   return date.getDay() === 6 ? settings.fireDeadlineSaturday : settings.fireDeadlineWeekday;

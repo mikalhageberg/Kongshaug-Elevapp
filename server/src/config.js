@@ -26,6 +26,10 @@ export const config = {
     lat: Number(process.env.SCHOOL_LAT ?? 60.18023),
     lng: Number(process.env.SCHOOL_LNG ?? 5.42007),
     radiusMeters: Number(process.env.SCHOOL_RADIUS_METERS ?? 200),
+    // Klokkeslett admin skriver inn (e-posttidspunkter) er norsk tid. Serveren
+    // kjører i UTC i drift (node:22-slim setter ingen TZ), så tidssonen må sies
+    // eksplisitt – ellers sendes e-postene to timer feil om sommeren.
+    timeZone: process.env.SCHOOL_TIMEZONE || 'Europe/Oslo',
   },
 
   andakt: {
