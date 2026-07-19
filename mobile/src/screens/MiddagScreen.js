@@ -2,22 +2,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { api, fileUrl } from '../api';
 import { C, formatDateLong, formatWeekRange, todayStr } from '../theme';
-import { Button, Card, Pill } from '../ui';
+import { Banner, Button, Card, Pill } from '../ui';
 
 export default function MiddagScreen({ user }) {
   const [dinner, setDinner] = useState(null);
   const [busy, setBusy] = useState(false);
   const [menus, setMenus] = useState([]);
   const [parsed, setParsed] = useState({}); // { [menuId]: { days, note } }
-  const [duty, setDuty] = useState(null);   // ukens kjøkkentjeneste
+  const [duty, setDuty] = useState(null);       // ukene framover, [0] = denne uken
+  const [planOpen, setPlanOpen] = useState(false);
 
   const loadDinner = useCallback(async () => {
     setDinner(await api('/api/dinner/status').catch(() => null));
   }, []);
 
   const loadDuty = useCallback(async () => {
-    const d = await api('/api/dinner/kitchen-duty').catch(() => null);
-    setDuty(d?.weeks?.[0] || null);
+    const d = await api('/api/dinner/kitchen-duty?weeks=12').catch(() => null);
+    setDuty(d?.weeks?.length ? d.weeks : null);
   }, []);
 
   const loadMenus = useCallback(async () => {
@@ -75,23 +76,63 @@ export default function MiddagScreen({ user }) {
         </Card>
       ))}
 
-      {duty ? (
-        <View style={{ marginTop: 26 }}>
-          <Text style={[styles.h1, { fontSize: 19 }]}>Kjøkkentjeneste</Text>
-          <Text style={styles.date}>Uke {duty.isoWeek} · {formatWeekRange(duty.weekStart, duty.weekEnd)}</Text>
-          <Card style={{ marginTop: 10, padding: 0, paddingVertical: 6 }}>
-            {duty.students.length ? duty.students.map((s, i) => (
-              <View key={s.id} style={[styles.dutyRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}>
-                <Text style={styles.dutyName}>{s.fullName}</Text>
-                {s.id === user?.id ? <Pill tone="amber" text="Deg" /> : null}
-                <Text style={styles.dutyClass}>{s.className || ''}</Text>
+      {duty ? (() => {
+        const now = duty[0];
+        // Klipp planen etter den siste uken noen er satt opp – tomme uker midt
+        // i beholdes, så eleven ser hullene i rundgangen.
+        let last = 0;
+        duty.forEach((w, i) => { if (w.students.length) last = i; });
+        const upcoming = duty.slice(1, last + 1);
+        const mine = upcoming.find((w) => w.students.some((s) => s.id === user?.id));
+        return (
+          <View style={{ marginTop: 26 }}>
+            <Text style={[styles.h1, { fontSize: 19 }]}>Kjøkkentjeneste</Text>
+            <Text style={styles.date}>Uke {now.isoWeek} · {formatWeekRange(now.weekStart, now.weekEnd)}</Text>
+            <Card style={{ marginTop: 10, padding: 0, paddingVertical: 6 }}>
+              {now.students.length ? now.students.map((s, i) => (
+                <View key={s.id} style={[styles.dutyRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}>
+                  <Text style={styles.dutyName}>{s.fullName}</Text>
+                  {s.id === user?.id ? <Pill tone="amber" text="Deg" /> : null}
+                  <Text style={styles.dutyClass}>{s.className || ''}</Text>
+                </View>
+              )) : (
+                <Text style={[styles.sub, { paddingHorizontal: 18, paddingVertical: 10, marginTop: 0 }]}>Ingen satt opp denne uken.</Text>
+              )}
+            </Card>
+
+            {mine ? (
+              <View style={{ marginTop: 10 }}>
+                <Banner text={`🕑 Din neste tjeneste: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}`} />
               </View>
-            )) : (
-              <Text style={[styles.sub, { paddingHorizontal: 18, paddingVertical: 10, marginTop: 0 }]}>Ingen satt opp denne uken.</Text>
-            )}
-          </Card>
-        </View>
-      ) : null}
+            ) : null}
+
+            {upcoming.length ? (
+              <>
+                <Button
+                  title={planOpen ? 'Vis mindre' : 'Vis hele planen'}
+                  color="#fff" textColor={C.slate} fontSize={14.5}
+                  onPress={() => setPlanOpen((o) => !o)}
+                  style={{ height: 46, marginTop: 10, borderWidth: 1.5, borderColor: '#d3dae2' }}
+                />
+                {planOpen ? upcoming.map((w) => {
+                  const isMine = w.students.some((s) => s.id === user?.id);
+                  return (
+                    <Card key={w.weekStart} style={[styles.planCard, isMine && { backgroundColor: C.amberBg, borderColor: C.amber }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                        <Text style={[styles.planWeek, isMine && { color: C.amberInk }]}>Uke {w.isoWeek}</Text>
+                        <Text style={styles.planRange}>{formatWeekRange(w.weekStart, w.weekEnd)}</Text>
+                      </View>
+                      <Text style={[styles.planNames, isMine && { color: C.amberInk }, !w.students.length && { color: C.muted2 }]}>
+                        {w.students.map((s) => s.fullName).join(', ') || 'Ingen satt opp'}
+                      </Text>
+                    </Card>
+                  );
+                }) : null}
+              </>
+            ) : null}
+          </View>
+        );
+      })() : null}
 
       <Text style={[styles.h1, { fontSize: 19, marginTop: 26 }]}>Ukemeny</Text>
       {menus.length ? menus.map((m) => {
@@ -145,4 +186,8 @@ const styles = StyleSheet.create({
   dutyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 11 },
   dutyName: { flex: 1, fontSize: 15, fontWeight: '700', color: C.ink },
   dutyClass: { fontSize: 13, fontWeight: '600', color: C.muted2 },
+  planCard: { borderRadius: 14, padding: 14, marginTop: 8 },
+  planWeek: { fontSize: 14, fontWeight: '800', color: C.ink },
+  planRange: { fontSize: 12.5, fontWeight: '600', color: C.muted2 },
+  planNames: { fontSize: 14.5, fontWeight: '600', color: C.ink, marginTop: 3, lineHeight: 20 },
 });

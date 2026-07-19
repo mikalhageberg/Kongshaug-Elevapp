@@ -749,11 +749,10 @@ window.addEventListener('hashchange', () => clearInterval(andaktTimer));
 // ── Middag (kjøkken) ─────────────────────────────────────────
 async function renderKitchen(main) {
   const d = await api('/api/dinner/overview').catch(() => null);
-  header(main, 'Middag i dag', d ? formatDateLong(todayStr()) : '',
+  header(main, 'Middag', formatDateLong(todayStr()),
     `<button class="btn btn-ghost" id="sendKitchen" style="height:44px;padding:0 18px;font-size:14px">Send til kjøkken nå</button>`);
   const page = el(`<div class="page" style="max-width:820px"></div>`);
   main.appendChild(page);
-  if (!d) { page.innerHTML = '<p>Kunne ikke laste middagsoversikten.</p>'; return; }
 
   main.querySelector('#sendKitchen').addEventListener('click', async (e) => {
     const btn = e.currentTarget; btn.disabled = true; const old = btn.textContent; btn.textContent = 'Sender…';
@@ -763,8 +762,10 @@ async function renderKitchen(main) {
   });
 
   const kpi = (n, txt, color) => `<div class="kpi"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">${txt}</div><div style="font-size:38px;font-weight:800;color:${color}">${n}</div></div>`;
-  const duty = d.kitchenDuty;
-  page.innerHTML = `
+  // Dagens tall. Feiler oppslaget viser vi bare det – kjøkkentjeneste og
+  // ukemeny under skal fortsatt være tilgjengelig.
+  const duty = d?.kitchenDuty;
+  page.innerHTML = !d ? '<p style="color:var(--muted-2)">Kunne ikke laste middagsoversikten.</p>' : `
     <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;margin-bottom:18px">
       <div style="width:42px;height:42px;border-radius:12px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.food}</div>
       <div style="flex:1;min-width:0">
@@ -787,6 +788,7 @@ async function renderKitchen(main) {
     </div>`;
 
   mountKitchenDuty(page);
+  mountMenuManager(page);
 }
 
 // ── Kjøkkentjeneste ──────────────────────────────────────────
@@ -896,7 +898,7 @@ function mountKitchenDuty(container) {
     upcomingEl.innerHTML = d.weeks.map((w) => `
       <button type="button" data-week="${w.weekStart}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:12px 18px;cursor:pointer">
         <span style="flex:0 0 76px;font-size:14px;font-weight:800">Uke ${w.isoWeek}</span>
-        <span style="flex:0 0 auto;font-size:12.5px;color:var(--muted-2);font-weight:600;min-width:130px">${formatWeekRange(w.weekStart, w.weekEnd)}</span>
+        <span style="flex:0 0 175px;font-size:12.5px;color:var(--muted-2);font-weight:600">${formatWeekRange(w.weekStart, w.weekEnd)}</span>
         <span style="flex:1;font-size:14px;font-weight:600;color:${w.students.length ? 'var(--ink, #1a2230)' : 'var(--muted-2)'}">${w.students.length ? esc(w.students.map((s) => s.fullName).join(', ')) : 'Ingen satt opp'}</span>
         ${w.isCurrent ? '<span class="pill pill-green">Nå</span>' : ''}
       </button>`).join('');
@@ -1134,10 +1136,9 @@ function mountMenuManager(container) {
 
 // ── Innstillinger ────────────────────────────────────────────
 async function renderSettings(main) {
-  header(main, 'Innstillinger', 'Ukemeny, tidspunkter for andakt og brannliste');
-  const page = el(`<div class="page" style="max-width:720px"><div id="menuManager"></div><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
+  header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post');
+  const page = el(`<div class="page" style="max-width:720px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
   main.appendChild(page);
-  mountMenuManager(page.querySelector('#menuManager'));
 
   const s = await api('/api/settings').catch(() => null);
   if (!s) { page.querySelector('#body').textContent = 'Kunne ikke laste innstillinger.'; return; }

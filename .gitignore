@@ -27,3 +27,6 @@ mobile/.expo/
 # Ukjent/uklart innhold – ikke del av appen. Fjern denne linjen bevisst
 # hvis mappen faktisk skal være med i repoet.
 Internatskole – Brannliste & Andakt/
+
+# Claude Code: lokale tillatelser er maskinspesifikke
+.claude/settings.local.json

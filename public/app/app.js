@@ -488,22 +488,60 @@ async function renderMenus(menusEl) {
   }
 }
 
-// Hvem har kjøkkentjeneste denne uken – alle elever ser listen.
-async function renderDutyWeek(node) {
-  const d = await api('/api/dinner/kitchen-duty').catch(() => null);
-  const w = d?.weeks?.[0];
-  if (!w) return;
+// Kjøkkentjeneste: denne uken i detalj, og hele planen framover.
+async function renderDutyPlan(node) {
+  const d = await api('/api/dinner/kitchen-duty?weeks=12').catch(() => null);
+  const weeks = d?.weeks;
+  if (!weeks?.length) return;
+  const now = weeks[0];
+
+  // Klipp planen etter den siste uken noen faktisk er satt opp – tomme uker
+  // midt i beholdes, så eleven ser hullene i rundgangen.
+  let last = 0;
+  weeks.forEach((w, i) => { if (w.students.length) last = i; });
+  const upcoming = weeks.slice(1, last + 1);
+
+  // Når er eleven selv nestemann?
+  const mine = upcoming.find((w) => w.students.some((s) => s.id === user.id));
+
   node.innerHTML = `
     <div class="h1" style="font-size:19px">Kjøkkentjeneste</div>
-    <div class="sub" style="font-weight:700;color:var(--muted-2);margin-top:2px">Uke ${w.isoWeek} · ${formatWeekRange(w.weekStart, w.weekEnd)}</div>
+    <div class="sub" style="font-weight:700;color:var(--muted-2);margin-top:2px">Uke ${now.isoWeek} · ${formatWeekRange(now.weekStart, now.weekEnd)}</div>
     <div class="card" style="border-radius:18px;margin-top:10px;padding:6px 0">
-      ${w.students.length ? w.students.map((s, i) => `
+      ${now.students.length ? now.students.map((s, i) => `
         <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;${i ? 'border-top:1px solid var(--line)' : ''}">
           <span style="flex:1;font-size:15px;font-weight:700">${esc(s.fullName)}${s.id === user.id ? ' <span class="pill pill-amber" style="margin-left:6px">Deg</span>' : ''}</span>
           <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
         </div>`).join('')
       : '<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">Ingen satt opp denne uken.</div>'}
-    </div>`;
+    </div>
+    ${mine ? `<div class="banner pill-grey" style="margin-top:10px;background:#e7edf5;color:var(--navy)">${icon.clock} Din neste tjeneste: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}</div>` : ''}
+    ${upcoming.length ? `
+      <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">Vis hele planen</button>
+      <div id="planList" style="display:none;margin-top:10px"></div>` : ''}`;
+
+  if (!upcoming.length) return;
+
+  const listEl = node.querySelector('#planList');
+  listEl.innerHTML = upcoming.map((w) => {
+    const isMine = w.students.some((s) => s.id === user.id);
+    const names = w.students.map((s) => esc(s.fullName)).join(', ');
+    return `
+      <div class="card" style="border-radius:14px;padding:12px 16px;margin-bottom:8px;${isMine ? 'border-color:var(--amber);background:var(--amber-bg)' : ''}">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-size:14px;font-weight:800;${isMine ? 'color:var(--amber-ink)' : ''}">Uke ${w.isoWeek}</span>
+          <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${formatWeekRange(w.weekStart, w.weekEnd)}</span>
+        </div>
+        <div style="font-size:14.5px;font-weight:600;margin-top:3px;${w.students.length ? (isMine ? 'color:var(--amber-ink)' : '') : 'color:var(--muted-2)'}">${names || 'Ingen satt opp'}</div>
+      </div>`;
+  }).join('');
+
+  const toggle = node.querySelector('#planToggle');
+  toggle.addEventListener('click', () => {
+    const open = listEl.style.display === 'block';
+    listEl.style.display = open ? 'none' : 'block';
+    toggle.textContent = open ? 'Vis hele planen' : 'Vis mindre';
+  });
 }
 
 // ── Middag ───────────────────────────────────────────────────
@@ -528,7 +566,7 @@ async function renderMiddag() {
 
   const menusEl = body.querySelector('#menus');
   renderMenus(menusEl);
-  renderDutyWeek(body.querySelector('#duty'));
+  renderDutyPlan(body.querySelector('#duty'));
 
   const dinnerEl = body.querySelector('#dinner');
   async function loadDinner() {
