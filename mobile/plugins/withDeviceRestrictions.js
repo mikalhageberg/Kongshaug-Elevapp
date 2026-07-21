@@ -23,10 +23,12 @@ function withDeviceRestrictions(config) {
       },
     ];
 
-    // Ekskluder Chromebook: ChromeOS' kompatibilitetsprofil mot Play
-    // rapporterer alltid berøringsskjerm som fraværende, uansett om
-    // maskinen faktisk har en. Å kreve den er den dokumenterte måten å
-    // melde en app ut av ChromeOS på.
+    // Krev berøringsskjerm. Dette utelukker Chromebooks UTEN touch (eldre
+    // modeller) og andre ikke-touch-enheter – men IKKE touch-Chromebooks
+    // som HP Chromebook x2, som rapporterer touchscreen=true. Det finnes
+    // ingen pålitelig manifest-tagg som utelukker alle Chromebooks; Google
+    // lager dem nettopp for å kjøre Android-apper. Denne taggen er derfor
+    // en delvis innsnevring, ikke en full utelukkelse.
     manifest['uses-feature'] = manifest['uses-feature'] || [];
     manifest['uses-feature'].push({
       $: {
