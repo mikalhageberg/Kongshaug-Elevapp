@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, SafeAreaView, ActivityIndicator, Platform, StatusBar, AppState } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, AppState } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { api, loadToken, setToken } from './src/api';
 import { C } from './src/theme';
@@ -24,7 +25,20 @@ const TABS = [
 // lås gitt Face ID-spørsmål midt i helt vanlig bruk.
 const LOCK_GRACE_MS = 60 * 1000;
 
+// SafeAreaProvider må ligge ytterst, slik at useSafeAreaInsets() virker.
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppInner />
+    </SafeAreaProvider>
+  );
+}
+
+function AppInner() {
+  // Faktiske høyder på systemets statuslinje (topp) og navigasjonslinje (bunn).
+  // Android tegner edge-to-edge, så uten dette havner tab-baren under
+  // navigasjonslinjen. Gjelder både gest-navigasjon og de tre knappene.
+  const insets = useSafeAreaInsets();
   const [booting, setBooting] = useState(true);
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('home');
@@ -72,12 +86,16 @@ export default function App() {
     );
   }
 
+  // Skjermer uten tab-bar: hold innholdet klar av både statuslinje og
+  // navigasjonslinje.
+  const screenPad = { paddingTop: insets.top, paddingBottom: insets.bottom };
+
   if (!user) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={[styles.safe, screenPad]}>
         <ExpoStatusBar style="dark" />
         <LoginScreen onLoggedIn={setUser} />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -85,24 +103,26 @@ export default function App() {
   // Face ID / kode er godkjent.
   if (locked) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={[styles.safe, screenPad]}>
         <ExpoStatusBar style="dark" />
         <LockScreen onUnlocked={() => setLocked(false)} onLogout={logout} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (user.mustChangePassword) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={[styles.safe, screenPad]}>
         <ExpoStatusBar style="dark" />
         <ChangePasswordScreen onDone={() => setUser({ ...user, mustChangePassword: false })} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    // Kun topp-padding her: tab-baren håndterer bunnen selv, så dens hvite
+    // flate strekker seg helt ned bak navigasjonslinjen.
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ExpoStatusBar style="dark" />
       <View style={{ flex: 1 }}>
         {tab === 'home' && <DashboardScreen user={user} onLogout={logout} goTo={setTab} />}
@@ -111,7 +131,7 @@ export default function App() {
         {tab === 'middag' && <MiddagScreen user={user} />}
       </View>
 
-      <View style={styles.tabbar}>
+      <View style={[styles.tabbar, { paddingBottom: 8 + insets.bottom }]}>
         {TABS.map((t) => {
           const active = tab === t.key;
           return (
@@ -124,7 +144,7 @@ export default function App() {
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -132,12 +152,12 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: C.surface,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabbar: {
+    // paddingTop fast; paddingBottom settes i render til 8 + navigasjonslinjen.
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
-    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: C.line, paddingVertical: 8,
+    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8,
   },
   tab: { alignItems: 'center', gap: 3, paddingHorizontal: 10, paddingVertical: 4 },
   tabLabel: { fontSize: 11 },
