@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { api } from '../api';
 import { C } from '../theme';
 import { Button } from '../ui';
@@ -26,7 +26,10 @@ export default function ChangePasswordScreen({ onDone }) {
   }
 
   return (
+    // ScrollView inni KeyboardAvoidingView, samme mønster som innloggingen:
+    // holder feltet synlig over tastaturet på Android med edge-to-edge.
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.icon}><Text style={{ fontSize: 26 }}>🔒</Text></View>
       <Text style={styles.h1}>Velg ditt eget passord</Text>
       <Text style={styles.sub}>
@@ -41,12 +44,14 @@ export default function ChangePasswordScreen({ onDone }) {
 
       {err ? <Text style={styles.err}>{err}</Text> : null}
       <Button title="Lagre og fortsett" onPress={submit} loading={loading} style={{ marginTop: 22 }} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, justifyContent: 'center', padding: 26, backgroundColor: C.surface },
+  wrap: { flex: 1, backgroundColor: C.surface },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 26 },
   icon: { width: 56, height: 56, borderRadius: 16, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   h1: { fontSize: 26, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
   sub: { fontSize: 15, color: C.muted, marginTop: 10, marginBottom: 22, lineHeight: 22 },

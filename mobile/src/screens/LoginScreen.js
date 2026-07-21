@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, ScrollView, Platform, Linking } from 'react-native';
 import { api, setToken, BASE_URL } from '../api';
 import { C } from '../theme';
 import { Button } from '../ui';
@@ -32,7 +32,13 @@ export default function LoginScreen({ onLoggedIn }) {
   }
 
   return (
+    // ScrollView inni KeyboardAvoidingView: innholdet sentreres når tastaturet
+    // er lukket, og kan rulles slik at det fokuserte feltet løftes over
+    // tastaturet på Android (der adjustResize ikke er til å stole på med
+    // edge-to-edge). keyboardShouldPersistTaps lar «Logg inn» trykkes på
+    // første trykk mens tastaturet er oppe.
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.logoRow}>
         <View style={styles.logo}><Text style={{ color: '#fff', fontSize: 22 }}>🏫</Text></View>
         <View>
@@ -72,12 +78,14 @@ export default function LoginScreen({ onLoggedIn }) {
       <Pressable onPress={() => Linking.openURL(`${BASE_URL}/personvern/`)} hitSlop={8}>
         <Text style={styles.privacyLink}>Personvernerklæring</Text>
       </Pressable>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, justifyContent: 'center', padding: 26, backgroundColor: C.surface },
+  wrap: { flex: 1, backgroundColor: C.surface },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 26 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 26 },
   logo: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   h1: { fontSize: 28, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
