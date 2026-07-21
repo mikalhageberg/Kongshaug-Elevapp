@@ -6,6 +6,7 @@ import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { paths, config } from '../config.js';
 import { parseMenuPdf, normalizeMenu } from '../menuParser.js';
+import { getTodayMenu } from '../todayMenu.js';
 
 const menusDir = path.join(paths.data, 'menus');
 fs.mkdirSync(menusDir, { recursive: true });
@@ -41,6 +42,12 @@ router.get('/', (req, res) => {
       hasFile: !!r.filename,
     })),
   });
+});
+
+// ── Dagens rett + nattens internatvakt (til hjem-widgeten) ───
+// Må stå FØR '/:id/parsed', ellers fanges «today» som en :id.
+router.get('/today', (req, res) => {
+  res.json(getTodayMenu());
 });
 
 // ── Hent tolket meny som strukturert JSON ────────────────────

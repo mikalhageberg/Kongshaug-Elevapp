@@ -176,6 +176,7 @@ async function renderDashboard() {
     </div>
     <div style="padding:0 22px"><div id="geo" class="banner pill-grey">Sjekker posisjon…</div></div>
     <div id="kitchenDuty" style="padding:0 22px"></div>
+    <div id="todayMenu" style="padding:0 22px"></div>
     <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:16px">
       <div class="card" data-go="/brannliste" style="cursor:pointer">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
@@ -240,6 +241,25 @@ async function renderDashboard() {
         </div>`;
     } else { return; }
     box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
+  }).catch(() => {});
+
+  // I dag: middagsrett + nattens internatvakt (fra ukemenyen)
+  api('/api/menus/today').then((t) => {
+    if (!t.dinner && !t.guard) return; // ingenting å vise
+    const box = body.querySelector('#todayMenu');
+    const row = (ic, label, value, sub) => `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0">
+        <div style="font-size:22px;line-height:1;flex:0 0 auto;margin-top:1px">${ic}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.04em">${label}</div>
+          <div style="font-size:15.5px;font-weight:700;margin-top:2px;line-height:1.35">${value}</div>
+          ${sub ? `<div class="sub" style="font-size:12.5px;margin-top:2px">${sub}</div>` : ''}
+        </div>
+      </div>`;
+    const parts = [];
+    if (t.dinner) parts.push(row('🍽️', 'Middag i dag', esc(t.dinner.dishes.join(', ')), t.dinner.note ? esc(t.dinner.note) : ''));
+    if (t.guard) parts.push(row('🌙', 'Internatvakt i natt', esc(t.guard.name), ''));
+    box.innerHTML = `<div class="card" style="border-radius:18px;margin-top:14px;padding:6px 18px">${parts.join('<div style="border-top:1px solid var(--line)"></div>')}</div>`;
   }).catch(() => {});
 
   // GPS-banner

@@ -16,19 +16,22 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
   const [fire, setFire] = useState(null);
   const [andakt, setAndakt] = useState(null);
   const [duty, setDuty] = useState(null);
+  const [todayMenu, setTodayMenu] = useState(null); // { dinner, guard } fra ukemenyen
   const [geo, setGeo] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
   const [refreshing, setRefreshing] = useState(false);
   const today = todayStr();
 
   const load = useCallback(async () => {
-    const [f, a, k] = await Promise.all([
+    const [f, a, k, t] = await Promise.all([
       api('/api/firelist/status').catch(() => null),
       api('/api/andakt/status').catch(() => null),
       api('/api/dinner/kitchen-duty/me').catch(() => null),
+      api('/api/menus/today').catch(() => null),
     ]);
     setFire(f);
     setAndakt(a);
     setDuty(k);
+    setTodayMenu(t);
   }, []);
 
   useEffect(() => {
@@ -94,6 +97,32 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
         </View>
       ) : null}
 
+      {/* I dag: middagsrett + nattens internatvakt, fra ukemenyen. */}
+      {todayMenu && (todayMenu.dinner || todayMenu.guard) ? (
+        <Card style={{ marginBottom: 14, paddingVertical: 6 }}>
+          {todayMenu.dinner ? (
+            <View style={styles.todayRow}>
+              <Text style={styles.todayIcon}>🍽️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.todayLabel}>Middag i dag</Text>
+                <Text style={styles.todayValue}>{todayMenu.dinner.dishes.join(', ')}</Text>
+                {todayMenu.dinner.note ? <Text style={styles.todaySub}>{todayMenu.dinner.note}</Text> : null}
+              </View>
+            </View>
+          ) : null}
+          {todayMenu.dinner && todayMenu.guard ? <View style={styles.todayDivider} /> : null}
+          {todayMenu.guard ? (
+            <View style={styles.todayRow}>
+              <Text style={styles.todayIcon}>🌙</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.todayLabel}>Internatvakt i natt</Text>
+                <Text style={styles.todayValue}>{todayMenu.guard.name}</Text>
+              </View>
+            </View>
+          ) : null}
+        </Card>
+      ) : null}
+
       <Card style={{ marginBottom: 14 }} onPress={() => goTo('brann')}>
         <View style={styles.cardHead}>
           <View style={styles.cardIcon}><Text style={{ fontSize: 24 }}>🔥</Text></View>
@@ -133,4 +162,10 @@ const styles = StyleSheet.create({
   cardSub: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 2 },
   dutyCard: { marginBottom: 14, backgroundColor: C.amberBg, borderColor: C.amber },
   dutySub: { fontSize: 13, color: C.amberInk, fontWeight: '600', marginTop: 3, lineHeight: 18 },
+  todayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
+  todayIcon: { fontSize: 22, lineHeight: 26 },
+  todayLabel: { fontSize: 12.5, fontWeight: '700', color: C.muted2, letterSpacing: 0.4, textTransform: 'uppercase' },
+  todayValue: { fontSize: 15.5, fontWeight: '700', color: C.ink, marginTop: 2, lineHeight: 21 },
+  todaySub: { fontSize: 12.5, color: C.muted, marginTop: 2 },
+  todayDivider: { height: 1, backgroundColor: C.line },
 });
