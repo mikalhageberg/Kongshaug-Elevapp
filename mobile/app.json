@@ -21,6 +21,7 @@
       "package": "no.kongshaug.elevapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
         "backgroundColor": "#20303A"
       },
       "permissions": [
