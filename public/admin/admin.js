@@ -1177,7 +1177,7 @@ async function renderSettings(main) {
         <div style="font-size:15px;font-weight:700;margin-bottom:6px">Mottaker (e-post)</div>
         <input type="email" name="fireEmailRecipient" value="${s.fireEmailRecipient || ''}" placeholder="larer@kongshaug.no" class="field" style="height:46px" autocapitalize="none" spellcheck="false" />
       </div>
-      ${timeRow('fireEmailTime', 'Sendetidspunkt', s.fireEmailTime, 'Kl. 14:15 sender siste ferdige natt (gårsdagens liste).')}
+      ${timeRow('fireEmailTime', 'Sendetidspunkt', s.fireEmailTime, 'Før kl. 18 sendes natt til i dag (natten som nettopp er ferdig). Fra kl. 18 sendes natt til i morgen (kveldens kommende liste).')}
       <div style="display:flex;justify-content:flex-end;margin-top:14px">
         <button class="btn btn-ghost" id="testEmail" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
       </div>

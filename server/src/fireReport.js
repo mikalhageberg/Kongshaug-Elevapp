@@ -1,5 +1,6 @@
 import db from './db.js';
 import { todayDate } from './andaktToken.js';
+import { config } from './config.js';
 
 // Bygg brannliste-oversikten for en gitt natt (night_date = dagen natten begynner).
 // Samme struktur som /api/firelist/overview.
@@ -43,11 +44,23 @@ export function getFireOverview(nightDate = todayDate()) {
 }
 
 // Hvilken natt skal rapporteres når jobben kjører nå?
-// Før kveldens innsjekk (kl. < 18) rapporteres natten som nettopp er ferdig (i går).
+// Før kl. 18 rapporteres natten som nettopp er ferdig («natt til i dag»); fra
+// kl. 18 rapporteres kveldens kommende natt («natt til i morgen»).
+// Klokkeslettet regnes i skolens tidssone – serveren kjører UTC i drift, så
+// getHours() ville flyttet grensen to timer om sommeren.
 export function reportNightDate(now = new Date()) {
-  const d = new Date(now);
-  if (now.getHours() < 18) d.setDate(d.getDate() - 1);
-  return todayDate(d);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: config.school.timeZone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now);
+  const get = (t) => parts.find((p) => p.type === t).value;
+  const hour = Number(get('hour'));
+
+  // Dagens dato i skolens tidssone, som UTC-midnatt så dag-aritmetikk er trygg.
+  const d = new Date(Date.UTC(Number(get('year')), Number(get('month')) - 1, Number(get('day'))));
+  if (hour < 18) d.setUTCDate(d.getUTCDate() - 1);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
 // 'YYYY-MM-DD' -> 'natt til <neste dag>' i lesbar norsk form.
