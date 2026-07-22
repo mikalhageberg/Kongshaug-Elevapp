@@ -102,14 +102,18 @@ router.post('/', async (req, res) => {
   });
 });
 
-// POST /api/users/bulk  – opprett mange elever på én gang.
-// body: { students: [{ fullName, className, dorm, room }] }
+// POST /api/users/bulk  – opprett mange brukere på én gang.
+// body: { students: [{ fullName, className, dorm, room }], role?: 'student' | 'admin' }
 // Genererer brukernavn (fornavn.etternavn, unikt) og et midlertidig passord for hver,
 // og returnerer passordene i klartekst ÉN gang (til utskrift av brukerkort).
+// Feltet heter fortsatt «students» av bakoverkompatibilitet; role styrer om det
+// blir elever eller administratorer. Administratorer får ikke klasse/internat/rom.
 router.post('/bulk', async (req, res) => {
   const list = Array.isArray(req.body?.students) ? req.body.students : [];
-  if (!list.length) return res.status(400).json({ error: 'Ingen elever å opprette' });
+  if (!list.length) return res.status(400).json({ error: 'Ingen brukere å opprette' });
   if (list.length > 500) return res.status(400).json({ error: 'For mange på én gang (maks 500)' });
+  const role = req.body?.role === 'admin' ? 'admin' : 'student';
+  const isStudent = role === 'student';
 
   const taken = new Set();
   const created = [];
@@ -117,7 +121,7 @@ router.post('/bulk', async (req, res) => {
 
   const insert = db.prepare(
     `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, must_change_password)
-     VALUES (?, ?, ?, 'student', ?, ?, ?, 1)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
   );
 
   for (let i = 0; i < list.length; i++) {
@@ -129,7 +133,12 @@ router.post('/bulk', async (req, res) => {
     const password = generatePassword();
     const hash = await hashPassword(password);
     try {
-      const info = insert.run(username, hash, fullName, row.className || null, row.dorm || null, row.room || null);
+      const info = insert.run(
+        username, hash, fullName, role,
+        isStudent ? (row.className || null) : null,
+        isStudent ? (row.dorm || null) : null,
+        isStudent ? (row.room || null) : null
+      );
       const u = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
       created.push({ ...publicUser(u), password });
     } catch (ex) {

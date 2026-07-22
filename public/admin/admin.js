@@ -266,8 +266,7 @@ function renderAdmins(main) {
 async function renderUserList(main, cfg) {
   const isStudent = cfg.role === 'student';
   header(main, cfg.title, 'Laster…',
-    `${isStudent ? `<button class="btn btn-ghost" id="bulk" style="height:44px;padding:0 18px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Legg til flere</button>` : ''}
-     ${!isStudent ? `<button class="btn btn-primary" id="add" style="height:44px;padding:0 20px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>${cfg.addLabel}</button>` : ''}`);
+    `<button class="btn btn-primary" id="bulk" style="height:44px;padding:0 18px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Legg til flere</button>`);
   const searchBar = cfg.search
     ? `<div style="margin-bottom:16px"><input id="search" class="field" placeholder="Søk navn eller brukernavn…" style="max-width:340px;height:42px;border-radius:12px" /></div>`
     : '';
@@ -357,8 +356,7 @@ async function renderUserList(main, cfg) {
   });
 
   if (cfg.search) page.querySelector('#search').addEventListener('input', draw);
-  main.querySelector('#add')?.addEventListener('click', () => userModal(null, load, cfg));
-  main.querySelector('#bulk')?.addEventListener('click', () => bulkAddModal(load));
+  main.querySelector('#bulk')?.addEventListener('click', () => bulkAddModal(cfg, load));
   await load();
 }
 
@@ -460,54 +458,68 @@ function userModal(existing, onSaved, cfg) {
   });
 }
 
-// ── Legg til flere elever (bulk) + brukerkort ────────────────
-const BULK_ROW_COLS = '1fr 120px 170px 90px 32px';
+// ── Legg til flere brukere (bulk) + brukerkort ───────────────
+// Samme flyt for elever og administratorer. Elever har klasse/internat/rom;
+// administratorer bare navn (brukernavn + passord genereres for begge).
+const BULK_COLS_STUDENT = '1fr 120px 170px 90px 32px';
+const BULK_COLS_ADMIN = '1fr 32px';
+const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
-function bulkRowHTML() {
-  return `
-    <div class="brow" style="display:grid;grid-template-columns:${BULK_ROW_COLS};gap:8px;margin-bottom:8px">
-      <input class="field field-sm" name="fullName" placeholder="Fullt navn" />
+function bulkRowHTML(isStudent) {
+  const rmBtn = `<button type="button" class="rm-row" title="Fjern rad" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:18px;height:18px;display:block">${icon.x}</span></button>`;
+  const studentFields = isStudent ? `
       <select class="field field-sm" name="className" style="background:#f7f8fa">${optionsHTML(CLASSES, 'Klasse', '')}</select>
       <select class="field field-sm" name="dorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Internat', '')}</select>
-      <input class="field field-sm" name="room" placeholder="Rom" />
-      <button type="button" class="rm-row" title="Fjern rad" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:18px;height:18px;display:block">${icon.x}</span></button>
+      <input class="field field-sm" name="room" placeholder="Rom" />` : '';
+  return `
+    <div class="brow" style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:8px">
+      <input class="field field-sm" name="fullName" placeholder="Fullt navn" />
+      ${studentFields}
+      ${rmBtn}
     </div>`;
 }
 
-function parseBulkRows(rowsEl) {
-  return Array.from(rowsEl.querySelectorAll('.brow')).map((row) => ({
-    fullName: row.querySelector('[name="fullName"]').value.trim(),
-    className: row.querySelector('[name="className"]').value,
-    dorm: row.querySelector('[name="dorm"]').value,
-    room: row.querySelector('[name="room"]').value.trim(),
-  })).filter((s) => s.fullName);
+function parseBulkRows(rowsEl, isStudent) {
+  return Array.from(rowsEl.querySelectorAll('.brow')).map((row) => {
+    const base = { fullName: row.querySelector('[name="fullName"]').value.trim() };
+    if (isStudent) {
+      base.className = row.querySelector('[name="className"]').value;
+      base.dorm = row.querySelector('[name="dorm"]').value;
+      base.room = row.querySelector('[name="room"]').value.trim();
+    }
+    return base;
+  }).filter((s) => s.fullName);
 }
 
-function bulkAddModal(onSaved) {
+function bulkAddModal(cfg, onSaved) {
+  const isStudent = cfg.role === 'student';
+  const unit = cfg.unit;              // 'elever' | 'administratorer'
+  const nounCap = isStudent ? 'elever' : 'administratorer';
+  const headLabels = isStudent
+    ? `<label class="field-label" style="margin:0">Navn</label>
+       <label class="field-label" style="margin:0">Klasse</label>
+       <label class="field-label" style="margin:0">Internat</label>
+       <label class="field-label" style="margin:0">Rom</label>
+       <span></span>`
+    : `<label class="field-label" style="margin:0">Navn</label><span></span>`;
   const bg = el(`
-    <div class="modal-bg"><div class="modal" style="width:660px">
+    <div class="modal-bg"><div class="modal" style="width:${isStudent ? 660 : 520}px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
-        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Legg til flere elever</div>
-          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Én rad per elev. Brukernavn og passord lages automatisk.</div></div>
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Legg til flere ${unit}</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Én rad per ${isStudent ? 'elev' : 'administrator'}. Brukernavn og passord lages automatisk.</div></div>
         <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
       </div>
       <div id="body" style="padding:22px 26px">
-        <div style="display:grid;grid-template-columns:${BULK_ROW_COLS};gap:8px;margin-bottom:6px">
-          <label class="field-label" style="margin:0">Navn</label>
-          <label class="field-label" style="margin:0">Klasse</label>
-          <label class="field-label" style="margin:0">Internat</label>
-          <label class="field-label" style="margin:0">Rom</label>
-          <span></span>
-        </div>
+        <div style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:6px">${headLabels}</div>
         <div id="rows" style="max-height:340px;overflow-y:auto;padding-right:2px"></div>
         <button type="button" id="addrow" class="btn btn-ghost" style="height:38px;padding:0 16px;font-size:13.5px;margin-top:4px">+ Legg til rad</button>
         <p id="berr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
-        <span id="cnt" style="font-size:14px;color:var(--muted-2);font-weight:600">0 elever</span>
+        <span id="cnt" style="font-size:14px;color:var(--muted-2);font-weight:600">0 ${unit}</span>
         <div style="display:flex;gap:12px">
           <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
-          <button id="create" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Opprett elever</button>
+          <button id="create" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Opprett ${nounCap}</button>
         </div>
       </div>
     </div></div>`);
@@ -519,9 +531,9 @@ function bulkAddModal(onSaved) {
 
   const rowsEl = bg.querySelector('#rows');
   const cnt = bg.querySelector('#cnt');
-  const updateCount = () => { cnt.textContent = `${parseBulkRows(rowsEl).length} elever`; };
+  const updateCount = () => { cnt.textContent = `${parseBulkRows(rowsEl, isStudent).length} ${unit}`; };
   const addRow = (focus) => {
-    const row = el(bulkRowHTML());
+    const row = el(bulkRowHTML(isStudent));
     rowsEl.appendChild(row);
     if (focus) row.querySelector('[name="fullName"]').focus();
     row.querySelector('.rm-row').addEventListener('click', () => {
@@ -541,22 +553,22 @@ function bulkAddModal(onSaved) {
 
   bg.querySelector('#create').addEventListener('click', async () => {
     const berr = bg.querySelector('#berr'); berr.style.display = 'none';
-    const students = parseBulkRows(rowsEl);
-    if (!students.length) { berr.textContent = 'Fyll ut minst én elev.'; berr.style.display = 'block'; return; }
+    const students = parseBulkRows(rowsEl, isStudent);
+    if (!students.length) { berr.textContent = `Fyll ut minst én ${isStudent ? 'elev' : 'administrator'}.`; berr.style.display = 'block'; return; }
     const btn = bg.querySelector('#create'); btn.disabled = true; btn.textContent = 'Oppretter…';
     try {
-      const r = await api('/api/users/bulk', { method: 'POST', body: { students } });
-      bulkResultView(bg, r, onSaved);
-    } catch (ex) { berr.textContent = ex.message; berr.style.display = 'block'; btn.disabled = false; btn.textContent = 'Opprett elever'; }
+      const r = await api('/api/users/bulk', { method: 'POST', body: { students, role: cfg.role } });
+      bulkResultView(bg, r, unit, onSaved);
+    } catch (ex) { berr.textContent = ex.message; berr.style.display = 'block'; btn.disabled = false; btn.textContent = `Opprett ${nounCap}`; }
   });
 }
 
-function bulkResultView(bg, result, onSaved) {
+function bulkResultView(bg, result, unit, onSaved) {
   const { created, errors } = result;
   bg.querySelector('#body').innerHTML = `
     <div style="text-align:center;padding:6px 0 4px">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><span style="width:34px;height:34px">${icon.check}</span></div>
-      <div style="font-size:20px;font-weight:800">${created.length} elever opprettet</div>
+      <div style="font-size:20px;font-weight:800">${created.length} ${unit} opprettet</div>
       <p style="font-size:14px;color:var(--muted);line-height:1.5;margin:8px 0 0">Passordene vises <b>kun nå</b>. Last ned brukerkortene og del dem ut.</p>
     </div>
     ${errors.length ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:16px 0 0">${errors.length} linjer ble hoppet over: ${errors.map((e) => 'linje ' + e.line + (e.fullName ? ' (' + e.fullName + ')' : '')).join(', ')}</div>` : ''}`;
