@@ -671,15 +671,22 @@ async function renderGjest() {
   body.appendChild(el(`
     <div class="pad">
       <div class="h1" style="font-size:22px">Meld gjest på internatet</div>
-      <p class="sub" style="line-height:1.5;margin:8px 0 12px">Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten.</p>
+      <p class="sub" style="line-height:1.5;margin:8px 0 12px">Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten. Én natt = velg samme dato i begge felt.</p>
+      <div style="background:#e7edf5;color:var(--navy);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:600;line-height:1.45;margin-bottom:10px">
+        🌙 Besøket gjelder natten. Velger du <strong>19. juli</strong>, betyr det at gjesten er på internatet <strong>natt til 20. juli</strong>.
+      </div>
       <div style="background:var(--amber-bg);color:var(--amber-ink);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:600;line-height:1.45;margin-bottom:18px">⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</div>
+      <div id="gconfirm" style="display:none;margin-bottom:14px"></div>
       <div class="card" style="border-radius:18px">
         <label class="field-label">Gjestens navn</label>
         <input class="field" id="gname" placeholder="Fullt navn" />
-        <label class="field-label" style="margin-top:14px">Første natt</label>
+        <label class="field-label" style="margin-top:14px">Kommentar (valgfritt)</label>
+        <input class="field" id="gnote" placeholder="F.eks. foreldre, søsken…" />
+        <label class="field-label" style="margin-top:14px">Første kveld</label>
         <input class="field" type="date" id="gfrom" value="${today}" />
-        <label class="field-label" style="margin-top:14px">Siste natt</label>
+        <label class="field-label" style="margin-top:14px">Siste kveld</label>
         <input class="field" type="date" id="gto" value="${today}" />
+        <div id="gpreview" style="display:none;margin-top:12px;font-size:14px;font-weight:700;color:var(--navy);background:#f2f5f9;border-radius:10px;padding:10px 12px"></div>
         <p id="gerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
         <button class="btn btn-primary" id="gadd" style="width:100%;height:52px;margin-top:16px">Send til godkjenning</button>
       </div>
@@ -695,11 +702,11 @@ async function renderGjest() {
       const badge = g.status === 'approved'
         ? '<span class="pill pill-green">Godkjent</span>'
         : '<span class="pill pill-amber">Venter på godkjenning</span>';
-      const dates = g.startDate === g.endDate ? formatDateShort(g.startDate) : formatDateShort(g.startDate) + ' – ' + formatDateShort(g.endDate);
-      // Godkjent: vis tildelt internat + rom. Ventende: bare datoene.
+      const dates = formatNightRange(g.startDate, g.endDate);
+      // Godkjent: vis tildelt internat + rom. Ventende: bare natten/nettene.
       const place = g.status === 'approved' && g.dorm ? `${esc(g.dorm)}${g.room ? ' · rom ' + esc(g.room) : ''} · ` : '';
       return `<div class="card" style="border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
-        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${esc(g.guestName)}</div><div class="sub" style="font-size:12.5px">${place}${dates}</div><div style="margin-top:6px">${badge}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${esc(g.guestName)}</div>${g.note ? `<div class="sub" style="font-size:12.5px;font-weight:700;color:var(--slate)">${esc(g.note)}</div>` : ''}<div class="sub" style="font-size:12.5px">${place}${dates}</div><div style="margin-top:6px">${badge}</div></div>
         <button data-del="${g.id}" style="background:none;border:none;color:var(--muted-2);padding:6px;cursor:pointer;flex:0 0 auto"><div style="width:20px;height:20px">${icon.x}</div></button>
       </div>`;
     }).join('');
@@ -710,17 +717,41 @@ async function renderGjest() {
     }));
   }
 
+  // Fortløpende forhåndsvisning: eleven ser hvilke NETTER valget dekker.
+  const gpreviewEl = body.querySelector('#gpreview');
+  function updateGuestPreview() {
+    const from = body.querySelector('#gfrom').value;
+    const to = body.querySelector('#gto').value || from;
+    if (!from || to < from) { gpreviewEl.style.display = 'none'; return; }
+    const n = countNights(from, to);
+    gpreviewEl.textContent = `🌙 ${n} ${n === 1 ? 'natt' : 'netter'} · ${formatNightRange(from, to)}`;
+    gpreviewEl.style.display = 'block';
+  }
+  body.querySelector('#gfrom').addEventListener('change', updateGuestPreview);
+  body.querySelector('#gto').addEventListener('change', updateGuestPreview);
+
+  const gconfirmEl = body.querySelector('#gconfirm');
   body.querySelector('#gadd').addEventListener('click', async () => {
     const gerr = body.querySelector('#gerr'); gerr.style.display = 'none';
+    gconfirmEl.style.display = 'none';
     const from = body.querySelector('#gfrom').value;
     const to = body.querySelector('#gto').value || from;
     const guestName = body.querySelector('#gname').value.trim();
+    const note = body.querySelector('#gnote').value.trim();
     if (!guestName) { gerr.textContent = 'Skriv inn gjestens navn.'; gerr.style.display = 'block'; return; }
-    if (to < from) { gerr.textContent = 'Siste natt kan ikke være før den første.'; gerr.style.display = 'block'; return; }
+    if (to < from) { gerr.textContent = 'Siste kveld kan ikke være før den første.'; gerr.style.display = 'block'; return; }
     const btn = body.querySelector('#gadd'); btn.disabled = true;
     try {
-      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName, startDate: from, endDate: to } });
-      body.querySelector('#gname').value = '';
+      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName, note, startDate: from, endDate: to } });
+      const n = countNights(from, to);
+      gconfirmEl.innerHTML = `
+        <div class="card" style="border-radius:14px;border-color:var(--amber);background:var(--amber-bg);padding:14px 16px">
+          <div style="font-size:15.5px;font-weight:800;color:var(--amber-ink)">✓ Sendt til godkjenning</div>
+          <div style="font-size:13.5px;color:var(--amber-ink);margin-top:3px;line-height:1.45">${esc(guestName)} er meldt inn for ${n} ${n === 1 ? 'natt' : 'netter'}: ${formatNightRange(from, to)}. Du kan ikke ta imot gjesten før administrasjonen har godkjent besøket.</div>
+        </div>`;
+      gconfirmEl.style.display = 'block';
+      body.querySelector('#gname').value = ''; body.querySelector('#gnote').value = '';
+      updateGuestPreview();
       toast('Sendt til godkjenning'); load();
     } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
     finally { btn.disabled = false; }

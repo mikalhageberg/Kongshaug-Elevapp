@@ -1347,6 +1347,7 @@ async function renderGuests(main) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div style="grid-column:1/3"><label class="field-label">Vert (elev)</label><select class="field field-sm" id="host" style="background:#f7f8fa"></select></div>
         <div style="grid-column:1/3"><label class="field-label">Gjestens navn</label><input class="field field-sm" id="gname" placeholder="Fullt navn" /></div>
+        <div style="grid-column:1/3"><label class="field-label">Kommentar (valgfritt)</label><input class="field field-sm" id="gnote" placeholder="F.eks. foreldre, søsken…" /></div>
         <div><label class="field-label">Internat gjesten sover i</label><select class="field field-sm" id="gdorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Velg internat…', '')}</select></div>
         <div><label class="field-label">Rom (valgfritt)</label><input class="field field-sm" id="groom" placeholder="Rom" /></div>
         <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /></div>
@@ -1385,7 +1386,7 @@ async function renderGuests(main) {
       <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-bg);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:800">${esc(g.guestName)} <span style="font-size:12.5px;font-weight:700;color:var(--muted-2)">· ${esc(g.dorm || '–')}${g.room ? ' · rom ' + esc(g.room) : ''}</span></div>
-        <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)}</div>
+        <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)}${g.note ? ' · ' + esc(g.note) : ''}</div>
       </div>
       <button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px;flex:0 0 auto">Slett</button>
     </div>`;
@@ -1396,7 +1397,7 @@ async function renderGuests(main) {
       <div style="display:flex;align-items:center;gap:12px">
         <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-bg);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:800">${esc(g.guestName)}</div>
+          <div style="font-size:15px;font-weight:800">${esc(g.guestName)}${g.note ? ` <span style="font-size:12.5px;font-weight:700;color:var(--amber-ink)">· ${esc(g.note)}</span>` : ''}</div>
           <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)} · meldt av eleven</div>
         </div>
       </div>
@@ -1443,6 +1444,7 @@ async function renderGuests(main) {
     const body = {
       hostUserId: Number(page.querySelector('#host').value),
       guestName: page.querySelector('#gname').value.trim(),
+      note: page.querySelector('#gnote').value.trim(),
       dorm: page.querySelector('#gdorm').value,
       room: page.querySelector('#groom').value.trim(),
       startDate: page.querySelector('#gfrom').value,
@@ -1452,7 +1454,7 @@ async function renderGuests(main) {
     const btn = page.querySelector('#gadd'); btn.disabled = true;
     try {
       await api('/api/firelist/guests', { method: 'POST', body });
-      page.querySelector('#gname').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = ''; page.querySelector('#groom').value = '';
+      page.querySelector('#gname').value = ''; page.querySelector('#gnote').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = ''; page.querySelector('#groom').value = '';
       toast('Gjest lagt til'); load();
     } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
     finally { btn.disabled = false; }

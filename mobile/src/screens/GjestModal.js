@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { api } from '../api';
-import { C, ymd, todayStr, formatDateShort } from '../theme';
+import { C, ymd, todayStr, formatNightRange, countNights } from '../theme';
 import { Button } from '../ui';
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -22,11 +22,13 @@ function monthCells(y, m) {
 export default function GjestModal({ visible, onClose, user }) {
   const [view, setView] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
   const [name, setName] = useState('');
+  const [note, setNote] = useState('');
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
   const [guests, setGuests] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
   const today = todayStr();
 
   const load = useCallback(async () => {
@@ -37,14 +39,15 @@ export default function GjestModal({ visible, onClose, user }) {
   useEffect(() => {
     if (!visible) return;
     load();
-    setName(''); setStart(null); setEnd(null); setErr(null);
+    setName(''); setNote(''); setStart(null); setEnd(null); setErr(null); setConfirmation(null);
     const n = new Date();
     setView({ y: n.getFullYear(), m: n.getMonth() });
   }, [visible, load]);
 
   function tapDay(d) {
     if (!d || d < today) return;
-    setErr(null);
+    // Nytt valg = forrige kvittering er ikke lenger det man ser på.
+    setErr(null); setConfirmation(null);
     if (!start || end) { setStart(d); setEnd(null); }
     else if (d < start) { setStart(d); setEnd(null); }
     else { setEnd(d); }
@@ -69,9 +72,12 @@ export default function GjestModal({ visible, onClose, user }) {
     if (!name.trim()) { setErr('Skriv inn gjestens navn.'); return; }
     if (!start) { setErr('Velg minst én natt.'); return; }
     setBusy(true); setErr(null);
+    const from = start, to = end || start;
     try {
-      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName: name.trim(), startDate: start, endDate: end || start } });
-      setName(''); setStart(null); setEnd(null); load();
+      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName: name.trim(), note: note.trim(), startDate: from, endDate: to } });
+      // Kvitteringen gjentar nøyaktig hva som ble sendt, i «natt til»-form.
+      setConfirmation({ guestName: name.trim(), nights: countNights(from, to), range: formatNightRange(from, to) });
+      setName(''); setNote(''); setStart(null); setEnd(null); load();
     } catch (ex) { setErr(ex.message || 'Kunne ikke sende'); }
     finally { setBusy(false); }
   }
@@ -81,9 +87,10 @@ export default function GjestModal({ visible, onClose, user }) {
   }
 
   const cells = monthCells(view.y, view.m);
-  const summary = !start ? 'Ingen netter valgt'
-    : end && end !== start ? `${formatDateShort(start)} – ${formatDateShort(end)}`
-      : formatDateShort(start);
+  const nights = start ? countNights(start, end || start) : 0;
+  const summary = !start
+    ? 'Ingen netter valgt'
+    : `${nights} ${nights === 1 ? 'natt' : 'netter'} · ${formatNightRange(start, end || start)}`;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
@@ -92,12 +99,20 @@ export default function GjestModal({ visible, onClose, user }) {
           <Text style={styles.title}>Meld gjest</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
         </View>
-        <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten.</Text>
+        <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten. Trykk kvelden gjesten kommer, deretter den siste kvelden. Én natt = trykk samme dag to ganger.</Text>
+        <View style={styles.nightNote}>
+          <Text style={styles.nightNoteText}>
+            🌙 Besøket gjelder natten. Velger du <Text style={{ fontWeight: '800' }}>19. juli</Text>, betyr det gjesten er på internatet <Text style={{ fontWeight: '800' }}>natt til 20. juli</Text>.
+          </Text>
+        </View>
         <View style={styles.warnBox}><Text style={styles.warnText}>⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</Text></View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           <Text style={styles.label}>Gjestens navn</Text>
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Fullt navn" placeholderTextColor={C.muted2} />
+
+          <Text style={[styles.label, { marginTop: 16 }]}>Kommentar (valgfritt)</Text>
+          <TextInput style={styles.input} value={note} onChangeText={setNote} placeholder="F.eks. foreldre, søsken…" placeholderTextColor={C.muted2} />
 
           <Text style={[styles.label, { marginTop: 16 }]}>Nett(er) gjesten blir</Text>
           <View style={styles.monthNav}>
@@ -129,9 +144,10 @@ export default function GjestModal({ visible, onClose, user }) {
                 <View key={g.id} style={styles.guestRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '700', color: C.ink }}>{g.guestName}</Text>
+                    {g.note ? <Text style={{ fontSize: 12.5, color: C.slate, fontWeight: '700', marginTop: 1 }}>{g.note}</Text> : null}
                     <Text style={{ fontSize: 12.5, color: C.muted2, marginTop: 2 }}>
                       {g.status === 'approved' && g.dorm ? `${g.dorm}${g.room ? ' · rom ' + g.room : ''} · ` : ''}
-                      {g.startDate === g.endDate ? formatDateShort(g.startDate) : `${formatDateShort(g.startDate)} – ${formatDateShort(g.endDate)}`}
+                      {formatNightRange(g.startDate, g.endDate)}
                     </Text>
                     <View style={{ marginTop: 6, alignSelf: 'flex-start', backgroundColor: g.status === 'approved' ? C.greenBg : C.amberBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
                       <Text style={{ fontSize: 12, fontWeight: '700', color: g.status === 'approved' ? C.greenInk : C.amberInk }}>
@@ -147,6 +163,14 @@ export default function GjestModal({ visible, onClose, user }) {
         </ScrollView>
 
         <View style={styles.footer}>
+          {confirmation ? (
+            <View style={styles.confirm}>
+              <Text style={styles.confirmTitle}>✓ Sendt til godkjenning</Text>
+              <Text style={styles.confirmBody}>
+                {confirmation.guestName} er meldt inn for {confirmation.nights} {confirmation.nights === 1 ? 'natt' : 'netter'}: {confirmation.range}. Du kan ikke ta imot gjesten før administrasjonen har godkjent besøket.
+              </Text>
+            </View>
+          ) : null}
           {err ? <View style={styles.errorBox}><Text style={styles.errorText}>{err}</Text></View> : null}
           <Text style={styles.summary}>{summary}</Text>
           <Button title="Send til godkjenning" onPress={submit} loading={busy} disabled={!name.trim() || !start} />
@@ -163,6 +187,11 @@ const styles = StyleSheet.create({
   hint: { fontSize: 14, color: C.muted, paddingHorizontal: 20, marginBottom: 6, lineHeight: 20 },
   warnBox: { marginHorizontal: 20, marginBottom: 8, backgroundColor: C.amberBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
   warnText: { fontSize: 13.5, color: C.amberInk, fontWeight: '600', lineHeight: 19 },
+  nightNote: { marginHorizontal: 20, marginBottom: 8, backgroundColor: '#e7edf5', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  nightNoteText: { fontSize: 13.5, color: C.navy, fontWeight: '600', lineHeight: 19 },
+  confirm: { backgroundColor: C.amberBg, borderWidth: 1, borderColor: C.amber, borderRadius: 12, padding: 14, marginBottom: 12 },
+  confirmTitle: { fontSize: 15.5, fontWeight: '800', color: C.amberInk },
+  confirmBody: { fontSize: 13.5, color: C.amberInk, marginTop: 3, lineHeight: 19 },
   label: { fontSize: 13, fontWeight: '700', color: C.slate, marginBottom: 6 },
   input: { height: 52, backgroundColor: '#fff', borderWidth: 1, borderColor: C.line2, borderRadius: 14, paddingHorizontal: 16, fontSize: 16, color: C.ink },
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },

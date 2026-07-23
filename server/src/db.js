@@ -167,6 +167,8 @@ ensureColumn('menus', 'parse_error', 'TEXT');                        // feilmeld
 ensureColumn('menus', 'parsed_at', 'TEXT');
 // Gjester: admin tildeler rom (og internat) ved godkjenning; rommet vises på lista.
 ensureColumn('fire_guests', 'room', 'TEXT');
+// Fritekst-kommentar fra eleven om besøket, f.eks. «Foreldre» eller «Søsken».
+ensureColumn('fire_guests', 'note', 'TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_feide ON users(feide_id) WHERE feide_id IS NOT NULL');
 
 export default db;

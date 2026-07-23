@@ -186,6 +186,7 @@ router.get('/overview', requireAdmin, (req, res) => {
 const guestPublic = (g) => ({
   id: g.id,
   guestName: g.guest_name,
+  note: g.note || null,
   dorm: g.dorm || null,
   room: g.room || null,
   startDate: g.start_date,
@@ -197,15 +198,17 @@ const guestPublic = (g) => ({
   hostDorm: g.host_dorm,
 });
 
-// Navn + datospenn – felles for elev-forespørsel og admin-oppretting.
+// Navn + datospenn + valgfri kommentar (f.eks. «Foreldre», «Søsken») – felles
+// for elev-forespørsel og admin-oppretting.
 function parseGuestBase(body) {
   const guestName = String(body?.guestName || '').trim().slice(0, 80);
+  const note = String(body?.note || '').trim().slice(0, 200);
   let { startDate, endDate } = body || {};
   endDate = endDate || startDate;
   if (!guestName) return { error: 'Gjestens navn kreves.' };
   if (!isValidDate(startDate) || !isValidDate(endDate)) return { error: 'Ugyldig dato.' };
   if (endDate < startDate) return { error: 'Sluttdato kan ikke være før startdato.' };
-  return { value: { guestName, startDate, endDate } };
+  return { value: { guestName, note: note || null, startDate, endDate } };
 }
 // Internat er påkrevd når en gjest godkjennes/legges til (må stå på lista);
 // rom er valgfritt. Admin tildeler begge – gjesten kan bo i et annet internat
@@ -245,9 +248,9 @@ router.post('/guests', requireAdmin, (req, res) => {
   const host = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1").get(hostId);
   if (!host) return res.status(400).json({ error: 'Fant ingen aktiv elev som vert.' });
   const info = db.prepare(
-    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, room, start_date, end_date, status, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, 'approved', 'admin')`
-  ).run(hostId, base.value.guestName, place.value.dorm, place.value.room, base.value.startDate, base.value.endDate);
+    `INSERT INTO fire_guests (host_user_id, guest_name, note, dorm, room, start_date, end_date, status, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', 'admin')`
+  ).run(hostId, base.value.guestName, base.value.note, place.value.dorm, place.value.room, base.value.startDate, base.value.endDate);
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
   res.status(201).json({ guest: guestPublic(g) });
 });
@@ -280,15 +283,16 @@ router.get('/guests/me', (req, res) => {
   res.json({ guests: rows.map(guestPublic) });
 });
 
-// ELEV: be om å få registrere en gjest – kun navn + datoer. Admin tildeler
-// internat og rom ved godkjenning (gjesten bor ikke nødvendigvis hos eleven).
+// ELEV: be om å få registrere en gjest – navn, datoer og en valgfri kommentar
+// (f.eks. «Foreldre», «Søsken»). Admin tildeler internat og rom ved godkjenning
+// (gjesten bor ikke nødvendigvis hos eleven).
 router.post('/guests/request', (req, res) => {
   const { error, value } = parseGuestBase(req.body);
   if (error) return res.status(400).json({ error });
   const info = db.prepare(
-    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, start_date, end_date, status, created_by)
-     VALUES (?, ?, '', ?, ?, 'pending', 'student')`
-  ).run(req.auth.sub, value.guestName, value.startDate, value.endDate);
+    `INSERT INTO fire_guests (host_user_id, guest_name, note, dorm, start_date, end_date, status, created_by)
+     VALUES (?, ?, ?, '', ?, ?, 'pending', 'student')`
+  ).run(req.auth.sub, value.guestName, value.note, value.startDate, value.endDate);
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
   res.status(201).json({ guest: guestPublic(g) });
 });
