@@ -676,14 +676,15 @@ async function renderAndakt(main) {
       const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Dato', 'Status', 'Hvor sent'].map((v) => ({ v, s: 1 }));
       const rows = [header];
       for (const day of week.days) {
+        const dato = formatDateNorsk(day.sessionDate);
         for (const s of day.absentList || []) {
-          rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', day.sessionDate, 'Fravær', ''].map((v) => ({ v, s: 2 })));
+          rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', dato, 'Fravær', ''].map((v) => ({ v, s: 2 })));
         }
         for (const c of (day.checkins || []).filter((x) => x.status === 'late')) {
           const how = c.minutesLate != null
             ? `${c.minutesLate} min for sent (kl. ${formatTime(c.checkedAt)})`
             : `kl. ${formatTime(c.checkedAt)}`;
-          rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', day.sessionDate, 'For sent', how].map((v) => ({ v, s: 3 })));
+          rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', dato, 'For sent', how].map((v) => ({ v, s: 3 })));
         }
       }
       if (rows.length === 1) { toast('Ingen fravær eller for sent denne uken 🎉'); return; }
@@ -1533,6 +1534,14 @@ function buildFireListPrintHTML(d) {
   <div class="toolbar"><button onclick="window.print()">Skriv ut / lagre som PDF</button></div>
   <script>window.onload=function(){setTimeout(function(){window.print();},350);};<\/script>
 </body></html>`;
+}
+
+// 'YYYY-MM-DD' -> 'DD.MM.ÅÅÅÅ', norsk tallformat for datoer i Excel-eksport.
+// Cellene i buildXlsx skrives som ren tekst (inlineStr), ikke ekte dato-typer,
+// så dette er hva som faktisk vises – ISO-formatet ville stått uendret ellers.
+function formatDateNorsk(dstr) {
+  const [y, m, dd] = String(dstr).split('-');
+  return `${dd}.${m}.${y}`;
 }
 
 function shiftDate(dstr, days) {
