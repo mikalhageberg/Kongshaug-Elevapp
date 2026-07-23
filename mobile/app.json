@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kongshaug Elevapp",
     "slug": "kongshaug-elevapp",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#1e3a5f",
