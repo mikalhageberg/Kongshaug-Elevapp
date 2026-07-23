@@ -34,12 +34,12 @@ function NightGuardsCard({ guards }) {
 }
 
 export default function BrannlisteScreen() {
-  const [state, setState] = useState('loading'); // loading | ready | blocked | done | away
+  const [state, setState] = useState('loading'); // loading | ready | blocked | closed | done | away
   const [coords, setCoords] = useState(null);
   const [info, setInfo] = useState(null); // { checkedAt, nightDate }
   const [scheduled, setScheduled] = useState(false);
   const [msg, setMsg] = useState('Sjekker posisjon…');
-  const [deadline, setDeadline] = useState(null);
+  const [win, setWin] = useState(null); // { isOpen, state, opensAt, closesAt }
   const [busy, setBusy] = useState(false);
   const [awayBusy, setAwayBusy] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
@@ -48,13 +48,13 @@ export default function BrannlisteScreen() {
 
   useEffect(() => { fetchLatestNightGuards().then(setNightGuards).catch(() => {}); }, []);
 
-  async function loadPosition(dl) {
+  async function loadPosition(closesAt) {
     setState('loading');
     try {
       const { coords: c, ok, distance } = await getPositionOnCampus();
       if (ok) {
         setCoords(c); setState('ready');
-        setMsg(dl ? `Meld deg til stede før kl. ${dl}.` : 'Gjelder natten som kommer.');
+        setMsg(closesAt ? `Meld deg til stede før kl. ${closesAt}.` : 'Gjelder natten som kommer.');
       } else {
         setState('blocked');
         setMsg(`Du er ${distance} m unna skolen (din posisjon: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}).`);
@@ -66,11 +66,20 @@ export default function BrannlisteScreen() {
 
   const refresh = useCallback(async () => {
     const status = await api('/api/firelist/status').catch(() => ({ status: null }));
-    setDeadline(status.deadline);
+    const w = status.window || { isOpen: true, state: 'open' };
+    setWin(w);
     if (status.status === 'present') { setInfo({ checkedAt: status.checkedAt, nightDate: status.nightDate }); setScheduled(false); setState('done'); return; }
     if (status.status === 'away') { setInfo({ nightDate: status.nightDate }); setScheduled(!!status.scheduled); setNoDinner(!!status.noDinner); setState('away'); return; }
-    loadPosition(status.deadline);
+    // Utenfor vinduet: ikke be om posisjon – vis nedtelling / stengt.
+    if (!w.isOpen) { setState('closed'); return; }
+    loadPosition(w.closesAt);
   }, []);
+
+  // Gå til innsjekk (fra «likevel på skolen»): respekter vinduet.
+  function goToCheckin() {
+    if (win && !win.isOpen) { setState('closed'); return; }
+    loadPosition(win?.closesAt);
+  }
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -81,6 +90,7 @@ export default function BrannlisteScreen() {
       setInfo({ checkedAt: r.checkedAt, nightDate: r.nightDate }); setState('done');
     } catch (ex) {
       if (ex.code === 'offsite') { setState('blocked'); setMsg('Du må være innenfor skolens område for å melde deg til stede.'); }
+      else if (ex.code === 'closed') { setBusy(false); refresh(); return; } // vinduet lukket seg – re-synk
       else setMsg(ex.message);
       setBusy(false);
     }
@@ -145,7 +155,7 @@ export default function BrannlisteScreen() {
           <Switch value={noDinner} onValueChange={setNoDinnerFlag} trackColor={{ true: C.navy }} />
         </View>
         <View style={{ height: 16 }} />
-        <Button title="✓  Jeg er likevel på skolen" color={C.green} onPress={() => loadPosition(deadline)} style={{ alignSelf: 'stretch', height: 56 }} />
+        <Button title="✓  Jeg er likevel på skolen" color={C.green} onPress={goToCheckin} style={{ alignSelf: 'stretch', height: 56 }} />
         <View style={{ height: 10 }} />
         {planButton}
         <NightGuardsCard guards={nightGuards} />
@@ -163,14 +173,22 @@ export default function BrannlisteScreen() {
       <View style={{ marginTop: 8 }}>
         {state === 'ready'
           ? <Banner tone="green" text="📍 Posisjon funnet · bekreftes mot skolens område" />
-          : state === 'blocked'
-            ? <Banner tone="red" text={'✕ ' + msg} />
-            : <Banner tone="grey" text="Sjekker posisjon…" />}
+          : state === 'closed' && win
+            ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
+            : state === 'blocked'
+              ? <Banner tone="red" text={'✕ ' + msg} />
+              : <Banner tone="grey" text="Sjekker posisjon…" />}
       </View>
 
       <View style={{ flex: 1, minHeight: 20 }} />
       <Button title="✓  Jeg er til stede" color={C.green} onPress={submit} loading={busy} disabled={state !== 'ready'} style={{ height: 62 }} />
-      <Text style={styles.hint}>{state === 'ready' ? msg : (state === 'blocked' ? msg : 'Sjekker posisjon…')}</Text>
+      <Text style={styles.hint}>{
+        state === 'ready' ? msg
+          : state === 'closed' && win
+            ? (win.state === 'before' ? `Du kan melde deg til stede mellom kl. ${win.opensAt} og ${win.closesAt}.` : 'Innsjekk for i kveld er stengt.')
+            : state === 'blocked' ? msg
+              : 'Sjekker posisjon…'
+      }</Text>
       <Button title="Jeg er ikke på skolen i natt" color="#fff" textColor={C.slate} loading={awayBusy}
         onPress={markAway} style={{ height: 52, borderWidth: 1.5, borderColor: '#d3dae2' }} />
       <View style={{ height: 10 }} />

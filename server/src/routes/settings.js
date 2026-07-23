@@ -18,7 +18,13 @@ router.put('/', (req, res) => {
   const b = req.body || {};
   const patch = {};
 
-  const times = { andaktDeadline: b.andaktDeadline, fireDeadlineWeekday: b.fireDeadlineWeekday, fireDeadlineSaturday: b.fireDeadlineSaturday, fireEmailTime: b.fireEmailTime, kitchenEmailTime: b.kitchenEmailTime };
+  const times = {
+    andaktDeadline: b.andaktDeadline,
+    fireOpenWeekday: b.fireOpenWeekday, fireCloseWeekday: b.fireCloseWeekday,
+    fireOpenFriday: b.fireOpenFriday, fireCloseFriday: b.fireCloseFriday,
+    fireOpenSaturday: b.fireOpenSaturday, fireCloseSaturday: b.fireCloseSaturday,
+    fireEmailTime: b.fireEmailTime, kitchenEmailTime: b.kitchenEmailTime,
+  };
   for (const [k, v] of Object.entries(times)) {
     if (v === undefined) continue;
     if (!TIME_RE.test(v)) return res.status(400).json({ error: `Ugyldig tidspunkt (${k}). Bruk formatet TT:MM.` });

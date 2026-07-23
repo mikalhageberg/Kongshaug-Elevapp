@@ -1162,6 +1162,17 @@ async function renderSettings(main) {
       <input type="time" name="${name}" value="${val}" class="field" style="width:150px;height:46px;flex:0 0 auto" />
     </div>`;
 
+  // Åpne–lukke-par for brannliste-vinduet.
+  const windowRow = (label, openName, openVal, closeName, closeVal, hint) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
+      <div><div style="font-size:15px;font-weight:700">${label}</div>${hint ? `<div style="font-size:13px;color:var(--muted-2);margin-top:2px">${hint}</div>` : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+        <input type="time" name="${openName}" value="${openVal}" class="field" style="width:118px;height:46px" title="Åpner" />
+        <span style="color:var(--muted-2);font-weight:700">–</span>
+        <input type="time" name="${closeName}" value="${closeVal}" class="field" style="width:118px;height:46px" title="Lukker" />
+      </div>
+    </div>`;
+
   page.querySelector('#body').innerHTML = `
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Andakt</div>
@@ -1173,10 +1184,11 @@ async function renderSettings(main) {
       </div>
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
-      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Brannliste</div>
-      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Frist for å melde seg til stede om kvelden.</div>
-      ${timeRow('fireDeadlineWeekday', 'Frist – vanlige dager', s.fireDeadlineWeekday, 'Søndag–fredag.')}
-      ${timeRow('fireDeadlineSaturday', 'Frist – lørdager', s.fireDeadlineSaturday, 'Egen, ofte senere frist i helgen.')}
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Brannliste – innsjekksvindu</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Tidsrom om kvelden der elevene kan melde seg til stede (åpner–lukker). Utenfor vinduet er registrering stengt. Lukketid i helgen kan settes etter midnatt, f.eks. 00:30.</div>
+      ${windowRow('Hverdag (søn–tor)', 'fireOpenWeekday', s.fireOpenWeekday, 'fireCloseWeekday', s.fireCloseWeekday, 'Skoledag neste dag.')}
+      ${windowRow('Fredag', 'fireOpenFriday', s.fireOpenFriday, 'fireCloseFriday', s.fireCloseFriday, 'Kan stenge etter midnatt.')}
+      ${windowRow('Lørdag', 'fireOpenSaturday', s.fireOpenSaturday, 'fireCloseSaturday', s.fireCloseSaturday, 'Kan stenge etter midnatt.')}
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: brannliste</div>
@@ -1226,8 +1238,12 @@ async function renderSettings(main) {
     return {
       andaktDeadline: val('andaktDeadline').value,
       andaktWeekdaysOnly: val('andaktWeekdaysOnly').checked,
-      fireDeadlineWeekday: val('fireDeadlineWeekday').value,
-      fireDeadlineSaturday: val('fireDeadlineSaturday').value,
+      fireOpenWeekday: val('fireOpenWeekday').value,
+      fireCloseWeekday: val('fireCloseWeekday').value,
+      fireOpenFriday: val('fireOpenFriday').value,
+      fireCloseFriday: val('fireCloseFriday').value,
+      fireOpenSaturday: val('fireOpenSaturday').value,
+      fireCloseSaturday: val('fireCloseSaturday').value,
       fireEmailEnabled: val('fireEmailEnabled').checked,
       fireEmailRecipient: val('fireEmailRecipient').value.trim(),
       fireEmailTime: val('fireEmailTime').value,

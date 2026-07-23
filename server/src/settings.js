@@ -17,8 +17,16 @@ export const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
 const DEFAULTS = {
   andaktDeadline: minutesToHHMM(config.andakt.deadlineMinutes), // f.eks. "08:10"
   andaktWeekdaysOnly: true,        // andakt kun mandag–fredag
-  fireDeadlineWeekday: '23:00',    // frist for brannliste vanlige dager
-  fireDeadlineSaturday: '23:59',   // egen (senere) frist på lørdager
+  // Brannliste: tidsvindu om kvelden man kan melde seg til stede. Egne tider for
+  // hverdag (søn–tor), fredag og lørdag. Lukketid kan være ≤ åpningstid i helgen
+  // (krysser midnatt), se fireWindow.js. Lukketidene arver de gamle «frist»-
+  // verdiene for eksisterende installasjoner (se getSettings).
+  fireOpenWeekday: '20:00',
+  fireCloseWeekday: '23:00',
+  fireOpenFriday: '20:00',
+  fireCloseFriday: '00:00',
+  fireOpenSaturday: '20:00',
+  fireCloseSaturday: '00:00',
   fireEmailEnabled: false,         // send brannlisten på e-post automatisk
   fireEmailRecipient: '',          // e-post til ansvarlig lærer
   fireEmailTime: '14:15',          // klokkeslett for automatisk utsending
@@ -35,8 +43,14 @@ export function getSettings() {
   return {
     andaktDeadline: s.andaktDeadline ?? DEFAULTS.andaktDeadline,
     andaktWeekdaysOnly: s.andaktWeekdaysOnly != null ? s.andaktWeekdaysOnly === 'true' : DEFAULTS.andaktWeekdaysOnly,
-    fireDeadlineWeekday: s.fireDeadlineWeekday ?? DEFAULTS.fireDeadlineWeekday,
-    fireDeadlineSaturday: s.fireDeadlineSaturday ?? DEFAULTS.fireDeadlineSaturday,
+    // Lukketider arver de gamle fristene (fireDeadline*) for eksisterende
+    // installasjoner, så ingen mister sin innstilte kveldsfrist ved oppgradering.
+    fireOpenWeekday: s.fireOpenWeekday ?? DEFAULTS.fireOpenWeekday,
+    fireCloseWeekday: s.fireCloseWeekday ?? s.fireDeadlineWeekday ?? DEFAULTS.fireCloseWeekday,
+    fireOpenFriday: s.fireOpenFriday ?? DEFAULTS.fireOpenFriday,
+    fireCloseFriday: s.fireCloseFriday ?? s.fireDeadlineWeekday ?? DEFAULTS.fireCloseFriday,
+    fireOpenSaturday: s.fireOpenSaturday ?? DEFAULTS.fireOpenSaturday,
+    fireCloseSaturday: s.fireCloseSaturday ?? s.fireDeadlineSaturday ?? DEFAULTS.fireCloseSaturday,
     fireEmailEnabled: s.fireEmailEnabled != null ? s.fireEmailEnabled === 'true' : DEFAULTS.fireEmailEnabled,
     fireEmailRecipient: s.fireEmailRecipient ?? DEFAULTS.fireEmailRecipient,
     fireEmailTime: s.fireEmailTime ?? DEFAULTS.fireEmailTime,
@@ -70,11 +84,6 @@ export function setLastSent(key, dateKey) {
   db.prepare(
     'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   ).run(key, dateKey);
-}
-
-// Hvilken brannliste-frist gjelder for en gitt dag? Lørdag (getDay()===6) har egen.
-export function fireDeadlineForDay(date = new Date(), settings = getSettings()) {
-  return date.getDay() === 6 ? settings.fireDeadlineSaturday : settings.fireDeadlineWeekday;
 }
 
 // Er det andakt i dag? (kun ukedager hvis andaktWeekdaysOnly er på)

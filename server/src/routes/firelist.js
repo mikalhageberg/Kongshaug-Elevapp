@@ -3,7 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
-import { fireDeadlineForDay } from '../settings.js';
+import { fireWindowNow, currentNightDate } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
 
 // Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
@@ -31,7 +31,21 @@ function isScheduledAway(userId, night) {
 router.post('/checkin', (req, res) => {
   const { lat, lng } = req.body || {};
   const reviewBypass = isAppReviewUser(req.auth?.username);
-  if (reviewBypass) console.warn(`[app-review-bypass] brannliste-innsjekk uten GPS-sjekk for «${req.auth.username}»`);
+  if (reviewBypass) console.warn(`[app-review-bypass] brannliste-innsjekk uten vindu-/GPS-sjekk for «${req.auth.username}»`);
+
+  // Tidsvindu: til stede kan bare meldes i kveldens vindu. App-review-kontoen
+  // hopper over (den kan verken være på skolen eller treffe vinduet).
+  const win = fireWindowNow();
+  if (!win.isOpen && !reviewBypass) {
+    return res.status(403).json({
+      error: 'closed',
+      message: win.state === 'before'
+        ? `Registreringen åpner kl. ${win.opensAt}.`
+        : `Registreringen stengte kl. ${win.closesAt}.`,
+      windowState: win.state, opensAt: win.opensAt, closesAt: win.closesAt,
+    });
+  }
+
   const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
   if (!campus.ok) {
     return res.status(403).json({
@@ -40,7 +54,7 @@ router.post('/checkin', (req, res) => {
       distance: campus.distance,
     });
   }
-  const night = todayDate();
+  const night = win.nightDate ?? currentNightDate();
   // Overskriver også en tidligere "borte"-melding hvis eleven likevel er på skolen.
   db.prepare(
     `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
@@ -55,9 +69,10 @@ router.post('/checkin', (req, res) => {
   res.json({ status: 'present', nightDate: night, checkedAt: row.checked_at });
 });
 
-// ── ELEV: meld at du IKKE er på skolen i natt (ingen GPS-krav) ──
+// ── ELEV: meld at du IKKE er på skolen i natt (ingen GPS- eller vindu-krav) ──
+// Kan meldes når som helst – vinduet gjelder bare tilstedeværelse.
 router.post('/away', (req, res) => {
-  const night = todayDate();
+  const night = currentNightDate();
   db.prepare(
     `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
      VALUES (@uid, @night, 'away', NULL, NULL)
@@ -78,7 +93,8 @@ router.post('/away', (req, res) => {
 
 // ── ELEV: min status i kveld ─────────────────────────────────
 router.get('/status', (req, res) => {
-  const night = todayDate();
+  const night = currentNightDate();
+  const win = fireWindowNow();
   const row = db
     .prepare('SELECT status, checked_at FROM fire_checkins WHERE user_id = ? AND night_date = ?')
     .get(req.auth.sub, night);
@@ -94,7 +110,8 @@ router.get('/status', (req, res) => {
     noDinner,                        // meldt av middag i dag
     checkedIn: status === 'present',
     checkedAt: row?.checked_at || null,
-    deadline: fireDeadlineForDay(),
+    // Vinduet for å melde seg til stede: klienten viser nedtelling / stengt.
+    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt },
   });
 });
 
@@ -137,7 +154,8 @@ router.post('/admin-checkin', requireAdmin, (req, res) => {
   const status = req.body?.status;
   const u = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student'").get(uid);
   if (!u) return res.status(404).json({ error: 'Fant ikke eleven' });
-  const night = todayDate();
+  // Admin kan overstyre når som helst – ikke bundet av kveldsvinduet.
+  const night = currentNightDate();
 
   if (status === 'clear') {
     db.prepare('DELETE FROM fire_checkins WHERE user_id = ? AND night_date = ?').run(uid, night);
@@ -157,7 +175,7 @@ router.post('/admin-checkin', requireAdmin, (req, res) => {
 
 // ── ADMIN: oversikt over kveldens brannliste, gruppert på internat ──
 router.get('/overview', requireAdmin, (req, res) => {
-  res.json(getFireOverview(todayDate()));
+  res.json(getFireOverview(currentNightDate()));
 });
 
 export default router;

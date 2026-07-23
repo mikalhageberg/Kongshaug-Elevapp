@@ -344,18 +344,32 @@ async function fireForm(body, status) {
   const hint = content.querySelector('#hint');
   let coords = null;
 
-  try {
-    coords = await getPosition();
-    geobox.innerHTML = `<div class="banner pill-green" style="padding:16px;border-radius:18px">
-      <div style="width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.pin}</div>
-      <div style="flex:1"><div style="font-size:16px;font-weight:800">Posisjon funnet</div><div style="font-size:13px;font-weight:600">Bekreftes mot skolens område</div></div></div>`;
-    btn.disabled = false;
-    hint.textContent = status.deadline ? `Meld deg til stede før kl. ${status.deadline}.` : 'Gjelder natten som kommer.';
-  } catch (ex) {
-    geobox.innerHTML = `<div class="banner pill-red" style="padding:16px;border-radius:18px">
-      <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.x}</div>
-      <div style="flex:1"><div style="font-size:16px;font-weight:800">${ex.message}</div></div></div>`;
-    hint.textContent = 'Du må gi tilgang til posisjon for å melde deg til stede.';
+  const win = status.window || { isOpen: true, state: 'open' };
+  if (!win.isOpen) {
+    // Utenfor vinduet: knappen er deaktivert, med nedtelling / stengt-melding.
+    // Vi ber ikke om posisjon før vinduet faktisk er åpent.
+    const msg = win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`;
+    geobox.innerHTML = `<div class="banner" style="padding:16px;border-radius:18px;background:#e7edf5;color:var(--navy)">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:24px;height:24px">${icon.clock}</div></div>
+      <div style="flex:1"><div style="font-size:16px;font-weight:800">${msg}</div><div style="font-size:13px;font-weight:600">Åpent kl. ${win.opensAt}–${win.closesAt}</div></div></div>`;
+    btn.disabled = true;
+    hint.textContent = win.state === 'before'
+      ? `Du kan melde deg til stede mellom kl. ${win.opensAt} og ${win.closesAt}.`
+      : 'Innsjekk for i kveld er stengt.';
+  } else {
+    try {
+      coords = await getPosition();
+      geobox.innerHTML = `<div class="banner pill-green" style="padding:16px;border-radius:18px">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.pin}</div>
+        <div style="flex:1"><div style="font-size:16px;font-weight:800">Posisjon funnet</div><div style="font-size:13px;font-weight:600">Bekreftes mot skolens område</div></div></div>`;
+      btn.disabled = false;
+      hint.textContent = `Meld deg til stede før kl. ${win.closesAt}.`;
+    } catch (ex) {
+      geobox.innerHTML = `<div class="banner pill-red" style="padding:16px;border-radius:18px">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.x}</div>
+        <div style="flex:1"><div style="font-size:16px;font-weight:800">${ex.message}</div></div></div>`;
+      hint.textContent = 'Du må gi tilgang til posisjon for å melde deg til stede.';
+    }
   }
 
   btn.addEventListener('click', async () => {
@@ -371,6 +385,10 @@ async function fireForm(body, status) {
           <div style="flex:1"><div style="font-size:16px;font-weight:800">Du er ikke på skolens område</div><div style="font-size:13px;font-weight:600">Kan ikke registrere herfra</div></div></div>`;
         btn.disabled = true;
         hint.textContent = 'Du må være innenfor skolens område for å melde deg til stede.';
+      } else if (ex.code === 'closed') {
+        // Vinduet lukket seg mellom lasting og trykk – deaktiver og forklar.
+        btn.disabled = true;
+        hint.textContent = ex.message;
       } else toast(ex.message);
     }
   });
