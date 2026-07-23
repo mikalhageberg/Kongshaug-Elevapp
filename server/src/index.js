@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settings.js';
 import historyRoutes from './routes/history.js';
 import dinnerRoutes from './routes/dinner.js';
 import menuRoutes from './routes/menus.js';
+import pushRoutes from './routes/push.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 
@@ -47,6 +48,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/dinner', dinnerRoutes);
 app.use('/api/menus', menuRoutes);
+app.use('/api/push', pushRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

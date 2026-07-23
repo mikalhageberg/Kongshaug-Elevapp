@@ -54,6 +54,14 @@
           "faceIDPermission": "Appen bruker Face ID for å låse opp når du åpner den."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon-monochrome.png",
+          "color": "#1e3a5f",
+          "sounds": []
+        }
+      ],
       "expo-asset"
     ],
     "extra": {

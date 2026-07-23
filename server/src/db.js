@@ -135,6 +135,18 @@ db.exec(`
     UNIQUE (user_id, week_start)
   );
   CREATE INDEX IF NOT EXISTS idx_kitchen_duty_week ON kitchen_duties(week_start);
+
+  -- Push-varsler: ett token per enhet (kan ha flere per bruker). Upsertes ved
+  -- hver registrering, slik at samme enhet aldri får flere rader.
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token      TEXT    NOT NULL UNIQUE,   -- Expo push-token
+    platform   TEXT    NOT NULL,          -- 'ios' | 'android'
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator, AppState } from '
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { api, loadToken, setToken } from './src/api';
+import { registerForPushNotifications, unregisterPushToken } from './src/push';
 import { C } from './src/theme';
 import LockScreen from './src/screens/LockScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -51,7 +52,7 @@ function AppInner() {
       try {
         const d = await api('/api/auth/me');
         if (d.user.role === 'admin') { await setToken(null); }
-        else { setUser(d.user); setLocked(true); } // krev opplåsing før innhold vises
+        else { setUser(d.user); setLocked(true); registerForPushNotifications(); } // krev opplåsing før innhold vises
       } catch { /* ikke innlogget */ }
       setBooting(false);
     })();
@@ -72,6 +73,7 @@ function AppInner() {
   }, [user]);
 
   async function logout() {
+    await unregisterPushToken();
     await setToken(null);
     setUser(null);
     setLocked(false);

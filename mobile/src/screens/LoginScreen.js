@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, ScrollView, Platform, Linking } from 'react-native';
 import { api, setToken, BASE_URL } from '../api';
+import { registerForPushNotifications } from '../push';
 import { C } from '../theme';
 import { Button } from '../ui';
 
@@ -23,6 +24,7 @@ export default function LoginScreen({ onLoggedIn }) {
         await setToken(null);
         return;
       }
+      registerForPushNotifications();
       onLoggedIn(data.user);
     } catch (ex) {
       setErr(ex.message);

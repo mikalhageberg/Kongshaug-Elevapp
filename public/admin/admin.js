@@ -59,6 +59,7 @@ const nav = {
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
   food: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/><path d="M17 2v20"/><path d="M17 8c0-3 1-6 3-6v20"/></svg>',
   guest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 19v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="7.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
 };
 
 init();
@@ -80,6 +81,7 @@ function render() {
   if (route.startsWith('gjester')) return page('gjester', renderGuests);
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
+  if (route.startsWith('varsler')) return page('varsler', renderVarsler);
   if (route.startsWith('innstillinger')) return page('innstillinger', renderSettings);
   return page('dashboard', renderDashboard);
 }
@@ -178,6 +180,7 @@ function page(active, renderMain) {
     ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
     ['middag', 'Middag', nav.food, '/middag'],
+    ['varsler', 'Varsler', nav.bell, '/varsler'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
   ];
   root.innerHTML = '';
@@ -1169,6 +1172,42 @@ function mountMenuManager(container) {
 }
 
 // ── Innstillinger ────────────────────────────────────────────
+// ── Varsler: push-varsel til alle i mobilappen ───────────────
+async function renderVarsler(main) {
+  header(main, 'Varsler', 'Send push-varsel til alle i appen');
+  const page = el(`
+    <div class="page" style="max-width:560px">
+      <div class="kpi" style="padding:24px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Tittel</div>
+        <input class="field" id="title" maxlength="80" style="height:46px" />
+        <div style="font-size:15px;font-weight:700;margin:18px 0 6px">Tekst</div>
+        <textarea class="field" id="body" maxlength="240" rows="4" style="padding:12px;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:18px">
+          <button class="btn btn-primary" id="send" style="height:46px;padding:0 22px">Send til alle</button>
+        </div>
+      </div>
+    </div>`);
+  main.appendChild(page);
+
+  page.querySelector('#send').addEventListener('click', async () => {
+    const title = page.querySelector('#title').value.trim();
+    const body = page.querySelector('#body').value.trim();
+    if (!title || !body) { toast('Fyll ut tittel og tekst'); return; }
+    const btn = page.querySelector('#send');
+    btn.disabled = true; btn.textContent = 'Sender…';
+    try {
+      const r = await api('/api/push/broadcast', { method: 'POST', body: { title, body } });
+      toast(`Sendt til ${r.sent} enhet${r.sent === 1 ? '' : 'er'}${r.failed ? ` (${r.failed} feilet)` : ''}`);
+      page.querySelector('#title').value = '';
+      page.querySelector('#body').value = '';
+    } catch (ex) {
+      toast(ex.message || 'Kunne ikke sende varsel');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send til alle';
+    }
+  });
+}
+
 async function renderSettings(main) {
   header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post');
   const page = el(`<div class="page" style="max-width:720px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
