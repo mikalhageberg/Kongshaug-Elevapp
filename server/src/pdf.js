@@ -23,14 +23,15 @@ export function buildFireListPdf(overview) {
       .text(`Kongshaug Musikkgymnas · generert ${new Date().toLocaleString('nb-NO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Oslo' })}`);
     doc.moveDown(0.7);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#000')
-      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}`);
+      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}${overview.guestCount ? `       Gjester: ${overview.guestCount}` : ''}`);
     doc.moveDown(0.3);
 
     for (const dorm of overview.dorms) {
       if (doc.y + 70 > bottom()) doc.addPage();
       doc.moveDown(0.7);
+      const guests = dorm.guests || [];
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000')
-        .text(`${dorm.dorm}  (${dorm.present}/${dorm.total} til stede)`, left);
+        .text(`${dorm.dorm}  (${dorm.present}/${dorm.total} til stede${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''})`, left);
       let uy = doc.y + 2;
       doc.moveTo(left, uy).lineTo(right, uy).lineWidth(1).strokeColor('#000').stroke();
 
@@ -38,6 +39,18 @@ export function buildFireListPdf(overview) {
       doc.font('Helvetica-Bold').fontSize(9).fillColor('#555');
       doc.text('NAVN', cols.name, y); doc.text('ROM', cols.room, y); doc.text('STATUS', cols.status, y); doc.text('TID', cols.time, y);
       y += 15;
+
+      // Gjesterad: navn + «Gjest hos [vert]», ingen rom/status/tid.
+      const hostIds = new Set(dorm.students.map((s) => s.id));
+      const renderGuest = (g, sameDorm) => {
+        if (y + 18 > bottom()) { doc.addPage(); y = 50; }
+        doc.font('Helvetica-Oblique').fontSize(11).fillColor('#7a5c00');
+        doc.text(g.name, cols.name, y, { width: cols.room - cols.name - 8, ellipsis: true, lineBreak: false });
+        const hos = sameDorm ? `Gjest hos ${g.hostName}` : `Gjest hos ${g.hostName} (${g.hostDorm || '–'})`;
+        doc.text(hos, cols.room, y, { width: right - cols.room, ellipsis: true, lineBreak: false });
+        y += 17;
+        doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.4).strokeColor('#e2e2e2').stroke();
+      };
 
       for (const s of dorm.students) {
         if (y + 18 > bottom()) { doc.addPage(); y = 50; }
@@ -49,7 +62,9 @@ export function buildFireListPdf(overview) {
         doc.text(s.status === 'present' ? formatCheckedAt(s.checkedAt) : '', cols.time, y, { lineBreak: false });
         y += 17;
         doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.4).strokeColor('#e2e2e2').stroke();
+        for (const g of guests.filter((g) => g.hostId === s.id)) renderGuest(g, true);
       }
+      for (const g of guests.filter((g) => !hostIds.has(g.hostId))) renderGuest(g, false);
       doc.y = y + 2;
     }
 

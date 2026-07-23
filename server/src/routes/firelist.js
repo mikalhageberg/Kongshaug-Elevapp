@@ -178,4 +178,105 @@ router.get('/overview', requireAdmin, (req, res) => {
   res.json(getFireOverview(currentNightDate()));
 });
 
+// ── GJESTER ──────────────────────────────────────────────────
+// En elev (host) har en gjest som sover i et internat et datospenn. Godkjente
+// gjester føres på brannlisten hver natt i spennet. Admin legger til godkjente
+// gjester direkte; elever sender forespørsler som venter på godkjenning.
+
+const guestPublic = (g) => ({
+  id: g.id,
+  guestName: g.guest_name,
+  dorm: g.dorm,
+  startDate: g.start_date,
+  endDate: g.end_date,
+  status: g.status,
+  createdBy: g.created_by,
+  hostId: g.host_user_id,
+  hostName: g.host_name,
+  hostDorm: g.host_dorm,
+});
+
+// Felles validering av gjeste-felt. Returnerer { error } eller { value }.
+function parseGuest(body) {
+  const guestName = String(body?.guestName || '').trim().slice(0, 80);
+  const dorm = String(body?.dorm || '').trim().slice(0, 60);
+  let { startDate, endDate } = body || {};
+  endDate = endDate || startDate;
+  if (!guestName) return { error: 'Gjestens navn kreves.' };
+  if (!dorm) return { error: 'Velg hvilket internat gjesten sover i.' };
+  if (!isValidDate(startDate) || !isValidDate(endDate)) return { error: 'Ugyldig dato.' };
+  if (endDate < startDate) return { error: 'Sluttdato kan ikke være før startdato.' };
+  return { value: { guestName, dorm, startDate, endDate } };
+}
+
+const GUEST_SELECT =
+  `SELECT g.*, u.full_name AS host_name, u.dorm AS host_dorm
+     FROM fire_guests g JOIN users u ON u.id = g.host_user_id`;
+
+// ADMIN: alle gjester – ventende forespørsler + kommende/pågående godkjente.
+router.get('/guests', requireAdmin, (req, res) => {
+  const today = todayDate();
+  const pending = db.prepare(`${GUEST_SELECT} WHERE g.status = 'pending' ORDER BY g.start_date`).all();
+  const upcoming = db.prepare(`${GUEST_SELECT} WHERE g.status = 'approved' AND g.end_date >= ? ORDER BY g.start_date`).all(today);
+  res.json({ pending: pending.map(guestPublic), upcoming: upcoming.map(guestPublic) });
+});
+
+// ADMIN: legg til en godkjent gjest for en elev.
+router.post('/guests', requireAdmin, (req, res) => {
+  const { error, value } = parseGuest(req.body);
+  if (error) return res.status(400).json({ error });
+  const hostId = Number(req.body?.hostUserId);
+  const host = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1").get(hostId);
+  if (!host) return res.status(400).json({ error: 'Fant ingen aktiv elev som vert.' });
+  const info = db.prepare(
+    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, start_date, end_date, status, created_by)
+     VALUES (?, ?, ?, ?, ?, 'approved', 'admin')`
+  ).run(hostId, value.guestName, value.dorm, value.startDate, value.endDate);
+  const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
+  res.status(201).json({ guest: guestPublic(g) });
+});
+
+// ADMIN: godkjenn en ventende forespørsel.
+router.post('/guests/:id/approve', requireAdmin, (req, res) => {
+  const info = db.prepare("UPDATE fire_guests SET status = 'approved' WHERE id = ? AND status = 'pending'").run(Number(req.params.id));
+  if (!info.changes) return res.status(404).json({ error: 'Fant ikke forespørselen' });
+  const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(Number(req.params.id));
+  res.json({ guest: guestPublic(g) });
+});
+
+// ADMIN: slett/avvis en gjest (uansett status).
+router.delete('/guests/:id', requireAdmin, (req, res) => {
+  const info = db.prepare('DELETE FROM fire_guests WHERE id = ?').run(Number(req.params.id));
+  if (!info.changes) return res.status(404).json({ error: 'Fant ikke gjesten' });
+  res.json({ ok: true });
+});
+
+// ELEV: mine gjester (ventende + godkjente, kommende/pågående).
+router.get('/guests/me', (req, res) => {
+  const today = todayDate();
+  const rows = db.prepare(
+    `${GUEST_SELECT} WHERE g.host_user_id = ? AND g.end_date >= ? ORDER BY g.start_date`
+  ).all(req.auth.sub, today);
+  res.json({ guests: rows.map(guestPublic) });
+});
+
+// ELEV: be om å få registrere en gjest – havner som 'pending' hos admin.
+router.post('/guests/request', (req, res) => {
+  const { error, value } = parseGuest(req.body);
+  if (error) return res.status(400).json({ error });
+  const info = db.prepare(
+    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, start_date, end_date, status, created_by)
+     VALUES (?, ?, ?, ?, ?, 'pending', 'student')`
+  ).run(req.auth.sub, value.guestName, value.dorm, value.startDate, value.endDate);
+  const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
+  res.status(201).json({ guest: guestPublic(g) });
+});
+
+// ELEV: trekk tilbake / slett egen gjest (kun sin egen).
+router.delete('/guests/me/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM fire_guests WHERE id = ? AND host_user_id = ?').run(Number(req.params.id), req.auth.sub);
+  if (!info.changes) return res.status(404).json({ error: 'Fant ikke gjesten' });
+  res.json({ ok: true });
+});
+
 export default router;

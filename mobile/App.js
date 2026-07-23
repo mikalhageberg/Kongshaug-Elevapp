@@ -126,7 +126,7 @@ function AppInner() {
       <ExpoStatusBar style="dark" />
       <View style={{ flex: 1 }}>
         {tab === 'home' && <DashboardScreen user={user} onLogout={logout} goTo={setTab} />}
-        {tab === 'brann' && <BrannlisteScreen />}
+        {tab === 'brann' && <BrannlisteScreen user={user} />}
         {tab === 'andakt' && <AndaktScreen user={user} />}
         {tab === 'middag' && <MiddagScreen user={user} />}
       </View>

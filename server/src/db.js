@@ -108,6 +108,23 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_dinner_date ON dinner_optouts(date);
 
+  -- Gjester på internatet: en elev (host) har en gjest som sover i et internat
+  -- et datospenn. Godkjente gjester føres på brannlisten for hver natt i
+  -- spennet. Elev-forespørsler starter som 'pending' til admin godkjenner.
+  CREATE TABLE IF NOT EXISTS fire_guests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    guest_name   TEXT    NOT NULL,
+    dorm         TEXT    NOT NULL,          -- internat gjesten sover i
+    start_date   TEXT    NOT NULL,          -- 'YYYY-MM-DD' første natt
+    end_date     TEXT    NOT NULL,          -- 'YYYY-MM-DD' siste natt (inklusiv)
+    status       TEXT    NOT NULL DEFAULT 'approved', -- 'approved' | 'pending'
+    created_by   TEXT    NOT NULL DEFAULT 'admin',    -- 'admin' | 'student'
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_fire_guest_dates ON fire_guests(start_date, end_date);
+  CREATE INDEX IF NOT EXISTS idx_fire_guest_host  ON fire_guests(host_user_id);
+
   -- Kjøkkentjeneste: elevene som har tjeneste en gitt uke (rundgang).
   -- Uken identifiseres av mandagsdatoen, se isoWeek.js. Én rad per elev per uke.
   CREATE TABLE IF NOT EXISTS kitchen_duties (

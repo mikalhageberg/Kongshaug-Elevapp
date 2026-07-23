@@ -58,6 +58,7 @@ const nav = {
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
   food: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/><path d="M17 2v20"/><path d="M17 8c0-3 1-6 3-6v20"/></svg>',
+  guest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 19v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="7.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>',
 };
 
 init();
@@ -76,6 +77,7 @@ function render() {
   if (route.startsWith('brukere')) return page('brukere', renderBrukere);
   if (route.startsWith('administratorer')) return page('administratorer', renderAdmins);
   if (route.startsWith('brannliste')) return page('brannliste', renderBrannliste);
+  if (route.startsWith('gjester')) return page('gjester', renderGuests);
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
   if (route.startsWith('innstillinger')) return page('innstillinger', renderSettings);
@@ -173,6 +175,7 @@ function page(active, renderMain) {
     ['brukere', 'Elever', nav.users, '/brukere'],
     ['administratorer', 'Administratorer', nav.shield, '/administratorer'],
     ['brannliste', 'Brannliste', nav.flame, '/brannliste'],
+    ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
     ['middag', 'Middag', nav.food, '/middag'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
@@ -1316,6 +1319,104 @@ async function renderStorskjerm() {
 window.addEventListener('hashchange', () => { if (!location.hash.includes('storskjerm')) clearInterval(screenTimer); });
 
 // ── 2.6 Brannliste-oversikt ──────────────────────────────────
+// ── Gjester: registrer gjester på internatet, godkjenn elev-forespørsler ──
+async function renderGuests(main) {
+  header(main, 'Gjester', 'Registreres på brannlisten for hver natt i perioden');
+  const page = el(`<div class="page" style="max-width:760px">
+    <div class="kpi" style="padding:8px 24px 22px;margin-bottom:22px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Legg til gjest</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">Gjesten føres på brannlisten i internatet den sover i, merket «Gjest hos [elev]».</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="grid-column:1/3"><label class="field-label">Vert (elev)</label><select class="field field-sm" id="host" style="background:#f7f8fa"></select></div>
+        <div><label class="field-label">Gjestens navn</label><input class="field field-sm" id="gname" placeholder="Fullt navn" /></div>
+        <div><label class="field-label">Internat gjesten sover i</label><select class="field field-sm" id="gdorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Velg internat…', '')}</select></div>
+        <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /></div>
+        <div><label class="field-label">Siste natt</label><input class="field field-sm" type="date" id="gto" /></div>
+      </div>
+      <p id="gerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+      <button class="btn btn-primary" id="gadd" style="height:46px;padding:0 22px;margin-top:16px">Legg til gjest</button>
+    </div>
+    <div id="pendingBox"></div>
+    <div style="font-size:15px;font-weight:800;margin:22px 2px 10px">Kommende gjester</div>
+    <div id="upcomingBox" style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden"></div>
+  </div>`);
+  main.appendChild(page);
+
+  const today = todayStr();
+  page.querySelector('#gfrom').value = today;
+  page.querySelector('#gto').value = today;
+
+  // Vertsvalg: alle aktive elever, sortert på navn.
+  const students = (await api('/api/users').catch(() => ({ users: [] }))).users
+    .filter((u) => u.role === 'student' && u.active)
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, 'nb'));
+  page.querySelector('#host').innerHTML = `<option value="">Velg elev…</option>` +
+    students.map((u) => `<option value="${u.id}" data-dorm="${esc(u.dorm || '')}">${esc(u.fullName)}${u.dorm ? ' · ' + esc(u.dorm) : ''}</option>`).join('');
+  // Forhåndsvelg vertens eget internat som gjestens internat (kan endres).
+  page.querySelector('#host').addEventListener('change', (e) => {
+    const dorm = e.target.selectedOptions[0]?.dataset.dorm;
+    if (dorm && !page.querySelector('#gdorm').value) page.querySelector('#gdorm').value = dorm;
+  });
+
+  const guestRow = (g, actions) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #f2f4f6">
+      <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-bg);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800">${esc(g.guestName)} <span style="font-size:12.5px;font-weight:700;color:var(--muted-2)">· ${esc(g.dorm)}</span></div>
+        <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${g.startDate === g.endDate ? formatDateNorsk(g.startDate) : formatDateNorsk(g.startDate) + ' – ' + formatDateNorsk(g.endDate)}${g.createdBy === 'student' ? ' · meldt av eleven' : ''}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex:0 0 auto">${actions}</div>
+    </div>`;
+
+  async function load() {
+    const d = await api('/api/firelist/guests').catch(() => ({ pending: [], upcoming: [] }));
+    const pendingBox = page.querySelector('#pendingBox');
+    pendingBox.innerHTML = d.pending.length ? `
+      <div style="font-size:15px;font-weight:800;margin:2px 2px 10px;color:var(--amber-ink)">Venter på godkjenning (${d.pending.length})</div>
+      <div style="background:#fff;border:1px solid var(--amber);border-radius:16px;overflow:hidden;margin-bottom:8px">
+        ${d.pending.map((g) => guestRow(g,
+          `<button class="btn btn-primary" data-approve="${g.id}" style="height:40px;padding:0 16px;font-size:13.5px">Godkjenn</button>
+           <button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px">Avvis</button>`)).join('')}
+      </div>` : '';
+    const upBox = page.querySelector('#upcomingBox');
+    upBox.innerHTML = d.upcoming.length
+      ? d.upcoming.map((g) => guestRow(g, `<button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px">Slett</button>`)).join('')
+      : '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen kommende gjester.</div>';
+
+    page.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try { await api(`/api/firelist/guests/${b.dataset.approve}/approve`, { method: 'POST' }); toast('Gjest godkjent'); load(); }
+      catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+    page.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('Slette denne gjesten?')) return;
+      try { await api(`/api/firelist/guests/${b.dataset.del}`, { method: 'DELETE' }); load(); }
+      catch (ex) { toast(ex.message); }
+    }));
+  }
+
+  page.querySelector('#gadd').addEventListener('click', async () => {
+    const gerr = page.querySelector('#gerr'); gerr.style.display = 'none';
+    const body = {
+      hostUserId: Number(page.querySelector('#host').value),
+      guestName: page.querySelector('#gname').value.trim(),
+      dorm: page.querySelector('#gdorm').value,
+      startDate: page.querySelector('#gfrom').value,
+      endDate: page.querySelector('#gto').value,
+    };
+    if (!body.hostUserId) { gerr.textContent = 'Velg hvilken elev som har gjesten.'; gerr.style.display = 'block'; return; }
+    const btn = page.querySelector('#gadd'); btn.disabled = true;
+    try {
+      await api('/api/firelist/guests', { method: 'POST', body });
+      page.querySelector('#gname').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = '';
+      toast('Gjest lagt til'); load();
+    } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
+    finally { btn.disabled = false; }
+  });
+
+  load();
+}
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
@@ -1360,16 +1461,33 @@ async function renderBrannliste(main) {
     return `<button data-uid="${uid}" data-set="${set}" title="${title}" style="width:48px;height:48px;border-radius:12px;border:1.5px solid ${active ? activeColor : 'var(--line-2)'};background:${active ? activeColor : '#fff'};color:${active ? '#fff' : 'var(--muted-2)'};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation"><span style="width:22px;height:22px;display:block">${ic}</span></button>`;
   }
 
+  // Gjesterad: ingen status-knapper, merket «Gjest hos [vert]». Vises rett under
+  // verten når de deler internat, ellers i gjestens internat med vertens angitt.
+  function guestRowHTML(g, sameDorm) {
+    const hos = sameDorm ? `Gjest hos ${esc(g.hostName)}` : `Gjest hos ${esc(g.hostName)} (${esc(g.hostDorm || '–')})`;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;background:#fbf6ee">
+        <span class="dot" style="background:var(--amber)"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:19px;font-weight:700;line-height:1.25">${esc(g.name)}</div>
+          <div style="font-size:14px;color:var(--amber-ink);font-weight:700;margin-top:2px">${hos}</div>
+        </div>
+        <span class="pill pill-amber" style="flex:0 0 auto">Gjest</span>
+      </div>`;
+  }
+
   function draw() {
     const dorms = activeFilter === 'Alle' ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
-    grid.innerHTML = dorms.map((dorm) => `
-      <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}</span></div>
-        ${dorm.students.map((s) => {
-          const dot = s.status === 'present' ? 'var(--green)' : s.status === 'away' ? 'var(--navy)' : 'var(--red)';
-          const rowBg = s.status === 'missing' ? 'background:#fdf5f4' : (s.status === 'away' ? 'background:#f4f6fa' : '');
-          const timeTitle = s.status === 'present' && s.checkedAt ? ' · ' + formatTime(s.checkedAt) : '';
-          return `
+    grid.innerHTML = dorms.map((dorm) => {
+      const guests = dorm.guests || [];
+      const hostIds = new Set(dorm.students.map((s) => s.id));
+      const studentRows = dorm.students.map((s) => {
+        const dot = s.status === 'present' ? 'var(--green)' : s.status === 'away' ? 'var(--navy)' : 'var(--red)';
+        const rowBg = s.status === 'missing' ? 'background:#fdf5f4' : (s.status === 'away' ? 'background:#f4f6fa' : '');
+        const timeTitle = s.status === 'present' && s.checkedAt ? ' · ' + formatTime(s.checkedAt) : '';
+        // Gjester hvis vert er denne eleven (samme internat) – rett under.
+        const own = guests.filter((g) => g.hostId === s.id).map((g) => guestRowHTML(g, true)).join('');
+        return `
           <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;${rowBg}">
             <span class="dot" style="background:${dot}"></span>
             <div style="flex:1;min-width:0">
@@ -1381,9 +1499,16 @@ async function renderBrannliste(main) {
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
               ${statusBtn(s.id, 'clear', icon.x, 'var(--red)', s.status === 'missing', 'Fjern (ikke registrert)')}
             </div>
-          </div>`;
-        }).join('')}
-      </div>`).join('');
+          </div>${own}`;
+      }).join('');
+      // Gjester som sover her, men hvor verten bor i et annet internat – nederst.
+      const orphanRows = guests.filter((g) => !hostIds.has(g.hostId)).map((g) => guestRowHTML(g, false)).join('');
+      return `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}</span></div>
+        ${studentRows}${orphanRows}
+      </div>`;
+    }).join('');
     grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => setStatus(Number(b.dataset.uid), b.dataset.set)));
   }
   chips.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
@@ -1506,21 +1631,29 @@ function buildFireListPrintHTML(d) {
   const printedAt = new Date().toLocaleString('nb-NO', { dateStyle: 'long', timeStyle: 'short' });
   const statusText = { present: 'Til stede', away: 'Borte', missing: 'MANGLER' };
 
-  const dorms = d.dorms.map((dorm) => `
-    <div class="dorm">
-      <h2>${esc(dorm.dorm)} <span class="cnt">${dorm.present} / ${dorm.total} til stede</span></h2>
-      <table>
-        <thead><tr><th>Navn</th><th class="c-room">Rom</th><th class="c-status">Status</th><th class="c-time">Tid</th></tr></thead>
-        <tbody>
-          ${dorm.students.map((s) => `<tr class="${s.status === 'missing' ? 'miss' : ''}">
+  const guestTr = (g, sameDorm) => `<tr class="guest">
+    <td>${esc(g.name)}</td>
+    <td colspan="3">Gjest hos ${esc(g.hostName)}${sameDorm ? '' : ` (${esc(g.hostDorm || '–')})`}</td>
+  </tr>`;
+  const dorms = d.dorms.map((dorm) => {
+    const guests = dorm.guests || [];
+    const hostIds = new Set(dorm.students.map((s) => s.id));
+    const rows = dorm.students.map((s) => `<tr class="${s.status === 'missing' ? 'miss' : ''}">
             <td>${esc(s.fullName)}</td>
             <td>${esc(s.room ?? '–')}</td>
             <td>${statusText[s.status] || ''}</td>
             <td>${s.status === 'present' ? formatTime(s.checkedAt) : ''}</td>
-          </tr>`).join('')}
-        </tbody>
+          </tr>` + guests.filter((g) => g.hostId === s.id).map((g) => guestTr(g, true)).join('')).join('')
+      + guests.filter((g) => !hostIds.has(g.hostId)).map((g) => guestTr(g, false)).join('');
+    return `
+    <div class="dorm">
+      <h2>${esc(dorm.dorm)} <span class="cnt">${dorm.present} / ${dorm.total} til stede${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}</span></h2>
+      <table>
+        <thead><tr><th>Navn</th><th class="c-room">Rom</th><th class="c-status">Status</th><th class="c-time">Tid</th></tr></thead>
+        <tbody>${rows}</tbody>
       </table>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   return `<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>Brannliste ${esc(d.nightDate)}</title>
 <style>
@@ -1536,6 +1669,7 @@ function buildFireListPrintHTML(d) {
   th,td{text-align:left;padding:5px 6px;border-bottom:1px solid #bbb;vertical-align:top}
   th{font-size:10.5px;text-transform:uppercase;color:#555;letter-spacing:.03em}
   .c-room{width:56px}.c-status{width:104px}.c-time{width:64px}
+  tr.guest td{font-style:italic;color:#6b4e00}
   tr.miss td{font-weight:bold}
   .toolbar{margin-top:26px}
   .toolbar button{font-size:14px;padding:8px 16px;cursor:pointer}

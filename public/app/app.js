@@ -46,6 +46,7 @@ function render() {
   if (user.mustChangePassword) return renderChangePassword();
   const route = (location.hash || '#/').slice(2);
   if (route.startsWith('planlegg')) return renderPlanlegg();
+  if (route.startsWith('gjest')) return renderGjest();
   if (route.startsWith('brannliste')) return renderBrannliste();
   if (route.startsWith('andakt')) return renderAndakt();
   if (route.startsWith('middag')) return renderMiddag();
@@ -333,11 +334,13 @@ async function fireForm(body, status) {
         <p id="hint" class="sub" style="text-align:center;margin:14px 0 12px">Sjekker posisjon…</p>
         <button class="btn btn-ghost" id="away" style="width:100%;height:52px">Jeg er ikke på skolen i natt</button>
         <button id="plan" style="background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;width:100%;margin-top:14px;cursor:pointer">📅 Planlegg fravær fremover</button>
+        <button id="guest" style="background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;width:100%;margin-top:12px;cursor:pointer">👤 Meld gjest på internatet</button>
       </div>
     </div>`);
   body.appendChild(content);
   sinkKeptNodes(body);
   content.querySelector('#plan').addEventListener('click', () => go('/planlegg'));
+  content.querySelector('#guest').addEventListener('click', () => go('/gjest'));
 
   const geobox = content.querySelector('#geobox');
   const btn = content.querySelector('#present');
@@ -442,11 +445,13 @@ function fireAway(body, data) {
       <div class="pad">
         <button class="btn btn-green" id="here" style="width:100%;height:56px;font-size:18px">${icon.check} Jeg er likevel på skolen</button>
         <button id="plan" style="background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;width:100%;margin-top:14px;cursor:pointer">📅 Planlegg fravær fremover</button>
+        <button id="guest" style="background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;width:100%;margin-top:12px;cursor:pointer">👤 Meld gjest på internatet</button>
       </div>
     </div>`));
   sinkKeptNodes(body);
   body.querySelector('#here').addEventListener('click', () => fireForm(body, data));
   body.querySelector('#plan').addEventListener('click', () => go('/planlegg'));
+  body.querySelector('#guest').addEventListener('click', () => go('/gjest'));
   body.querySelector('#noDinner').addEventListener('change', async (e) => {
     try { await api('/api/firelist/away', { method: 'POST', body: { noDinner: e.target.checked } }); data.noDinner = e.target.checked; }
     catch (ex) { toast(ex.message); e.target.checked = !e.target.checked; }
@@ -634,6 +639,74 @@ async function renderMiddag() {
     });
   }
   loadDinner();
+}
+
+// ── Meld gjest (sendes til admin for godkjenning) ────────────
+async function renderGjest() {
+  root.innerHTML = '';
+  const screen = el(`<div class="screen fadein"><div id="body" style="flex:1;overflow:auto" class="noscroll"></div></div>`);
+  const body = screen.querySelector('#body');
+  screen.appendChild(tabbar('brann'));
+  root.appendChild(screen);
+  body.appendChild(subHeader('Meld gjest', '/brannliste'));
+
+  const today = ymd(new Date());
+  body.appendChild(el(`
+    <div class="pad">
+      <div class="h1" style="font-size:22px">Meld gjest på internatet</div>
+      <p class="sub" style="line-height:1.5;margin:8px 0 18px">Gjesten føres på brannlisten i ditt internat${user.dorm ? ` (${esc(user.dorm)})` : ''}. Forespørselen sendes til administrasjonen for godkjenning.</p>
+      <div class="card" style="border-radius:18px">
+        <label class="field-label">Gjestens navn</label>
+        <input class="field" id="gname" placeholder="Fullt navn" />
+        <label class="field-label" style="margin-top:14px">Første natt</label>
+        <input class="field" type="date" id="gfrom" value="${today}" />
+        <label class="field-label" style="margin-top:14px">Siste natt</label>
+        <input class="field" type="date" id="gto" value="${today}" />
+        <p id="gerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+        <button class="btn btn-primary" id="gadd" style="width:100%;height:52px;margin-top:16px">Send til godkjenning</button>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.04em;margin:24px 6px 10px">Mine gjester</div>
+      <div id="glist"><span class="pill pill-grey">Laster…</span></div>
+    </div>`));
+
+  const listEl = body.querySelector('#glist');
+  async function load() {
+    const d = await api('/api/firelist/guests/me').catch(() => ({ guests: [] }));
+    if (!d.guests.length) { listEl.innerHTML = '<p class="sub" style="padding:0 6px">Ingen gjester meldt.</p>'; return; }
+    listEl.innerHTML = d.guests.map((g) => {
+      const badge = g.status === 'approved'
+        ? '<span class="pill pill-green">Godkjent</span>'
+        : '<span class="pill pill-amber">Venter på godkjenning</span>';
+      const dates = g.startDate === g.endDate ? formatDateShort(g.startDate) : formatDateShort(g.startDate) + ' – ' + formatDateShort(g.endDate);
+      return `<div class="card" style="border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${esc(g.guestName)}</div><div class="sub" style="font-size:12.5px">${esc(g.dorm)} · ${dates}</div><div style="margin-top:6px">${badge}</div></div>
+        <button data-del="${g.id}" style="background:none;border:none;color:var(--muted-2);padding:6px;cursor:pointer;flex:0 0 auto"><div style="width:20px;height:20px">${icon.x}</div></button>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      try { await api(`/api/firelist/guests/me/${b.dataset.del}`, { method: 'DELETE' }); load(); }
+      catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+  }
+
+  body.querySelector('#gadd').addEventListener('click', async () => {
+    const gerr = body.querySelector('#gerr'); gerr.style.display = 'none';
+    const from = body.querySelector('#gfrom').value;
+    const to = body.querySelector('#gto').value || from;
+    const guestName = body.querySelector('#gname').value.trim();
+    if (!guestName) { gerr.textContent = 'Skriv inn gjestens navn.'; gerr.style.display = 'block'; return; }
+    if (to < from) { gerr.textContent = 'Siste natt kan ikke være før den første.'; gerr.style.display = 'block'; return; }
+    const btn = body.querySelector('#gadd'); btn.disabled = true;
+    try {
+      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName, dorm: user.dorm, startDate: from, endDate: to } });
+      body.querySelector('#gname').value = '';
+      toast('Sendt til godkjenning'); load();
+    } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
+    finally { btn.disabled = false; }
+  });
+
+  load();
 }
 
 // ── Planlagt fravær ──────────────────────────────────────────

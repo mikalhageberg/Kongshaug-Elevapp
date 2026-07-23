@@ -21,16 +21,33 @@ export function getFireOverview(nightDate = todayDate()) {
   );
 
   const dorms = {};
+  const ensureDorm = (name) => (dorms[name] ||= { dorm: name, total: 0, present: 0, students: [], guests: [] });
   let present = 0, away = 0, missing = 0;
   for (const s of students) {
     const key = s.dorm || 'Uten internat';
-    (dorms[key] ||= { dorm: key, total: 0, present: 0, students: [] });
-    dorms[key].total++;
+    const dorm = ensureDorm(key);
+    dorm.total++;
     const status = s.status || (scheduledAway.has(s.id) ? 'away' : 'missing');
-    if (status === 'present') { dorms[key].present++; present++; }
+    if (status === 'present') { dorm.present++; present++; }
     else if (status === 'away') away++;
     else missing++;
-    dorms[key].students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at });
+    dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at });
+  }
+
+  // Godkjente gjester som sover på internatet denne natten. De listes i internatet
+  // de sover i (g.dorm), merket «Gjest hos [vert]». Verten kan bo i et annet internat.
+  const guests = db
+    .prepare(
+      `SELECT g.id, g.guest_name, g.dorm, g.host_user_id, u.full_name AS host_name, u.dorm AS host_dorm
+         FROM fire_guests g
+         JOIN users u ON u.id = g.host_user_id
+        WHERE g.status = 'approved' AND ? BETWEEN g.start_date AND g.end_date
+        ORDER BY g.guest_name COLLATE NOCASE`
+    )
+    .all(nightDate);
+  for (const g of guests) {
+    const dorm = ensureDorm(g.dorm || 'Uten internat');
+    dorm.guests.push({ id: g.id, name: g.guest_name, hostId: g.host_user_id, hostName: g.host_name, hostDorm: g.host_dorm || null });
   }
 
   return {
@@ -39,6 +56,7 @@ export function getFireOverview(nightDate = todayDate()) {
     present,
     away,
     missing,
+    guestCount: guests.length,
     dorms: Object.values(dorms),
   };
 }

@@ -4,6 +4,7 @@ import { api, getPositionOnCampus } from '../api';
 import { C, formatTime, formatDateLong, shiftDate } from '../theme';
 import { Button, Banner, Card } from '../ui';
 import PlanleggModal from './PlanleggModal';
+import GjestModal from './GjestModal';
 
 // Henter internatvakt fra siste tolkede ukeoppslag (uansett hvor mange menyer
 // som finnes), slik at Brannliste alltid viser nyeste vaktliste.
@@ -33,8 +34,9 @@ function NightGuardsCard({ guards }) {
   );
 }
 
-export default function BrannlisteScreen() {
+export default function BrannlisteScreen({ user }) {
   const [state, setState] = useState('loading'); // loading | ready | blocked | closed | done | away
+  const [guestOpen, setGuestOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const [info, setInfo] = useState(null); // { checkedAt, nightDate }
   const [scheduled, setScheduled] = useState(false);
@@ -112,11 +114,19 @@ export default function BrannlisteScreen() {
   }
 
   const planModal = (
-    <PlanleggModal visible={planOpen} onClose={() => { setPlanOpen(false); refresh(); }} />
+    <>
+      <PlanleggModal visible={planOpen} onClose={() => { setPlanOpen(false); refresh(); }} />
+      <GjestModal visible={guestOpen} onClose={() => setGuestOpen(false)} user={user} />
+    </>
   );
   const planButton = (
-    <Button title="📅 Planlegg fravær" color="#fff" textColor={C.navy} fontSize={15}
-      onPress={() => setPlanOpen(true)} style={{ height: 46 }} />
+    <>
+      <Button title="📅 Planlegg fravær" color="#fff" textColor={C.navy} fontSize={15}
+        onPress={() => setPlanOpen(true)} style={{ height: 46 }} />
+      <View style={{ height: 10 }} />
+      <Button title="👤 Meld gjest på internatet" color="#fff" textColor={C.navy} fontSize={15}
+        onPress={() => setGuestOpen(true)} style={{ height: 46 }} />
+    </>
   );
 
   // Bekreftet til stede
