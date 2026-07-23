@@ -1420,7 +1420,11 @@ async function renderGuests(main) {
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Legg til gjest</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">Gjesten føres på brannlisten i internatet den sover i, merket «Gjest hos [elev]».</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div style="grid-column:1/3"><label class="field-label">Vert (elev)</label><select class="field field-sm" id="host" style="background:#f7f8fa"></select></div>
+        <div style="grid-column:1/3;position:relative" id="hostField">
+          <label class="field-label">Vert (elev)</label>
+          <input type="text" class="field field-sm" id="hostSearch" placeholder="Søk opp elev…" autocomplete="off" />
+          <div id="hostResults" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.14);z-index:20"></div>
+        </div>
         <div style="grid-column:1/3"><label class="field-label">Gjestens navn</label><input class="field field-sm" id="gname" placeholder="Fullt navn" /></div>
         <div style="grid-column:1/3"><label class="field-label">Kommentar (valgfritt)</label><input class="field field-sm" id="gnote" placeholder="F.eks. foreldre, søsken…" /></div>
         <div><label class="field-label">Internat gjesten sover i</label><select class="field field-sm" id="gdorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Velg internat…', '')}</select></div>
@@ -1441,16 +1445,45 @@ async function renderGuests(main) {
   page.querySelector('#gfrom').value = today;
   page.querySelector('#gto').value = today;
 
-  // Vertsvalg: alle aktive elever, sortert på navn.
+  // Vertsvalg: søk blant aktive elever, sortert på navn.
   const students = (await api('/api/users').catch(() => ({ users: [] }))).users
     .filter((u) => u.role === 'student' && u.active)
     .sort((a, b) => a.fullName.localeCompare(b.fullName, 'nb'));
-  page.querySelector('#host').innerHTML = `<option value="">Velg elev…</option>` +
-    students.map((u) => `<option value="${u.id}" data-dorm="${esc(u.dorm || '')}">${esc(u.fullName)}${u.dorm ? ' · ' + esc(u.dorm) : ''}</option>`).join('');
-  // Forhåndsvelg vertens eget internat som gjestens internat (kan endres).
-  page.querySelector('#host').addEventListener('change', (e) => {
-    const dorm = e.target.selectedOptions[0]?.dataset.dorm;
-    if (dorm && !page.querySelector('#gdorm').value) page.querySelector('#gdorm').value = dorm;
+
+  let hostId = null;
+  const hostField = page.querySelector('#hostField');
+  const hostSearch = page.querySelector('#hostSearch');
+  const hostResults = page.querySelector('#hostResults');
+
+  function selectHost(u) {
+    hostId = u.id;
+    hostSearch.value = u.fullName;
+    hostResults.style.display = 'none';
+    // Forhåndsvelg vertens eget internat som gjestens internat (kan endres).
+    if (u.dorm && !page.querySelector('#gdorm').value) page.querySelector('#gdorm').value = u.dorm;
+  }
+
+  function renderHostResults() {
+    hostId = null;
+    const q = hostSearch.value.trim().toLowerCase();
+    if (!q) { hostResults.style.display = 'none'; return; }
+    const hits = students.filter((u) => u.fullName.toLowerCase().includes(q) || (u.dorm || '').toLowerCase().includes(q)).slice(0, 8);
+    hostResults.innerHTML = hits.length ? hits.map((u) => `
+      <button type="button" data-host="${u.id}" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:11px 14px;cursor:pointer">
+        <span style="flex:1;font-size:14px;font-weight:700">${esc(u.fullName)}</span>
+        <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${esc(u.dorm || '')}</span>
+      </button>`).join('') : '<div style="padding:14px;color:var(--muted-2);font-size:13.5px">Ingen treff.</div>';
+    hostResults.style.display = 'block';
+    hostResults.querySelectorAll('[data-host]').forEach((b) => b.addEventListener('click', () => {
+      const u = students.find((s) => s.id === Number(b.dataset.host));
+      if (u) selectHost(u);
+    }));
+  }
+  hostSearch.addEventListener('input', renderHostResults);
+  hostSearch.addEventListener('focus', renderHostResults);
+  // Klikk utenfor lukker trefflisten (uten å spise klikket på et treff).
+  document.addEventListener('click', (e) => {
+    if (!hostField.contains(e.target)) hostResults.style.display = 'none';
   });
 
   const dates = (g) => g.startDate === g.endDate ? formatDateNorsk(g.startDate) : formatDateNorsk(g.startDate) + ' – ' + formatDateNorsk(g.endDate);
@@ -1517,7 +1550,7 @@ async function renderGuests(main) {
   page.querySelector('#gadd').addEventListener('click', async () => {
     const gerr = page.querySelector('#gerr'); gerr.style.display = 'none';
     const body = {
-      hostUserId: Number(page.querySelector('#host').value),
+      hostUserId: hostId,
       guestName: page.querySelector('#gname').value.trim(),
       note: page.querySelector('#gnote').value.trim(),
       dorm: page.querySelector('#gdorm').value,
@@ -1529,7 +1562,9 @@ async function renderGuests(main) {
     const btn = page.querySelector('#gadd'); btn.disabled = true;
     try {
       await api('/api/firelist/guests', { method: 'POST', body });
-      page.querySelector('#gname').value = ''; page.querySelector('#gnote').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = ''; page.querySelector('#groom').value = '';
+      page.querySelector('#gname').value = ''; page.querySelector('#gnote').value = '';
+      hostSearch.value = ''; hostId = null;
+      page.querySelector('#gdorm').value = ''; page.querySelector('#groom').value = '';
       toast('Gjest lagt til'); load();
     } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
     finally { btn.disabled = false; }
