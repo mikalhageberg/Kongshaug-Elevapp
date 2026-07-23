@@ -851,6 +851,15 @@ function mountKitchenDuty(container) {
           <div id="dutyResults" style="display:none;position:absolute;left:18px;right:18px;bottom:62px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.14);z-index:20"></div>
         </div>
       </div>
+      <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px">Importer fra Excel</div>
+        <div style="font-size:12.5px;color:var(--muted-2);margin-bottom:12px">Last opp en Excel-liste med kjøkkentjeneste – OpenAI leser ut hvem som har tjeneste hvilke uker, og du bekrefter før det legges inn.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input type="file" id="dutyXlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:14px" />
+          <button class="btn btn-primary" id="dutyXlsxUpload" style="height:44px;padding:0 18px">Les inn Excel</button>
+        </div>
+        <div id="dutyImportPreview" style="margin-top:14px"></div>
+      </div>
       <div style="font-size:15px;font-weight:800;margin:22px 0 10px">Kommende uker</div>
       <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"></div>
     </div>`);
@@ -949,6 +958,70 @@ function mountKitchenDuty(container) {
   // Klikk utenfor lukker trefflisten (uten å spise klikket på et treff).
   document.addEventListener('click', (e) => {
     if (!card.contains(e.target)) resultsEl.style.display = 'none';
+  });
+
+  // ── Excel-import: last opp → OpenAI-forhåndsvisning → bekreft ──
+  const previewEl = card.querySelector('#dutyImportPreview');
+  const weekEndOf = (ws) => { const [y, m, d] = ws.split('-').map(Number); const e = new Date(y, m - 1, d + 6); return ymd(e); };
+
+  function renderDutyPreview(data) {
+    const weeks = data.weeks || [];
+    if (!weeks.length) { previewEl.innerHTML = '<div style="color:var(--muted-2);font-size:13.5px">Fant ingen uker i arket.</div>'; return; }
+    previewEl.innerHTML = `
+      <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+        ${weeks.map((w, i) => {
+          const chips = w.matched.map((m) => `<span style="display:inline-block;background:var(--green-bg);color:var(--green-ink,#166534);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px">${esc(m.fullName)}</span>`).join(' ');
+          const miss = w.unmatched.map((n) => `<span style="display:inline-block;background:var(--amber-bg);color:var(--amber-ink);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px" title="Ikke funnet blant elevene">${esc(n)} · ikke funnet</span>`).join(' ');
+          return `
+          <div style="display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid #f2f4f6">
+            <input type="checkbox" data-wk="${i}" ${w.matched.length ? 'checked' : ''} ${w.matched.length ? '' : 'disabled'} style="width:20px;height:20px;flex:0 0 auto;margin-top:2px" />
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800">Uke ${w.week} <span style="font-weight:600;color:var(--muted-2)">· ${esc(formatWeekRange(w.weekStart, weekEndOf(w.weekStart)))}</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${chips || '<span style="font-size:12.5px;color:var(--muted-2)">Ingen elever funnet</span>'} ${miss}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-ghost" id="dutyImportCancel" style="height:42px;padding:0 16px">Avbryt</button>
+        <button class="btn btn-primary" id="dutyImportApply" style="height:42px;padding:0 18px">Legg til valgte uker</button>
+      </div>`;
+
+    previewEl.querySelector('#dutyImportCancel').addEventListener('click', () => { previewEl.innerHTML = ''; });
+    previewEl.querySelector('#dutyImportApply').addEventListener('click', async () => {
+      const chosen = weeks.filter((_, i) => previewEl.querySelector(`[data-wk="${i}"]`)?.checked)
+        .map((w) => ({ weekStart: w.weekStart, userIds: w.matched.map((m) => m.id) }))
+        .filter((w) => w.userIds.length);
+      if (!chosen.length) { toast('Ingen uker valgt'); return; }
+      const btn = previewEl.querySelector('#dutyImportApply'); btn.disabled = true; btn.textContent = 'Legger til…';
+      try {
+        const r = await api('/api/dinner/kitchen-duty/bulk', { method: 'POST', body: { weeks: chosen } });
+        const n = (r.weeks || []).length;
+        previewEl.innerHTML = '';
+        toast(`La til tjeneste for ${n} uke${n === 1 ? '' : 'r'}`);
+        loadWeek(weekStart); loadUpcoming();
+      } catch (ex) { toast(ex.message); btn.disabled = false; btn.textContent = 'Legg til valgte uker'; }
+    });
+  }
+
+  card.querySelector('#dutyXlsxUpload').addEventListener('click', async () => {
+    const input = card.querySelector('#dutyXlsx');
+    const file = input.files[0];
+    if (!file) { toast('Velg en Excel-fil (.xlsx).'); return; }
+    const btn = card.querySelector('#dutyXlsxUpload'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
+    previewEl.innerHTML = '<div style="color:var(--muted-2);font-size:13.5px">Leser arket med OpenAI…</div>';
+    try {
+      const res = await fetch('/api/dinner/kitchen-duty/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+        body: file, credentials: 'same-origin',
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Kunne ikke lese arket'); }
+      const data = await res.json();
+      input.value = '';
+      renderDutyPreview(data);
+    } catch (ex) { previewEl.innerHTML = ''; toast(ex.message); }
+    finally { btn.disabled = false; btn.textContent = old; }
   });
 
   loadWeek();

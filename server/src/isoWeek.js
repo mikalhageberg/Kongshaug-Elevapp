@@ -72,3 +72,14 @@ export function weekInfo(weekStart) {
 export function currentWeekStart(dateStr = todayDate()) {
   return weekStartOf(dateStr);
 }
+
+// Mandagsdatoen ('YYYY-MM-DD') for et gitt ISO-ukenummer i et ISO-år.
+// ISO-regel: uke 1 er uken som inneholder 4. januar (årets første torsdag).
+// Regnes i lokal tid, konsistent med weekStartOf, for å unngå off-by-one.
+export function mondayOfIsoWeek(isoYear, week) {
+  const jan4 = new Date(isoYear, 0, 4);
+  const dow = (jan4.getDay() + 6) % 7;        // 0 = mandag
+  const week1Monday = new Date(isoYear, 0, 4 - dow);
+  week1Monday.setDate(week1Monday.getDate() + (week - 1) * 7);
+  return ymd(week1Monday);
+}
