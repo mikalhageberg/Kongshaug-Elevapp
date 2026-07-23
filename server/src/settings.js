@@ -35,6 +35,7 @@ const DEFAULTS = {
   kitchenEmailTime: '13:00',       // klokkeslett for utsending til kjøkkenet
   kitchenEmailFromName: 'Kongshaug Kjøkken', // avsendernavn for middags-e-posten
   kitchenEmailFrom: '',            // valgfri egen avsender-e-post (må være verifisert i Brevo)
+  fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
 };
 
 export function getSettings() {
@@ -59,6 +60,7 @@ export function getSettings() {
     kitchenEmailTime: s.kitchenEmailTime ?? DEFAULTS.kitchenEmailTime,
     kitchenEmailFromName: s.kitchenEmailFromName ?? DEFAULTS.kitchenEmailFromName,
     kitchenEmailFrom: s.kitchenEmailFrom ?? DEFAULTS.kitchenEmailFrom,
+    fireReminderPushEnabled: s.fireReminderPushEnabled != null ? s.fireReminderPushEnabled === 'true' : DEFAULTS.fireReminderPushEnabled,
   };
 }
 

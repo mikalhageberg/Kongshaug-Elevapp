@@ -1,4 +1,5 @@
-// Automatisk utsending av brannliste- og middags-e-post.
+// Automatisk utsending av brannliste- og middags-e-post, samt push-påminnelse
+// om brannlisten.
 //
 // To ting gjorde at den gamle versjonen kunne hoppe over en dag i det stille:
 //
@@ -19,6 +20,7 @@
 import { config } from './config.js';
 import { getSettings, getLastSent, setLastSent, hhmmToMinutes } from './settings.js';
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
+import { sendFireListReminder } from './fireReminder.js';
 
 // Hvor lenge etter oppsatt tidspunkt vi fortsatt sender. Dekker drift og korte
 // nedetider, men hindrer at en e-post fra i formiddag plutselig går ut om
@@ -73,11 +75,20 @@ export async function runOnce(now = zonedNow(), log = console) {
       send: sendKitchenEmail,
       beskriv: (r) => `sendt til ${r.recipient} (${r.eating} spiser)`,
     },
+    {
+      navn: 'Brannliste-påminnelse',
+      key: 'fireReminderPushLastSent',
+      // recipient: true er en plassholder – denne jobben har ingen fast mottaker
+      // (målgruppen beregnes dynamisk ved kjøring), men isDue() krever en «sann» verdi her.
+      cfg: { enabled: s.fireReminderPushEnabled, recipient: true, time: '20:00' },
+      send: sendFireListReminder,
+      beskriv: (r) => `sendt til ${r.sent} av ${r.targeted} elever (natt ${r.nightDate})`,
+    },
   ];
 
   for (const job of jobs) {
     if (!isDue({ ...job.cfg, lastSent: getLastSent(job.key) }, now)) continue;
-    // Merk som sendt FØR utsending: feiler Brevo, vil vi ikke at neste tick
+    // Merk som sendt FØR utsending: feiler sendingen, vil vi ikke at neste tick
     // 30 sekunder senere skal prøve igjen og igjen resten av vinduet.
     setLastSent(job.key, now.dateKey);
     try {
@@ -85,7 +96,7 @@ export async function runOnce(now = zonedNow(), log = console) {
       sent.push(job.navn);
       log.log(`  ✉  ${job.navn} ${job.beskriv(r)}`);
     } catch (ex) {
-      log.error(`  ✉  ${job.navn}-epost feilet: ${ex.message}`);
+      log.error(`  ✉  ${job.navn} feilet: ${ex.message}`);
     }
   }
   return sent;

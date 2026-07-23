@@ -2,10 +2,10 @@ import { Router } from 'express';
 import { Expo } from 'expo-server-sdk';
 import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
+import { sendExpoPush } from '../pushSend.js';
 
 const router = Router();
 router.use(requireAuth);
-const expo = new Expo();
 
 // ELEV/ADMIN: registrer denne enhetens Expo push-token (etter innlogging).
 router.post('/register', (req, res) => {
@@ -34,34 +34,7 @@ router.post('/broadcast', requireAdmin, async (req, res) => {
   if (!title || !body) return res.status(400).json({ error: 'Tittel og tekst kreves' });
 
   const rows = db.prepare('SELECT token FROM push_tokens').all();
-  if (!rows.length) return res.json({ sent: 0, failed: 0 });
-
-  const messages = rows.map((r) => ({ to: r.token, title, body, sound: 'default' }));
-  const chunks = expo.chunkPushNotifications(messages);
-  const badTokens = [];
-  let sent = 0;
-
-  for (const chunk of chunks) {
-    try {
-      const tickets = await expo.sendPushNotificationsAsync(chunk);
-      tickets.forEach((ticket, i) => {
-        if (ticket.status === 'error') {
-          if (ticket.details?.error === 'DeviceNotRegistered') badTokens.push(chunk[i].to);
-        } else {
-          sent++;
-        }
-      });
-    } catch {
-      // Hele chunken feilet (f.eks. nettverksfeil) – hopp over, ikke stopp resten.
-    }
-  }
-
-  if (badTokens.length) {
-    const ph = badTokens.map(() => '?').join(',');
-    db.prepare(`DELETE FROM push_tokens WHERE token IN (${ph})`).run(...badTokens);
-  }
-
-  res.json({ sent, failed: rows.length - sent });
+  res.json(await sendExpoPush(rows.map((r) => r.token), { title, body }));
 });
 
 export default router;

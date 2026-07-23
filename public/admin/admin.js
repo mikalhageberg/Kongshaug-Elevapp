@@ -1251,6 +1251,17 @@ async function renderSettings(main) {
       ${windowRow('Lørdag', 'fireOpenSaturday', s.fireOpenSaturday, 'fireCloseSaturday', s.fireCloseSaturday, 'Kan stenge etter midnatt.')}
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Push-varsel: husk brannlisten</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender et push-varsel i mobilappen kl. 20:00 til elever som ikke har krysset seg av for kvelden. Tidspunktet er fast og uavhengig av åpningstidene for innsjekksvinduet over.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
+        <div><div style="font-size:15px;font-weight:700">Automatisk påminnelse</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Kl. 20:00 hver dag.</div></div>
+        <input type="checkbox" name="fireReminderPushEnabled" ${s.fireReminderPushEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-ghost" id="testPushReminder" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
+      </div>
+    </div>
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: brannliste</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send brannlisten automatisk til ansvarlig lærer, med PDF vedlagt.</div>
       ${!s.mailConfigured ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:6px 0 4px">⚠ Brevo er ikke satt opp ennå. Legg inn BREVO_API_KEY og MAIL_FROM i server/.env og start serveren på nytt.</div>` : ''}
@@ -1311,6 +1322,7 @@ async function renderSettings(main) {
       kitchenEmailRecipient: val('kitchenEmailRecipient').value.trim(),
       kitchenEmailTime: val('kitchenEmailTime').value,
       kitchenEmailFromName: val('kitchenEmailFromName').value.trim(),
+      fireReminderPushEnabled: val('fireReminderPushEnabled').checked,
     };
   };
 
@@ -1340,6 +1352,16 @@ async function renderSettings(main) {
       await api('/api/settings', { method: 'PUT', body: collectBody() });
       const r = await api('/api/settings/test-kitchen-email', { method: 'POST' });
       toast('Test-e-post sendt til ' + r.recipient);
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  });
+
+  page.querySelector('#testPushReminder').addEventListener('click', async () => {
+    const btn = page.querySelector('#testPushReminder'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Sender…';
+    try {
+      await api('/api/settings', { method: 'PUT', body: collectBody() });
+      const r = await api('/api/settings/test-push-reminder', { method: 'POST' });
+      toast(`Sendt til ${r.sent} av ${r.targeted} elever`);
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; btn.textContent = old; }
   });

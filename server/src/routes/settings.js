@@ -3,6 +3,7 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import { getSettings, setSettings, TIME_RE } from '../settings.js';
 import { config } from '../config.js';
 import { sendFireListEmail, sendKitchenEmail } from '../mail.js';
+import { sendFireListReminder } from '../fireReminder.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -33,6 +34,7 @@ router.put('/', (req, res) => {
   if (b.andaktWeekdaysOnly !== undefined) patch.andaktWeekdaysOnly = b.andaktWeekdaysOnly ? 'true' : 'false';
   if (b.fireEmailEnabled !== undefined) patch.fireEmailEnabled = b.fireEmailEnabled ? 'true' : 'false';
   if (b.kitchenEmailEnabled !== undefined) patch.kitchenEmailEnabled = b.kitchenEmailEnabled ? 'true' : 'false';
+  if (b.fireReminderPushEnabled !== undefined) patch.fireReminderPushEnabled = b.fireReminderPushEnabled ? 'true' : 'false';
   for (const k of ['fireEmailRecipient', 'kitchenEmailRecipient', 'kitchenEmailFrom']) {
     if (b[k] === undefined) continue;
     const r = String(b[k]).trim();
@@ -58,6 +60,16 @@ router.post('/test-email', async (req, res) => {
 router.post('/test-kitchen-email', async (req, res) => {
   try {
     const result = await sendKitchenEmail();
+    res.json({ ok: true, ...result });
+  } catch (ex) {
+    res.status(400).json({ error: ex.message });
+  }
+});
+
+// Send brannliste-påminnelsen nå (for å teste oppsettet).
+router.post('/test-push-reminder', async (req, res) => {
+  try {
+    const result = await sendFireListReminder();
     res.json({ ok: true, ...result });
   } catch (ex) {
     res.status(400).json({ error: ex.message });
