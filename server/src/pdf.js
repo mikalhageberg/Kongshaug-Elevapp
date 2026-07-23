@@ -46,8 +46,9 @@ export function buildFireListPdf(overview) {
         if (y + 18 > bottom()) { doc.addPage(); y = 50; }
         doc.font('Helvetica-Oblique').fontSize(11).fillColor('#7a5c00');
         doc.text(g.name, cols.name, y, { width: cols.room - cols.name - 8, ellipsis: true, lineBreak: false });
+        doc.text(String(g.room ?? '–'), cols.room, y, { lineBreak: false });
         const hos = sameDorm ? `Gjest hos ${g.hostName}` : `Gjest hos ${g.hostName} (${g.hostDorm || '–'})`;
-        doc.text(hos, cols.room, y, { width: right - cols.room, ellipsis: true, lineBreak: false });
+        doc.text(hos, cols.status, y, { width: right - cols.status, ellipsis: true, lineBreak: false });
         y += 17;
         doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.4).strokeColor('#e2e2e2').stroke();
       };

@@ -52,6 +52,7 @@ export function Banner({ text, tone = 'grey' }) {
   const map = {
     green: [C.greenBg, C.greenInk],
     red: [C.redBg, C.redInk],
+    amber: [C.amberBg, C.amberInk],
     grey: ['#eef1f5', C.slate],
   };
   const [bg, fg] = map[tone] || map.grey;

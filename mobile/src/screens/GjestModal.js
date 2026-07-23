@@ -70,7 +70,7 @@ export default function GjestModal({ visible, onClose, user }) {
     if (!start) { setErr('Velg minst én natt.'); return; }
     setBusy(true); setErr(null);
     try {
-      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName: name.trim(), dorm: user?.dorm, startDate: start, endDate: end || start } });
+      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName: name.trim(), startDate: start, endDate: end || start } });
       setName(''); setStart(null); setEnd(null); load();
     } catch (ex) { setErr(ex.message || 'Kunne ikke sende'); }
     finally { setBusy(false); }
@@ -92,7 +92,8 @@ export default function GjestModal({ visible, onClose, user }) {
           <Text style={styles.title}>Meld gjest</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
         </View>
-        <Text style={styles.hint}>Gjesten føres på brannlisten i ditt internat{user?.dorm ? ` (${user.dorm})` : ''}. Sendes til administrasjonen for godkjenning.</Text>
+        <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten.</Text>
+        <View style={styles.warnBox}><Text style={styles.warnText}>⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</Text></View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           <Text style={styles.label}>Gjestens navn</Text>
@@ -129,7 +130,8 @@ export default function GjestModal({ visible, onClose, user }) {
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '700', color: C.ink }}>{g.guestName}</Text>
                     <Text style={{ fontSize: 12.5, color: C.muted2, marginTop: 2 }}>
-                      {g.dorm} · {g.startDate === g.endDate ? formatDateShort(g.startDate) : `${formatDateShort(g.startDate)} – ${formatDateShort(g.endDate)}`}
+                      {g.status === 'approved' && g.dorm ? `${g.dorm}${g.room ? ' · rom ' + g.room : ''} · ` : ''}
+                      {g.startDate === g.endDate ? formatDateShort(g.startDate) : `${formatDateShort(g.startDate)} – ${formatDateShort(g.endDate)}`}
                     </Text>
                     <View style={{ marginTop: 6, alignSelf: 'flex-start', backgroundColor: g.status === 'approved' ? C.greenBg : C.amberBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
                       <Text style={{ fontSize: 12, fontWeight: '700', color: g.status === 'approved' ? C.greenInk : C.amberInk }}>
@@ -159,6 +161,8 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 6 },
   title: { fontSize: 22, fontWeight: '800', color: C.ink },
   hint: { fontSize: 14, color: C.muted, paddingHorizontal: 20, marginBottom: 6, lineHeight: 20 },
+  warnBox: { marginHorizontal: 20, marginBottom: 8, backgroundColor: C.amberBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  warnText: { fontSize: 13.5, color: C.amberInk, fontWeight: '600', lineHeight: 19 },
   label: { fontSize: 13, fontWeight: '700', color: C.slate, marginBottom: 6 },
   input: { height: 52, backgroundColor: '#fff', borderWidth: 1, borderColor: C.line2, borderRadius: 14, paddingHorizontal: 16, fontSize: 16, color: C.ink },
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },

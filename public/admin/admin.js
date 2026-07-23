@@ -187,7 +187,7 @@ function page(active, renderMain) {
         <div class="brand"><div style="width:38px;height:38px;border-radius:11px;background:var(--navy-2);color:#fff;display:flex;align-items:center;justify-content:center">${icon.home}</div>
           <div><div style="font-size:15px;font-weight:800;color:#fff">Kongshaug</div><div style="font-size:12px">Brannvakt</div></div></div>
         <nav style="display:flex;flex-direction:column;gap:4px">
-          ${items.map(([id, label, ic, hash]) => `<a class="navitem ${active === id ? 'active' : ''}" href="#${hash}">${ic}${label}</a>`).join('')}
+          ${items.map(([id, label, ic, hash]) => `<a class="navitem ${active === id ? 'active' : ''}" href="#${hash}">${ic}${label}${id === 'gjester' ? '<span id="gjesterBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;font-weight:800;align-items:center;justify-content:center"></span>' : ''}</a>`).join('')}
         </nav>
         <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,.06)">
           <div style="width:38px;height:38px;border-radius:50%;background:#e5b769;color:#3a2c0a;display:flex;align-items:center;justify-content:center;font-weight:800">${initials(user.fullName)}</div>
@@ -199,6 +199,11 @@ function page(active, renderMain) {
     </div>`);
   root.appendChild(layout);
   layout.querySelector('#logout').addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); user = null; go('/'); render(); });
+  // Varsel-badge på Gjester: antall ventende besøksforespørsler.
+  api('/api/firelist/guests/pending-count').then((r) => {
+    const badge = layout.querySelector('#gjesterBadge');
+    if (badge && r.count > 0) { badge.textContent = r.count; badge.style.display = 'inline-flex'; }
+  }).catch(() => {});
   renderMain(layout.querySelector('#main'));
 }
 
@@ -212,14 +217,27 @@ async function renderDashboard(main) {
     `<button class="btn btn-primary" id="screen" style="height:44px;padding:0 20px;font-size:14.5px">${nav.qr}Vis QR på storskjerm</button>`);
   main.querySelector('#screen').addEventListener('click', () => window.open('/admin/#/storskjerm', '_blank'));
 
-  const page = el(`<div class="page"><div id="kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:22px"></div><div id="missing"></div></div>`);
+  const page = el(`<div class="page"><div id="guestNotice"></div><div id="kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:22px"></div><div id="missing"></div></div>`);
   main.appendChild(page);
 
-  const [fire, andakt, users] = await Promise.all([
+  const [fire, andakt, users, guests] = await Promise.all([
     api('/api/firelist/overview').catch(() => null),
     api('/api/andakt/checkins').catch(() => null),
     api('/api/users').catch(() => ({ users: [] })),
+    api('/api/firelist/guests').catch(() => ({ pending: [] })),
   ]);
+
+  // Varsel: ubehandlede besøksforespørsler fra elever.
+  const pend = guests.pending || [];
+  if (pend.length) {
+    page.querySelector('#guestNotice').innerHTML = `
+      <a href="#/gjester" style="display:flex;align-items:center;gap:14px;background:var(--amber-bg);border:1px solid var(--amber);border-radius:16px;padding:16px 20px;margin-bottom:22px;text-decoration:none;color:inherit">
+        <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:800;color:var(--amber-ink)">${pend.length} besøksforespørsel${pend.length > 1 ? 'er' : ''} venter på godkjenning</div>
+          <div style="font-size:13px;font-weight:600;color:var(--amber-ink);opacity:.85">${pend.map((g) => esc(g.guestName) + ' (hos ' + esc(g.hostName) + ')').join(', ')}</div></div>
+        <span class="pill" style="background:var(--amber-ink);color:#fff;flex:0 0 auto">Gå til Gjester →</span>
+      </a>`;
+  }
   const activeStudents = users.users.filter((u) => u.role === 'student' && u.active).length;
   const deactivated = users.users.filter((u) => u.role === 'student' && !u.active).length;
 
@@ -1328,8 +1346,9 @@ async function renderGuests(main) {
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">Gjesten føres på brannlisten i internatet den sover i, merket «Gjest hos [elev]».</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div style="grid-column:1/3"><label class="field-label">Vert (elev)</label><select class="field field-sm" id="host" style="background:#f7f8fa"></select></div>
-        <div><label class="field-label">Gjestens navn</label><input class="field field-sm" id="gname" placeholder="Fullt navn" /></div>
+        <div style="grid-column:1/3"><label class="field-label">Gjestens navn</label><input class="field field-sm" id="gname" placeholder="Fullt navn" /></div>
         <div><label class="field-label">Internat gjesten sover i</label><select class="field field-sm" id="gdorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Velg internat…', '')}</select></div>
+        <div><label class="field-label">Rom (valgfritt)</label><input class="field field-sm" id="groom" placeholder="Rom" /></div>
         <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /></div>
         <div><label class="field-label">Siste natt</label><input class="field field-sm" type="date" id="gto" /></div>
       </div>
@@ -1358,14 +1377,36 @@ async function renderGuests(main) {
     if (dorm && !page.querySelector('#gdorm').value) page.querySelector('#gdorm').value = dorm;
   });
 
-  const guestRow = (g, actions) => `
+  const dates = (g) => g.startDate === g.endDate ? formatDateNorsk(g.startDate) : formatDateNorsk(g.startDate) + ' – ' + formatDateNorsk(g.endDate);
+
+  // Godkjent/kommende gjest: viser tildelt internat + rom.
+  const upcomingRow = (g) => `
     <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #f2f4f6">
       <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-bg);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:800">${esc(g.guestName)} <span style="font-size:12.5px;font-weight:700;color:var(--muted-2)">· ${esc(g.dorm)}</span></div>
-        <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${g.startDate === g.endDate ? formatDateNorsk(g.startDate) : formatDateNorsk(g.startDate) + ' – ' + formatDateNorsk(g.endDate)}${g.createdBy === 'student' ? ' · meldt av eleven' : ''}</div>
+        <div style="font-size:15px;font-weight:800">${esc(g.guestName)} <span style="font-size:12.5px;font-weight:700;color:var(--muted-2)">· ${esc(g.dorm || '–')}${g.room ? ' · rom ' + esc(g.room) : ''}</span></div>
+        <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)}</div>
       </div>
-      <div style="display:flex;gap:8px;flex:0 0 auto">${actions}</div>
+      <button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px;flex:0 0 auto">Slett</button>
+    </div>`;
+
+  // Ventende forespørsel: admin tildeler internat + rom før godkjenning.
+  const pendingRow = (g) => `
+    <div style="padding:14px 18px;border-bottom:1px solid #f2f4f6">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:11px;background:var(--amber-bg);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${nav.guest}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800">${esc(g.guestName)}</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)} · meldt av eleven</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;flex-wrap:wrap">
+        <div><label class="field-label" style="margin-bottom:4px">Internat</label><select class="field field-sm" data-adorm="${g.id}" style="background:#f7f8fa;width:180px">${optionsHTML(DORMS, 'Velg internat…', g.hostDorm || '')}</select></div>
+        <div><label class="field-label" style="margin-bottom:4px">Rom</label><input class="field field-sm" data-aroom="${g.id}" placeholder="Rom" style="width:90px" /></div>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" data-approve="${g.id}" style="height:46px;padding:0 18px;font-size:14px">Godkjenn</button>
+        <button class="btn btn-ghost" data-del="${g.id}" style="height:46px;padding:0 14px;font-size:14px">Avvis</button>
+      </div>
     </div>`;
 
   async function load() {
@@ -1374,18 +1415,20 @@ async function renderGuests(main) {
     pendingBox.innerHTML = d.pending.length ? `
       <div style="font-size:15px;font-weight:800;margin:2px 2px 10px;color:var(--amber-ink)">Venter på godkjenning (${d.pending.length})</div>
       <div style="background:#fff;border:1px solid var(--amber);border-radius:16px;overflow:hidden;margin-bottom:8px">
-        ${d.pending.map((g) => guestRow(g,
-          `<button class="btn btn-primary" data-approve="${g.id}" style="height:40px;padding:0 16px;font-size:13.5px">Godkjenn</button>
-           <button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px">Avvis</button>`)).join('')}
+        ${d.pending.map(pendingRow).join('')}
       </div>` : '';
     const upBox = page.querySelector('#upcomingBox');
     upBox.innerHTML = d.upcoming.length
-      ? d.upcoming.map((g) => guestRow(g, `<button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px">Slett</button>`)).join('')
+      ? d.upcoming.map(upcomingRow).join('')
       : '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen kommende gjester.</div>';
 
     page.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', async () => {
+      const id = b.dataset.approve;
+      const dorm = page.querySelector(`[data-adorm="${id}"]`).value;
+      const room = page.querySelector(`[data-aroom="${id}"]`).value.trim();
+      if (!dorm) { toast('Velg internat for gjesten.'); return; }
       b.disabled = true;
-      try { await api(`/api/firelist/guests/${b.dataset.approve}/approve`, { method: 'POST' }); toast('Gjest godkjent'); load(); }
+      try { await api(`/api/firelist/guests/${id}/approve`, { method: 'POST', body: { dorm, room } }); toast('Gjest godkjent'); load(); }
       catch (ex) { toast(ex.message); b.disabled = false; }
     }));
     page.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
@@ -1401,6 +1444,7 @@ async function renderGuests(main) {
       hostUserId: Number(page.querySelector('#host').value),
       guestName: page.querySelector('#gname').value.trim(),
       dorm: page.querySelector('#gdorm').value,
+      room: page.querySelector('#groom').value.trim(),
       startDate: page.querySelector('#gfrom').value,
       endDate: page.querySelector('#gto').value,
     };
@@ -1408,7 +1452,7 @@ async function renderGuests(main) {
     const btn = page.querySelector('#gadd'); btn.disabled = true;
     try {
       await api('/api/firelist/guests', { method: 'POST', body });
-      page.querySelector('#gname').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = '';
+      page.querySelector('#gname').value = ''; page.querySelector('#host').value = ''; page.querySelector('#gdorm').value = ''; page.querySelector('#groom').value = '';
       toast('Gjest lagt til'); load();
     } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }
     finally { btn.disabled = false; }
@@ -1470,7 +1514,7 @@ async function renderBrannliste(main) {
         <span class="dot" style="background:var(--amber)"></span>
         <div style="flex:1;min-width:0">
           <div style="font-size:19px;font-weight:700;line-height:1.25">${esc(g.name)}</div>
-          <div style="font-size:14px;color:var(--amber-ink);font-weight:700;margin-top:2px">${hos}</div>
+          <div style="font-size:14px;color:var(--amber-ink);font-weight:700;margin-top:2px">Rom ${esc(g.room ?? '–')} · ${hos}</div>
         </div>
         <span class="pill pill-amber" style="flex:0 0 auto">Gjest</span>
       </div>`;
@@ -1633,7 +1677,8 @@ function buildFireListPrintHTML(d) {
 
   const guestTr = (g, sameDorm) => `<tr class="guest">
     <td>${esc(g.name)}</td>
-    <td colspan="3">Gjest hos ${esc(g.hostName)}${sameDorm ? '' : ` (${esc(g.hostDorm || '–')})`}</td>
+    <td>${esc(g.room ?? '–')}</td>
+    <td colspan="2">Gjest hos ${esc(g.hostName)}${sameDorm ? '' : ` (${esc(g.hostDorm || '–')})`}</td>
   </tr>`;
   const dorms = d.dorms.map((dorm) => {
     const guests = dorm.guests || [];

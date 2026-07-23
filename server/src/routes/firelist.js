@@ -186,7 +186,8 @@ router.get('/overview', requireAdmin, (req, res) => {
 const guestPublic = (g) => ({
   id: g.id,
   guestName: g.guest_name,
-  dorm: g.dorm,
+  dorm: g.dorm || null,
+  room: g.room || null,
   startDate: g.start_date,
   endDate: g.end_date,
   status: g.status,
@@ -196,17 +197,24 @@ const guestPublic = (g) => ({
   hostDorm: g.host_dorm,
 });
 
-// Felles validering av gjeste-felt. Returnerer { error } eller { value }.
-function parseGuest(body) {
+// Navn + datospenn – felles for elev-forespørsel og admin-oppretting.
+function parseGuestBase(body) {
   const guestName = String(body?.guestName || '').trim().slice(0, 80);
-  const dorm = String(body?.dorm || '').trim().slice(0, 60);
   let { startDate, endDate } = body || {};
   endDate = endDate || startDate;
   if (!guestName) return { error: 'Gjestens navn kreves.' };
-  if (!dorm) return { error: 'Velg hvilket internat gjesten sover i.' };
   if (!isValidDate(startDate) || !isValidDate(endDate)) return { error: 'Ugyldig dato.' };
   if (endDate < startDate) return { error: 'Sluttdato kan ikke være før startdato.' };
-  return { value: { guestName, dorm, startDate, endDate } };
+  return { value: { guestName, startDate, endDate } };
+}
+// Internat er påkrevd når en gjest godkjennes/legges til (må stå på lista);
+// rom er valgfritt. Admin tildeler begge – gjesten kan bo i et annet internat
+// enn eleven.
+function parsePlacement(body) {
+  const dorm = String(body?.dorm || '').trim().slice(0, 60);
+  const room = String(body?.room || '').trim().slice(0, 20);
+  if (!dorm) return { error: 'Velg hvilket internat gjesten sover i.' };
+  return { value: { dorm, room: room || null } };
 }
 
 const GUEST_SELECT =
@@ -221,24 +229,36 @@ router.get('/guests', requireAdmin, (req, res) => {
   res.json({ pending: pending.map(guestPublic), upcoming: upcoming.map(guestPublic) });
 });
 
-// ADMIN: legg til en godkjent gjest for en elev.
+// ADMIN: hvor mange forespørsler venter (til varsel-badge og dashbord).
+router.get('/guests/pending-count', requireAdmin, (req, res) => {
+  const n = db.prepare("SELECT COUNT(*) AS n FROM fire_guests WHERE status = 'pending'").get().n;
+  res.json({ count: n });
+});
+
+// ADMIN: legg til en godkjent gjest for en elev – med internat + rom.
 router.post('/guests', requireAdmin, (req, res) => {
-  const { error, value } = parseGuest(req.body);
-  if (error) return res.status(400).json({ error });
+  const base = parseGuestBase(req.body);
+  if (base.error) return res.status(400).json({ error: base.error });
+  const place = parsePlacement(req.body);
+  if (place.error) return res.status(400).json({ error: place.error });
   const hostId = Number(req.body?.hostUserId);
   const host = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1").get(hostId);
   if (!host) return res.status(400).json({ error: 'Fant ingen aktiv elev som vert.' });
   const info = db.prepare(
-    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, start_date, end_date, status, created_by)
-     VALUES (?, ?, ?, ?, ?, 'approved', 'admin')`
-  ).run(hostId, value.guestName, value.dorm, value.startDate, value.endDate);
+    `INSERT INTO fire_guests (host_user_id, guest_name, dorm, room, start_date, end_date, status, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, 'approved', 'admin')`
+  ).run(hostId, base.value.guestName, place.value.dorm, place.value.room, base.value.startDate, base.value.endDate);
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
   res.status(201).json({ guest: guestPublic(g) });
 });
 
-// ADMIN: godkjenn en ventende forespørsel.
+// ADMIN: godkjenn en ventende forespørsel og tildel internat + rom.
 router.post('/guests/:id/approve', requireAdmin, (req, res) => {
-  const info = db.prepare("UPDATE fire_guests SET status = 'approved' WHERE id = ? AND status = 'pending'").run(Number(req.params.id));
+  const place = parsePlacement(req.body);
+  if (place.error) return res.status(400).json({ error: place.error });
+  const info = db.prepare(
+    "UPDATE fire_guests SET status = 'approved', dorm = ?, room = ? WHERE id = ? AND status = 'pending'"
+  ).run(place.value.dorm, place.value.room, Number(req.params.id));
   if (!info.changes) return res.status(404).json({ error: 'Fant ikke forespørselen' });
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(Number(req.params.id));
   res.json({ guest: guestPublic(g) });
@@ -260,14 +280,15 @@ router.get('/guests/me', (req, res) => {
   res.json({ guests: rows.map(guestPublic) });
 });
 
-// ELEV: be om å få registrere en gjest – havner som 'pending' hos admin.
+// ELEV: be om å få registrere en gjest – kun navn + datoer. Admin tildeler
+// internat og rom ved godkjenning (gjesten bor ikke nødvendigvis hos eleven).
 router.post('/guests/request', (req, res) => {
-  const { error, value } = parseGuest(req.body);
+  const { error, value } = parseGuestBase(req.body);
   if (error) return res.status(400).json({ error });
   const info = db.prepare(
     `INSERT INTO fire_guests (host_user_id, guest_name, dorm, start_date, end_date, status, created_by)
-     VALUES (?, ?, ?, ?, ?, 'pending', 'student')`
-  ).run(req.auth.sub, value.guestName, value.dorm, value.startDate, value.endDate);
+     VALUES (?, ?, '', ?, ?, 'pending', 'student')`
+  ).run(req.auth.sub, value.guestName, value.startDate, value.endDate);
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
   res.status(201).json({ guest: guestPublic(g) });
 });

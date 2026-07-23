@@ -176,6 +176,7 @@ async function renderDashboard() {
       <div style="width:42px;height:42px;border-radius:50%;background:#dbe4ef;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto">${initials(user.fullName)}</div>
     </div>
     <div style="padding:0 22px"><div id="geo" class="banner pill-grey">Sjekker posisjon…</div></div>
+    <div id="guestStatus" style="padding:0 22px"></div>
     <div id="kitchenDuty" style="padding:0 22px"></div>
     <div id="todayMenu" style="padding:0 22px"></div>
     <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:16px">
@@ -241,6 +242,22 @@ async function renderDashboard() {
           ${icon.food} Du har kjøkkentjeneste neste uke · uke ${d.nextWeek.isoWeek}
         </div>`;
     } else { return; }
+    box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
+  }).catch(() => {});
+
+  // Gjeste-status: venter på godkjenning / godkjent (med tildelt internat+rom).
+  api('/api/firelist/guests/me').then((d) => {
+    const guests = (d.guests || []);
+    if (!guests.length) return;
+    const box = body.querySelector('#guestStatus');
+    box.innerHTML = guests.map((g) => {
+      const dates = g.startDate === g.endDate ? formatDateShort(g.startDate) : formatDateShort(g.startDate) + ' – ' + formatDateShort(g.endDate);
+      if (g.status === 'approved') {
+        const place = g.dorm ? `${esc(g.dorm)}${g.room ? ' · rom ' + esc(g.room) : ''} · ` : '';
+        return `<div class="banner pill-green" data-go="/gjest" style="cursor:pointer;margin-top:12px">${icon.check} Gjest godkjent: ${esc(g.guestName)} · ${place}${dates}</div>`;
+      }
+      return `<div class="banner pill-amber" data-go="/gjest" style="cursor:pointer;margin-top:12px">${icon.clock} Gjest venter på godkjenning: ${esc(g.guestName)} · ${dates}</div>`;
+    }).join('');
     box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
   }).catch(() => {});
 
@@ -654,7 +671,8 @@ async function renderGjest() {
   body.appendChild(el(`
     <div class="pad">
       <div class="h1" style="font-size:22px">Meld gjest på internatet</div>
-      <p class="sub" style="line-height:1.5;margin:8px 0 18px">Gjesten føres på brannlisten i ditt internat${user.dorm ? ` (${esc(user.dorm)})` : ''}. Forespørselen sendes til administrasjonen for godkjenning.</p>
+      <p class="sub" style="line-height:1.5;margin:8px 0 12px">Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten.</p>
+      <div style="background:var(--amber-bg);color:var(--amber-ink);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:600;line-height:1.45;margin-bottom:18px">⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</div>
       <div class="card" style="border-radius:18px">
         <label class="field-label">Gjestens navn</label>
         <input class="field" id="gname" placeholder="Fullt navn" />
@@ -678,8 +696,10 @@ async function renderGjest() {
         ? '<span class="pill pill-green">Godkjent</span>'
         : '<span class="pill pill-amber">Venter på godkjenning</span>';
       const dates = g.startDate === g.endDate ? formatDateShort(g.startDate) : formatDateShort(g.startDate) + ' – ' + formatDateShort(g.endDate);
+      // Godkjent: vis tildelt internat + rom. Ventende: bare datoene.
+      const place = g.status === 'approved' && g.dorm ? `${esc(g.dorm)}${g.room ? ' · rom ' + esc(g.room) : ''} · ` : '';
       return `<div class="card" style="border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
-        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${esc(g.guestName)}</div><div class="sub" style="font-size:12.5px">${esc(g.dorm)} · ${dates}</div><div style="margin-top:6px">${badge}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">${esc(g.guestName)}</div><div class="sub" style="font-size:12.5px">${place}${dates}</div><div style="margin-top:6px">${badge}</div></div>
         <button data-del="${g.id}" style="background:none;border:none;color:var(--muted-2);padding:6px;cursor:pointer;flex:0 0 auto"><div style="width:20px;height:20px">${icon.x}</div></button>
       </div>`;
     }).join('');
@@ -699,7 +719,7 @@ async function renderGjest() {
     if (to < from) { gerr.textContent = 'Siste natt kan ikke være før den første.'; gerr.style.display = 'block'; return; }
     const btn = body.querySelector('#gadd'); btn.disabled = true;
     try {
-      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName, dorm: user.dorm, startDate: from, endDate: to } });
+      await api('/api/firelist/guests/request', { method: 'POST', body: { guestName, startDate: from, endDate: to } });
       body.querySelector('#gname').value = '';
       toast('Sendt til godkjenning'); load();
     } catch (ex) { gerr.textContent = ex.message; gerr.style.display = 'block'; }

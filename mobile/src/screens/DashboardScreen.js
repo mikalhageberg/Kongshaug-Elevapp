@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from 'react-native';
 import { api, getPositionOnCampus } from '../api';
 import { C, formatTime, formatDateLong, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button } from '../ui';
@@ -17,21 +17,24 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
   const [andakt, setAndakt] = useState(null);
   const [duty, setDuty] = useState(null);
   const [todayMenu, setTodayMenu] = useState(null); // { dinner, guard } fra ukemenyen
+  const [guests, setGuests] = useState([]); // egne gjester (venter/godkjent)
   const [geo, setGeo] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
   const [refreshing, setRefreshing] = useState(false);
   const today = todayStr();
 
   const load = useCallback(async () => {
-    const [f, a, k, t] = await Promise.all([
+    const [f, a, k, t, g] = await Promise.all([
       api('/api/firelist/status').catch(() => null),
       api('/api/andakt/status').catch(() => null),
       api('/api/dinner/kitchen-duty/me').catch(() => null),
       api('/api/menus/today').catch(() => null),
+      api('/api/firelist/guests/me').catch(() => null),
     ]);
     setFire(f);
     setAndakt(a);
     setDuty(k);
     setTodayMenu(t);
+    setGuests(g?.guests || []);
   }, []);
 
   useEffect(() => {
@@ -76,6 +79,21 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
       </View>
 
       <View style={{ marginBottom: 16 }}><Banner tone={geo.tone} text={geo.text} /></View>
+
+      {/* Gjeste-status: venter på godkjenning / godkjent med tildelt rom. */}
+      {guests.map((g) => {
+        const dates = g.startDate === g.endDate ? formatDateLong(g.startDate) : `${g.startDate} – ${g.endDate}`;
+        const approved = g.status === 'approved';
+        const place = approved && g.dorm ? `${g.dorm}${g.room ? ' · rom ' + g.room : ''} · ` : '';
+        return (
+          <Pressable key={g.id} style={{ marginBottom: 12 }} onPress={() => goTo('brann')}>
+            <Banner tone={approved ? 'green' : 'amber'}
+              text={approved
+                ? `✓ Gjest godkjent: ${g.guestName} · ${place}${dates}`
+                : `🕑 Gjest venter på godkjenning: ${g.guestName}`} />
+          </Pressable>
+        );
+      })}
 
       {/* Kjøkkentjeneste: tydelig kort i tjenesteuken, diskret varsel uken før. */}
       {duty?.thisWeek ? (

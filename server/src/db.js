@@ -165,6 +165,8 @@ ensureColumn('menus', 'parsed_json', 'TEXT');                        // JSON: { 
 ensureColumn('menus', 'parse_status', "TEXT NOT NULL DEFAULT 'none'"); // 'none' | 'pending' | 'ok' | 'error'
 ensureColumn('menus', 'parse_error', 'TEXT');                        // feilmelding hvis parse_status = 'error'
 ensureColumn('menus', 'parsed_at', 'TEXT');
+// Gjester: admin tildeler rom (og internat) ved godkjenning; rommet vises på lista.
+ensureColumn('fire_guests', 'room', 'TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_feide ON users(feide_id) WHERE feide_id IS NOT NULL');
 
 export default db;

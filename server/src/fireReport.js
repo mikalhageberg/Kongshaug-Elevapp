@@ -38,7 +38,7 @@ export function getFireOverview(nightDate = todayDate()) {
   // de sover i (g.dorm), merket «Gjest hos [vert]». Verten kan bo i et annet internat.
   const guests = db
     .prepare(
-      `SELECT g.id, g.guest_name, g.dorm, g.host_user_id, u.full_name AS host_name, u.dorm AS host_dorm
+      `SELECT g.id, g.guest_name, g.dorm, g.room, g.host_user_id, u.full_name AS host_name, u.dorm AS host_dorm
          FROM fire_guests g
          JOIN users u ON u.id = g.host_user_id
         WHERE g.status = 'approved' AND ? BETWEEN g.start_date AND g.end_date
@@ -47,7 +47,7 @@ export function getFireOverview(nightDate = todayDate()) {
     .all(nightDate);
   for (const g of guests) {
     const dorm = ensureDorm(g.dorm || 'Uten internat');
-    dorm.guests.push({ id: g.id, name: g.guest_name, hostId: g.host_user_id, hostName: g.host_name, hostDorm: g.host_dorm || null });
+    dorm.guests.push({ id: g.id, name: g.guest_name, room: g.room || null, hostId: g.host_user_id, hostName: g.host_name, hostDorm: g.host_dorm || null });
   }
 
   return {
