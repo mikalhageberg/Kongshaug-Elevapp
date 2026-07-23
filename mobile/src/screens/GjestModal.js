@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { api } from '../api';
 import { C, ymd, todayStr, formatNightRange, countNights } from '../theme';
 import { Button } from '../ui';
@@ -94,20 +94,24 @@ export default function GjestModal({ visible, onClose, user }) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <View style={styles.wrap}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <View style={styles.head}>
           <Text style={styles.title}>Meld gjest</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
         </View>
-        <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten. Trykk kvelden gjesten kommer, deretter den siste kvelden. Én natt = trykk samme dag to ganger.</Text>
-        <View style={styles.nightNote}>
-          <Text style={styles.nightNoteText}>
-            🌙 Besøket gjelder natten. Velger du <Text style={{ fontWeight: '800' }}>19. juli</Text>, betyr det gjesten er på internatet <Text style={{ fontWeight: '800' }}>natt til 20. juli</Text>.
-          </Text>
-        </View>
-        <View style={styles.warnBox}><Text style={styles.warnText}>⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</Text></View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        {/* Hele innholdet – forklaring, skjema, kalender og listen – ligger i
+            samme ScrollView, slik at det fokuserte feltet alltid kan rulles
+            opp over tastaturet, uansett hvor langt ned det står. */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten. Trykk kvelden gjesten kommer, deretter den siste kvelden. Én natt = trykk samme dag to ganger.</Text>
+          <View style={styles.nightNote}>
+            <Text style={styles.nightNoteText}>
+              🌙 Besøket gjelder natten. Velger du <Text style={{ fontWeight: '800' }}>19. juli</Text>, betyr det gjesten er på internatet <Text style={{ fontWeight: '800' }}>natt til 20. juli</Text>.
+            </Text>
+          </View>
+          <View style={styles.warnBox}><Text style={styles.warnText}>⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</Text></View>
+
           <Text style={styles.label}>Gjestens navn</Text>
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Fullt navn" placeholderTextColor={C.muted2} />
 
@@ -175,7 +179,7 @@ export default function GjestModal({ visible, onClose, user }) {
           <Text style={styles.summary}>{summary}</Text>
           <Button title="Send til godkjenning" onPress={submit} loading={busy} disabled={!name.trim() || !start} />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -184,10 +188,12 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: C.surface },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 6 },
   title: { fontSize: 22, fontWeight: '800', color: C.ink },
-  hint: { fontSize: 14, color: C.muted, paddingHorizontal: 20, marginBottom: 6, lineHeight: 20 },
-  warnBox: { marginHorizontal: 20, marginBottom: 8, backgroundColor: C.amberBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  // Ligger nå inne i ScrollView-ens contentContainerStyle (padding:16), så
+  // ingen egen horisontal margin – ellers blir de mer innrykket enn feltene.
+  hint: { fontSize: 14, color: C.muted, marginBottom: 6, lineHeight: 20 },
+  warnBox: { marginBottom: 16, backgroundColor: C.amberBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
   warnText: { fontSize: 13.5, color: C.amberInk, fontWeight: '600', lineHeight: 19 },
-  nightNote: { marginHorizontal: 20, marginBottom: 8, backgroundColor: '#e7edf5', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  nightNote: { marginBottom: 8, backgroundColor: '#e7edf5', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
   nightNoteText: { fontSize: 13.5, color: C.navy, fontWeight: '600', lineHeight: 19 },
   confirm: { backgroundColor: C.amberBg, borderWidth: 1, borderColor: C.amber, borderRadius: 12, padding: 14, marginBottom: 12 },
   confirmTitle: { fontSize: 15.5, fontWeight: '800', color: C.amberInk },
