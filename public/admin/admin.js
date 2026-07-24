@@ -1565,7 +1565,7 @@ async function renderGuests(main) {
   const parseD = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
   const nights = (g) => Math.round((parseD(g.endDate) - parseD(g.startDate)) / 86400000) + 1;
   const dayAfter = (s) => { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + 1)); };
-  const stayInfo = (g) => `${nights(g)} natt${nights(g) === 1 ? '' : 'er'} · reiser ${formatDateNorsk(dayAfter(g.endDate))}`;
+  const stayInfo = (g) => `${nights(g)} ${nights(g) === 1 ? 'natt' : 'netter'} · reiser ${formatDateNorsk(dayAfter(g.endDate))}`;
 
   // Godkjent/kommende gjest: viser tildelt internat + rom.
   const upcomingRow = (g) => `
