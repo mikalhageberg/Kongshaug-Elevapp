@@ -778,9 +778,10 @@ async function renderAndakt(main) {
     page.querySelector('#countAbsent').style.color = view === 'absent' ? '#fff' : 'var(--red-ink)';
   }
 
+  // 48×48 – samme trykkflate som statusknappene på brannlisten (Apple HIG: 44pt).
   const andBtn = (uid, set, ic, activeColor, active, title) =>
-    `<button data-uid="${uid}" data-andset="${set}" title="${title}" style="width:28px;height:28px;border-radius:8px;border:1px solid ${active ? activeColor : 'var(--line-2)'};background:${active ? activeColor : '#fff'};color:${active ? '#fff' : 'var(--muted-2)'};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0"><span style="width:14px;height:14px;display:block">${ic}</span></button>`;
-  const andCtrl = (uid, cur) => `<div style="display:flex;gap:4px;flex:0 0 auto">
+    `<button data-uid="${uid}" data-andset="${set}" title="${title}" style="width:48px;height:48px;border-radius:12px;border:1.5px solid ${active ? activeColor : 'var(--line-2)'};background:${active ? activeColor : '#fff'};color:${active ? '#fff' : 'var(--muted-2)'};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation"><span style="width:22px;height:22px;display:block">${ic}</span></button>`;
+  const andCtrl = (uid, cur) => `<div style="display:flex;gap:8px;flex:0 0 auto">
     ${andBtn(uid, 'present', icon.check, 'var(--green)', cur === 'present', 'Sett til stede')}
     ${andBtn(uid, 'late', icon.warn, 'var(--amber)', cur === 'late', 'Sett for sent')}
     ${andBtn(uid, 'clear', icon.x, 'var(--red)', !cur, 'Fjern (fravær)')}
