@@ -1505,6 +1505,10 @@ async function renderGuests(main) {
         <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /></div>
         <div><label class="field-label">Siste natt</label><input class="field field-sm" type="date" id="gto" /></div>
       </div>
+      <div style="background:#eef4fb;border:1px solid #d7e4f4;border-radius:10px;padding:11px 14px;margin-top:12px">
+        <div style="font-size:12.5px;color:var(--slate,#33415a);line-height:1.5">🌙 Datoene er <b>netter</b>. «Siste natt» er den siste natten gjesten sover på internatet – gjesten reiser <b>morgenen etter</b>. Velger du samme dato i begge felt, er det ett døgn (én natt).</div>
+        <div id="gpreview" style="font-size:13.5px;font-weight:800;color:var(--navy);margin-top:7px;display:none"></div>
+      </div>
       <p id="gerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
       <button class="btn btn-primary" id="gadd" style="height:46px;padding:0 22px;margin-top:16px">Legg til gjest</button>
     </div>
@@ -1566,6 +1570,20 @@ async function renderGuests(main) {
   const nights = (g) => Math.round((parseD(g.endDate) - parseD(g.startDate)) / 86400000) + 1;
   const dayAfter = (s) => { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + 1)); };
   const stayInfo = (g) => `${nights(g)} ${nights(g) === 1 ? 'natt' : 'netter'} · reiser ${formatDateNorsk(dayAfter(g.endDate))}`;
+
+  // Live forhåndsvisning i skjemaet: antall netter + når gjesten reiser, så
+  // admin ser med en gang hva datovalget faktisk betyr.
+  const gpreview = page.querySelector('#gpreview');
+  function updateGuestPreview() {
+    const from = page.querySelector('#gfrom').value, to = page.querySelector('#gto').value;
+    if (!from || !to || to < from) { gpreview.style.display = 'none'; return; }
+    const n = nights({ startDate: from, endDate: to });
+    gpreview.textContent = `${n} ${n === 1 ? 'natt' : 'netter'} · gjesten reiser ${formatDateNorsk(dayAfter(to))}`;
+    gpreview.style.display = 'block';
+  }
+  page.querySelector('#gfrom').addEventListener('change', updateGuestPreview);
+  page.querySelector('#gto').addEventListener('change', updateGuestPreview);
+  updateGuestPreview();
 
   // Godkjent/kommende gjest: viser tildelt internat + rom.
   const upcomingRow = (g) => `
