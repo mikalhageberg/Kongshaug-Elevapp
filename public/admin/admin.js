@@ -1560,6 +1560,12 @@ async function renderGuests(main) {
   });
 
   const dates = (g) => g.startDate === g.endDate ? formatDateNorsk(g.startDate) : formatDateNorsk(g.startDate) + ' – ' + formatDateNorsk(g.endDate);
+  // Datoene er NETTER: en dato = natten fra den datoen til dagen etter. Gjesten
+  // sover altså siste natt og reiser morgenen etter siste dato.
+  const parseD = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const nights = (g) => Math.round((parseD(g.endDate) - parseD(g.startDate)) / 86400000) + 1;
+  const dayAfter = (s) => { const [y, m, d] = s.split('-').map(Number); return ymd(new Date(y, m - 1, d + 1)); };
+  const stayInfo = (g) => `${nights(g)} natt${nights(g) === 1 ? '' : 'er'} · reiser ${formatDateNorsk(dayAfter(g.endDate))}`;
 
   // Godkjent/kommende gjest: viser tildelt internat + rom.
   const upcomingRow = (g) => `
@@ -1568,6 +1574,7 @@ async function renderGuests(main) {
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:800">${esc(g.guestName)} <span style="font-size:12.5px;font-weight:700;color:var(--muted-2)">· ${esc(g.dorm || '–')}${g.room ? ' · rom ' + esc(g.room) : ''}</span></div>
         <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm && g.hostDorm !== g.dorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)}${g.note ? ' · ' + esc(g.note) : ''}</div>
+        <div style="font-size:12.5px;color:var(--amber-ink);font-weight:700;margin-top:2px">🌙 ${stayInfo(g)}</div>
       </div>
       <button class="btn btn-ghost" data-del="${g.id}" style="height:40px;padding:0 14px;font-size:13.5px;flex:0 0 auto">Slett</button>
     </div>`;
@@ -1580,6 +1587,7 @@ async function renderGuests(main) {
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:800">${esc(g.guestName)}${g.note ? ` <span style="font-size:12.5px;font-weight:700;color:var(--amber-ink)">· ${esc(g.note)}</span>` : ''}</div>
           <div style="font-size:13px;color:var(--muted-2);font-weight:600">Hos ${esc(g.hostName)}${g.hostDorm ? ` (${esc(g.hostDorm)})` : ''} · ${dates(g)} · meldt av eleven</div>
+          <div style="font-size:12.5px;color:var(--amber-ink);font-weight:700;margin-top:2px">🌙 ${stayInfo(g)}</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;flex-wrap:wrap">
