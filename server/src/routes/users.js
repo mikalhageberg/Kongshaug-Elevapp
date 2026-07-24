@@ -1,7 +1,10 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import crypto from 'node:crypto';
 import db from '../db.js';
+import { config } from '../config.js';
 import { hashPassword, requireAuth, requireAdmin } from '../auth.js';
+import { readXlsxGrid } from '../xlsxReader.js';
+import { parseStudentsXlsx } from '../studentParser.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -100,6 +103,29 @@ router.post('/', async (req, res) => {
     // Klartekst-passordet returneres bare her, slik at admin kan gi det videre.
     generatedPassword: generated ? password : undefined,
   });
+});
+
+// POST /api/users/parse-xlsx – les en opplastet elevliste (.xlsx/.csv), tolk den
+// med OpenAI og returner en FORHÅNDSVISNING. Skriver ikke til databasen; admin
+// bekrefter (og kan rette) før opprettelsen skjer via /bulk under.
+// Tillatte klasser/internat sendes som query-parametre fra frontend, slik at
+// CLASSES/DORMS i admin.js forblir eneste fasit.
+router.post('/parse-xlsx', express.raw({ type: () => true, limit: '5mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Tom fil.' });
+  if (!config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY).' });
+  const split = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
+  try {
+    const { rows } = readXlsxGrid(req.body);
+    const existingNames = db.prepare("SELECT full_name FROM users WHERE role = 'student'").all().map((r) => r.full_name);
+    const preview = await parseStudentsXlsx(rows, {
+      classes: split(req.query.classes),
+      dorms: split(req.query.dorms),
+      existingNames,
+    });
+    res.json(preview);
+  } catch (ex) {
+    res.status(400).json({ error: ex.message || 'Kunne ikke lese filen.' });
+  }
 });
 
 // POST /api/users/bulk  – opprett mange brukere på én gang.

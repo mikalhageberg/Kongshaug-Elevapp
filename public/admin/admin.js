@@ -534,6 +534,16 @@ function bulkAddModal(cfg, onSaved) {
         <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
       </div>
       <div id="body" style="padding:22px 26px">
+        ${isStudent ? `
+        <div style="background:#eef4fb;border:1px solid #d7e4f4;border-radius:10px;padding:12px 14px;margin-bottom:18px">
+          <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">Importer fra Excel</div>
+          <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:10px">Last opp elevlista – OpenAI henter ut navn, klasse, internat og rom. Du kan rette radene før du oppretter.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input type="file" id="bxlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:13px" />
+            <button type="button" class="btn btn-ghost" id="bxlsxRead" style="height:38px;padding:0 16px;font-size:13.5px">Les inn fra Excel</button>
+          </div>
+          <div id="bximport" style="font-size:12.5px;margin-top:9px;display:none"></div>
+        </div>` : ''}
         <div style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:6px">${headLabels}</div>
         <div id="rows" style="max-height:340px;overflow-y:auto;padding-right:2px"></div>
         <button type="button" id="addrow" class="btn btn-ghost" style="height:38px;padding:0 16px;font-size:13.5px;margin-top:4px">+ Legg til rad</button>
@@ -574,6 +584,46 @@ function bulkAddModal(cfg, onSaved) {
   };
   for (let i = 0; i < 6; i++) addRow(false);
   bg.querySelector('#addrow').addEventListener('click', () => addRow(true));
+
+  // Excel-import: tolk arket med OpenAI og fyll radene, slik at admin kan
+  // rette før opprettelsen. Elever som allerede finnes hoppes over.
+  if (isStudent) {
+    const note = bg.querySelector('#bximport');
+    const showNote = (html, color) => { note.innerHTML = html; note.style.color = color || 'var(--muted-2)'; note.style.display = 'block'; };
+    bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
+      const input = bg.querySelector('#bxlsx');
+      const file = input.files[0];
+      if (!file) { showNote('Velg en Excel-fil (.xlsx).', 'var(--red-ink)'); return; }
+      const btn = bg.querySelector('#bxlsxRead'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
+      showNote('Leser arket med OpenAI…');
+      try {
+        const qs = `classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`;
+        const res = await fetch(`/api/users/parse-xlsx?${qs}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+          body: file, credentials: 'same-origin',
+        });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Kunne ikke lese arket'); }
+        const d = await res.json();
+        rowsEl.innerHTML = '';
+        for (const s of d.students) {
+          const row = addRow(false);
+          row.querySelector('[name="fullName"]').value = s.fullName;
+          if (s.className) row.querySelector('[name="className"]').value = s.className;
+          if (s.dorm) row.querySelector('[name="dorm"]').value = s.dorm;
+          if (s.room) row.querySelector('[name="room"]').value = s.room;
+        }
+        addRow(false);                       // én tom rad til slutt
+        updateCount();
+        input.value = '';
+        const n = d.students.length;
+        let html = `<b>Fant ${n} ${n === 1 ? 'ny elev' : 'nye elever'}.</b> Sjekk radene under før du oppretter.`;
+        if (d.existing.length) html += `<br>${d.existing.length} fantes allerede og ble utelatt: ${d.existing.map(esc).join(', ')}.`;
+        showNote(html, 'var(--navy)');
+      } catch (ex) { showNote(esc(ex.message), 'var(--red-ink)'); }
+      finally { btn.disabled = false; btn.textContent = old; }
+    });
+  }
 
   bg.querySelector('#create').addEventListener('click', async () => {
     const berr = bg.querySelector('#berr'); berr.style.display = 'none';
