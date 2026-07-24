@@ -54,7 +54,7 @@ export const config = {
     get enabled() { return !!(process.env.BREVO_API_KEY || process.env.MAIL_API_KEY); },
     brevoApiKey: process.env.BREVO_API_KEY || process.env.MAIL_API_KEY || '',
     from: process.env.MAIL_FROM || '',
-    fromName: process.env.MAIL_FROM_NAME || 'Kongshaug Brannvakt',
+    fromName: process.env.MAIL_FROM_NAME || 'Kongshaug Elevapp',
   },
 
   // Feide / Dataporten (OpenID Connect). Aktiveres først når skolen har registrert

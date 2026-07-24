@@ -92,7 +92,7 @@ function renderLogin() {
   const wrap = el(`
     <div style="display:flex;min-height:100dvh">
       <div style="width:46%;background:var(--navy-dark);display:none;flex-direction:column;justify-content:space-between;padding:44px;color:#fff" class="loginside">
-        <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:var(--navy-2);display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px">${icon.home}</div></div><div style="font-size:16px;font-weight:700">Kongshaug Brannvakt</div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:var(--navy-2);display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px">${icon.home}</div></div><div style="font-size:16px;font-weight:700">Kongshaug Elevapp</div></div>
         <div style="color:#9fb0c6;font-size:15px;line-height:1.6;max-width:340px">Brannliste og andaktsregistrering for internatet. Kun for ansatte.</div>
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px">
@@ -188,7 +188,7 @@ function page(active, renderMain) {
     <div class="layout">
       <aside class="side">
         <div class="brand"><div style="width:38px;height:38px;border-radius:11px;background:var(--navy-2);color:#fff;display:flex;align-items:center;justify-content:center">${icon.home}</div>
-          <div><div style="font-size:15px;font-weight:800;color:#fff">Kongshaug</div><div style="font-size:12px">Brannvakt</div></div></div>
+          <div><div style="font-size:15px;font-weight:800;color:#fff">Kongshaug</div><div style="font-size:12px">Elevapp</div></div></div>
         <nav style="display:flex;flex-direction:column;gap:4px">
           ${items.map(([id, label, ic, hash]) => `<a class="navitem ${active === id ? 'active' : ''}" href="#${hash}">${ic}${label}${id === 'gjester' ? '<span id="gjesterBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;font-weight:800;align-items:center;justify-content:center"></span>' : ''}</a>`).join('')}
         </nav>

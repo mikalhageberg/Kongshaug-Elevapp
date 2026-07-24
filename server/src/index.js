@@ -82,7 +82,7 @@ app.get('/app/*', (req, res) => sendHtmlUtf8(res, path.join(paths.public, 'app',
 app.get('/admin/*', (req, res) => sendHtmlUtf8(res, path.join(paths.public, 'admin', 'index.html')));
 
 app.listen(config.port, () => {
-  console.log(`\n  Kongshaug Brannvakt kjører:`);
+  console.log(`\n  Kongshaug Elevapp kjører:`);
   console.log(`  → Elevapp:  http://localhost:${config.port}/app/`);
   console.log(`  → Admin:    http://localhost:${config.port}/admin/`);
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);

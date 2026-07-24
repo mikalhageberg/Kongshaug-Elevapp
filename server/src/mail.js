@@ -83,7 +83,7 @@ export function buildFireEmailHtml(overview) {
         </tr></table>
         ${missingBlock}
         <p style="margin:22px 0 0;font-size:14px;color:#55607a">Full brannliste, gruppert på internat, ligger vedlagt som PDF.</p>
-        <p style="margin:18px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Brannvakt.</p>
+        <p style="margin:18px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Elevapp.</p>
       </div>
     </div></body></html>`;
 }
@@ -138,7 +138,7 @@ export function buildKitchenEmailHtml(report) {
           ${stat(report.total - report.eating, 'Spiser ikke', '#d64545')}
         </tr></table>
         ${notEating}
-        <p style="margin:20px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Brannvakt.</p>
+        <p style="margin:20px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Elevapp.</p>
       </div>
     </div></body></html>`;
 }
