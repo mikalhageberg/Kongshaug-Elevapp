@@ -895,6 +895,19 @@ async function renderAndakt() {
   }
   if (status.registered) return andaktResult(body, status.status, status.checkedAt, status.sessionDate);
 
+  // QR-en er bare tilgjengelig ±30 min rundt fristen. Utenfor vinduet viser vi
+  // når registreringen åpner/stengte i stedet for kameraet.
+  if (status.qrOpen === false) {
+    const before = status.qrState === 'before';
+    body.appendChild(el(`
+      <div class="pad fadein" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+        <div style="width:104px;height:104px;border-radius:50%;background:${before ? 'var(--amber-bg)' : '#eef1f5'};display:flex;align-items:center;justify-content:center;margin-bottom:24px"><div style="width:74px;height:74px;border-radius:50%;background:${before ? 'var(--amber)' : 'var(--muted-2)'};color:#fff;display:flex;align-items:center;justify-content:center"><div style="width:36px;height:36px">${icon.clock}</div></div></div>
+        <div class="h1" style="font-size:24px">${before ? 'Registrering åpner snart' : 'Andakten er over'}</div>
+        <p class="sub" style="line-height:1.5;margin:10px 0 0">${before ? `Du kan registrere oppmøte på andakt fra kl. ${status.opensAt}.` : `Registreringen stengte kl. ${status.closesAt}.`}</p>
+      </div>`));
+    return;
+  }
+
   const content = el(`
     <div style="flex:1;display:flex;flex-direction:column">
       <div class="pad" style="padding-bottom:8px">
@@ -974,11 +987,17 @@ function andaktResult(body, status, checkedAt, date) {
 function andaktError(body, code, message) {
   const offsite = code === 'offsite';
   const expired = code === 'expired';
+  const closed = code === 'closed';
   centerCard(body, {
-    ring: { bg: 'var(--red-bg)', fg: 'var(--red)', icon: offsite ? icon.pin : icon.x },
-    title: offsite ? 'Du er ikke på skolens område' : (expired ? 'QR-koden er ikke gyldig lenger' : 'Ugyldig QR-kode'),
+    ring: closed
+      ? { bg: 'var(--amber-bg)', fg: 'var(--amber)', icon: icon.clock }
+      : { bg: 'var(--red-bg)', fg: 'var(--red)', icon: offsite ? icon.pin : icon.x },
+    title: offsite ? 'Du er ikke på skolens område'
+      : closed ? 'Registreringen er stengt'
+      : expired ? 'QR-koden er ikke gyldig lenger'
+      : 'Ugyldig QR-kode',
     text: `<p class="sub" style="line-height:1.5">${message}</p>`,
-    btnLabel: offsite ? 'Prøv igjen' : 'Skann på nytt',
+    btnLabel: closed ? 'Tilbake' : offsite ? 'Prøv igjen' : 'Skann på nytt',
     onBtn: () => renderAndakt(),
   });
 }

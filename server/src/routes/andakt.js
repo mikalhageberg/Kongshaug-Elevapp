@@ -5,6 +5,8 @@ import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { config } from '../config.js';
 import { getSettings, hhmmToMinutes, isAndaktDay } from '../settings.js';
+import { osloParts } from '../fireWindow.js';
+import { andaktWindow } from '../andaktWindow.js';
 import {
   todayDate,
   currentToken,
@@ -15,10 +17,6 @@ import {
 
 const router = Router();
 router.use(requireAuth);
-
-function minutesNow(d = new Date()) {
-  return d.getHours() * 60 + d.getMinutes();
-}
 
 // Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
 // NaN havner i databasen når klienten sender manglende/ugyldig posisjon
@@ -35,7 +33,21 @@ router.post('/checkin', (req, res) => {
   }
 
   const reviewBypass = isAppReviewUser(req.auth?.username);
-  if (reviewBypass) console.warn(`[app-review-bypass] andakt-innsjekk uten GPS/QR-sjekk for «${req.auth.username}»`);
+  if (reviewBypass) console.warn(`[app-review-bypass] andakt-innsjekk uten GPS/QR/tidsvindu for «${req.auth.username}»`);
+
+  // QR-en er bare tilgjengelig ±30 min rundt fristen. Reviewer-kontoen har ingen
+  // storskjerm og kan testes når som helst, så den hopper over vindu-sjekken.
+  const win = andaktWindow(new Date(), settings);
+  if (!reviewBypass && !win.open) {
+    return res.status(400).json({
+      error: 'closed',
+      message: win.state === 'before'
+        ? `Andakts-registreringen åpner kl. ${win.opensAt}.`
+        : win.state === 'after'
+          ? 'Andakten er over for i dag.'
+          : 'Det er ikke andakt i dag.',
+    });
+  }
 
   const campus = reviewBypass ? { ok: true, distance: 0 } : isOnCampus(Number(lat), Number(lng));
   if (!campus.ok) {
@@ -59,7 +71,8 @@ router.post('/checkin', (req, res) => {
   }
 
   const date = todayDate();
-  const status = minutesNow() > hhmmToMinutes(settings.andaktDeadline) ? 'late' : 'present';
+  // Til stede vs. for sent regnes i skolens tidssone (samme som vinduet over).
+  const status = osloParts().minutes > hhmmToMinutes(settings.andaktDeadline) ? 'late' : 'present';
 
   db.prepare(
     `INSERT INTO andakt_checkins (user_id, session_date, status, lat, lng)
@@ -80,31 +93,52 @@ router.get('/status', (req, res) => {
   const row = db
     .prepare('SELECT status, checked_at FROM andakt_checkins WHERE user_id = ? AND session_date = ?')
     .get(req.auth.sub, date);
+  const win = andaktWindow();
   res.json({
     sessionDate: date,
     andaktToday: isAndaktDay(),
     registered: !!row,
     status: row?.status || null,
     checkedAt: row?.checked_at || null,
+    // Tidsvindu for QR-registrering, så appen kan vise «åpner kl. …» / «over».
+    qrOpen: win.open,
+    qrState: win.state,
+    opensAt: win.opensAt || null,
+    closesAt: win.closesAt || null,
+    deadline: win.deadline,
   });
 });
 
 // ── ADMIN: gjeldende QR (roterende token) som PNG-dataURL + antall ──
 router.get('/qr', requireAuth, requireAdmin, async (req, res) => {
   const date = todayDate();
-  getOrCreateSession(date);
-  const token = currentToken(date);
-  const dataUrl = await QRCode.toDataURL(token, { margin: 1, width: 512, errorCorrectionLevel: 'M' });
+  const win = andaktWindow();
   const count = db
     .prepare('SELECT COUNT(*) AS n FROM andakt_checkins WHERE session_date = ?')
     .get(date).n;
+
+  // Klienten henter dette på nytt hvert par sekund; koden roterer i takt, og
+  // vinduet flipper automatisk til/fra QR når det åpner/stenger.
+  const refreshMs = Math.min(config.andakt.qrTtlSeconds, 15) * 1000;
+
+  // Utenfor tidsvinduet: ingen QR, bare tilstanden så klienten kan forklare når.
+  if (!win.open) {
+    return res.json({ sessionDate: date, open: false, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, deadline: win.deadline, refreshMs, count });
+  }
+
+  getOrCreateSession(date);
+  const token = currentToken(date);
+  const dataUrl = await QRCode.toDataURL(token, { margin: 1, width: 512, errorCorrectionLevel: 'M' });
   res.json({
     sessionDate: date,
+    open: true,
+    state: 'open',
     qr: dataUrl,
-    // Klienten henter dette på nytt hvert par sekund; koden roterer i takt.
-    refreshMs: Math.min(config.andakt.qrTtlSeconds, 15) * 1000,
+    opensAt: win.opensAt,
+    closesAt: win.closesAt,
+    deadline: win.deadline,
+    refreshMs,
     count,
-    deadline: config.andakt.deadlineMinutes,
   });
 });
 

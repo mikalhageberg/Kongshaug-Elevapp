@@ -710,10 +710,13 @@ async function renderAndakt(main) {
   const page = el(`
     <div class="page" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
       <div style="flex:0 0 380px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center">
-        <span class="pill pill-green" style="margin-bottom:6px"><span class="dot" style="background:var(--green)"></span>Gyldig i dag</span>
+        <span class="pill pill-green" id="qrPill" style="margin-bottom:6px"><span class="dot" id="qrDot" style="background:var(--green)"></span><span id="qrPillText">Gyldig i dag</span></span>
         <div style="font-size:16px;font-weight:700;color:var(--slate);margin:8px 0 18px">${formatDateLong(todayStr())}</div>
-        <div style="width:244px;height:244px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
-        <p style="font-size:13px;color:var(--muted-2);line-height:1.5;margin:18px 0 20px">Koden roterer automatisk. Et avfotografert bilde slutter å virke etter noen sekunder.</p>
+        <div id="qrLive">
+          <div style="width:244px;height:244px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
+          <p style="font-size:13px;color:var(--muted-2);line-height:1.5;margin:18px 0 20px">Koden roterer automatisk. Et avfotografert bilde slutter å virke etter noen sekunder.</p>
+        </div>
+        <div id="qrClosed" style="display:none;width:244px;min-height:244px;background:var(--soft,#f5f7f9);border:1px dashed var(--line-2);border-radius:16px;padding:20px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin-bottom:8px"></div>
         <div style="display:flex;flex-direction:column;gap:10px;width:100%">
           <button class="btn btn-primary" id="screen" style="height:48px">${nav.qr}Åpne storskjerm</button>
           <button class="btn btn-ghost" id="rotate" style="height:48px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>Ugyldiggjør koder nå</button>
@@ -732,7 +735,27 @@ async function renderAndakt(main) {
   page.querySelector('#rotate').addEventListener('click', async () => { await api('/api/andakt/rotate', { method: 'POST' }); toast('Alle tidligere koder er nå ugyldige'); refreshQr(); });
 
   async function refreshQr() {
-    try { const d = await api('/api/andakt/qr'); page.querySelector('#qr').src = d.qr; } catch {}
+    try {
+      const d = await api('/api/andakt/qr');
+      const pill = page.querySelector('#qrPill'), pillText = page.querySelector('#qrPillText'), dot = page.querySelector('#qrDot');
+      const live = page.querySelector('#qrLive'), closed = page.querySelector('#qrClosed');
+      if (d.open) {
+        page.querySelector('#qr').src = d.qr;
+        live.style.display = ''; closed.style.display = 'none';
+        pill.className = 'pill pill-green'; dot.style.background = 'var(--green)';
+        pillText.textContent = `Gyldig nå · til kl. ${d.closesAt}`;
+      } else {
+        live.style.display = 'none'; closed.style.display = 'flex';
+        pill.className = 'pill pill-amber'; dot.style.background = 'var(--amber)';
+        const m = d.state === 'before'
+          ? { pill: `Åpner kl. ${d.opensAt}`, big: 'Ikke tilgjengelig ennå', sub: `QR-koden vises fra kl. ${d.opensAt} – 30 min før fristen.` }
+          : d.state === 'after'
+            ? { pill: 'Andakten er over', big: 'Andakten er over for i dag', sub: `Registrering var åpen til kl. ${d.closesAt}.` }
+            : { pill: 'Ingen andakt', big: 'Ingen andakt i dag', sub: 'Andakt holdes kun på ukedager.' };
+        pillText.textContent = m.pill;
+        closed.innerHTML = `<div style="font-size:15px;font-weight:800;color:var(--slate)">${m.big}</div><div style="font-size:13px;color:var(--muted-2);line-height:1.5">${m.sub}</div>`;
+      }
+    } catch {}
   }
 
   let view = 'present';
@@ -1517,9 +1540,10 @@ async function renderStorskjerm() {
         <div style="font-size:28px;font-weight:800;letter-spacing:-.02em">Kongshaug Musikkgymnas</div>
       </div>
       <div style="font-size:clamp(24px,4vw,40px);font-weight:800;letter-spacing:-.02em;margin-top:16px">Andakt · ${formatDateLong(todayStr())}</div>
-      <div style="font-size:clamp(16px,2vw,22px);font-weight:700;color:var(--muted-2);margin-top:4px">Skann koden for å registrere oppmøte</div>
+      <div id="ssSub" style="font-size:clamp(16px,2vw,22px);font-weight:700;color:var(--muted-2);margin-top:4px">Skann koden for å registrere oppmøte</div>
       <div style="flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;margin-top:18px">
-        <div style="height:100%;aspect-ratio:1;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:26px;padding:2.2%;box-sizing:border-box;box-shadow:0 18px 50px -18px rgba(15,26,43,.28);display:flex"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
+        <div id="ssQrBox" style="height:100%;aspect-ratio:1;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:26px;padding:2.2%;box-sizing:border-box;box-shadow:0 18px 50px -18px rgba(15,26,43,.28);display:flex"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
+        <div id="ssClosed" style="display:none;text-align:center;max-width:80%"></div>
       </div>
       <button id="exit" style="position:absolute;top:28px;right:40px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-weight:700;color:var(--slate);cursor:pointer">Lukk</button>
     </div>`);
@@ -1527,7 +1551,24 @@ async function renderStorskjerm() {
   wrap.querySelector('#exit').addEventListener('click', () => go('/andakt'));
 
   async function tick() {
-    try { const d = await api('/api/andakt/qr'); wrap.querySelector('#qr').src = d.qr; }
+    try {
+      const d = await api('/api/andakt/qr');
+      const box = wrap.querySelector('#ssQrBox'), closed = wrap.querySelector('#ssClosed'), sub = wrap.querySelector('#ssSub');
+      if (d.open) {
+        wrap.querySelector('#qr').src = d.qr;
+        box.style.display = 'flex'; closed.style.display = 'none';
+        sub.textContent = 'Skann koden for å registrere oppmøte';
+      } else {
+        box.style.display = 'none'; closed.style.display = 'block';
+        const m = d.state === 'before'
+          ? { sub: `Andakt kl. ${d.deadline}`, big: 'QR-koden vises snart', small: `Registreringen åpner kl. ${d.opensAt}.` }
+          : d.state === 'after'
+            ? { sub: 'Registreringen er stengt', big: 'Andakten er over', small: `Var åpen til kl. ${d.closesAt}.` }
+            : { sub: '', big: 'Ingen andakt i dag', small: 'Andakt holdes kun på ukedager.' };
+        sub.textContent = m.sub;
+        closed.innerHTML = `<div style="font-size:clamp(30px,5vw,54px);font-weight:800;letter-spacing:-.02em">${m.big}</div><div style="font-size:clamp(18px,2.4vw,26px);font-weight:700;color:var(--muted-2);margin-top:12px">${m.small}</div>`;
+      }
+    }
     catch (ex) { if (ex.status === 401) { go('/'); render(); } }
   }
   await tick();

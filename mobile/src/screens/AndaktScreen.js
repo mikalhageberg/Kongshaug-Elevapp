@@ -11,6 +11,7 @@ export default function AndaktScreen({ user }) {
   const [result, setResult] = useState(null); // { kind:'present'|'late'|'error', ... }
   const [permission, requestPermission] = useCameraPermissions();
   const [geoText, setGeoText] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
+  const [win, setWin] = useState(null); // tidsvindu for QR (åpner/stengte kl. …)
   const [bypassBusy, setBypassBusy] = useState(false);
   const coordsRef = useRef(null);
   const scannedRef = useRef(false);
@@ -29,6 +30,9 @@ export default function AndaktScreen({ user }) {
         setStatus('result');
         return;
       }
+      // QR-en er bare tilgjengelig ±30 min rundt fristen. Reviewer-kontoen har
+      // ingen storskjerm og får gå videre til kameraet uansett.
+      if (s.qrOpen === false && !canSkipQr) { setWin(s); setStatus('closed'); return; }
       if (!permission?.granted) await requestPermission();
       getPositionOnCampus()
         .then(({ coords, ok, distance }) => {
@@ -93,6 +97,21 @@ export default function AndaktScreen({ user }) {
         </View>
         <Text style={styles.title}>Ingen andakt i dag</Text>
         <Text style={styles.sub}>Det er andakt på ukedager (mandag–fredag).</Text>
+      </View>
+    );
+  }
+
+  if (status === 'closed') {
+    const before = win?.qrState === 'before';
+    return (
+      <View style={styles.center}>
+        <View style={[styles.ringBig, { backgroundColor: before ? C.amberBg : '#eef1f5' }]}>
+          <View style={[styles.ringInner, { backgroundColor: before ? C.amber : C.muted2 }]}><Text style={styles.tick}>🕘</Text></View>
+        </View>
+        <Text style={styles.title}>{before ? 'Registrering åpner snart' : 'Andakten er over'}</Text>
+        <Text style={styles.sub}>
+          {before ? `Du kan registrere oppmøte på andakt fra kl. ${win.opensAt}.` : `Registreringen stengte kl. ${win.closesAt}.`}
+        </Text>
       </View>
     );
   }
@@ -173,17 +192,21 @@ function ResultView({ result, onAgain }) {
   // error
   const offsite = result.code === 'offsite';
   const expired = result.code === 'expired';
+  const closed = result.code === 'closed';
   return (
     <View style={styles.center}>
-      <View style={[styles.ringBig, { backgroundColor: C.redBg }]}>
-        <View style={[styles.ringInner, { backgroundColor: C.red }]}><Text style={styles.tick}>{offsite ? '📍' : '✕'}</Text></View>
+      <View style={[styles.ringBig, { backgroundColor: closed ? C.amberBg : C.redBg }]}>
+        <View style={[styles.ringInner, { backgroundColor: closed ? C.amber : C.red }]}><Text style={styles.tick}>{closed ? '🕘' : offsite ? '📍' : '✕'}</Text></View>
       </View>
       <Text style={styles.title}>
-        {offsite ? 'Du er ikke på skolens område' : expired ? 'QR-koden er ikke gyldig lenger' : 'Ugyldig QR-kode'}
+        {offsite ? 'Du er ikke på skolens område'
+          : closed ? 'Registreringen er stengt'
+          : expired ? 'QR-koden er ikke gyldig lenger'
+          : 'Ugyldig QR-kode'}
       </Text>
       <Text style={styles.sub}>{result.message}</Text>
       <View style={{ height: 24 }} />
-      <Button title={offsite ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
+      <Button title={closed ? 'Tilbake' : offsite ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
     </View>
   );
 }
