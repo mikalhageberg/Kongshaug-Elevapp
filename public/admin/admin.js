@@ -179,7 +179,7 @@ function page(active, renderMain) {
     ['brannliste', 'Brannliste', nav.flame, '/brannliste'],
     ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
-    ['middag', 'Middag', nav.food, '/middag'],
+    ['middag', 'Kjøkken', nav.food, '/middag'],
     ['varsler', 'Varsler', nav.bell, '/varsler'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
   ];
@@ -712,9 +712,9 @@ async function renderAndakt(main) {
       <div style="flex:0 0 380px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center">
         <span class="pill pill-green" id="qrPill" style="margin-bottom:6px"><span class="dot" id="qrDot" style="background:var(--green)"></span><span id="qrPillText">Gyldig i dag</span></span>
         <div style="font-size:16px;font-weight:700;color:var(--slate);margin:8px 0 18px">${formatDateLong(todayStr())}</div>
-        <div id="qrLive">
+        <div id="qrLive" style="display:flex;flex-direction:column;align-items:center">
           <div style="width:244px;height:244px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
-          <p style="font-size:13px;color:var(--muted-2);line-height:1.5;margin:18px 0 20px">Koden roterer automatisk. Et avfotografert bilde slutter å virke etter noen sekunder.</p>
+          <p style="font-size:13px;color:var(--muted-2);line-height:1.5;margin:18px 0 20px;text-align:center">Koden roterer automatisk. Et avfotografert bilde slutter å virke etter noen sekunder.</p>
         </div>
         <div id="qrClosed" style="display:none;width:244px;min-height:244px;background:var(--soft,#f5f7f9);border:1px dashed var(--line-2);border-radius:16px;padding:20px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin-bottom:8px"></div>
         <div style="display:flex;flex-direction:column;gap:10px;width:100%">
@@ -860,7 +860,7 @@ window.addEventListener('hashchange', () => clearInterval(andaktTimer));
 // ── Middag (kjøkken) ─────────────────────────────────────────
 async function renderKitchen(main) {
   const d = await api('/api/dinner/overview').catch(() => null);
-  header(main, 'Middag', formatDateLong(todayStr()),
+  header(main, 'Kjøkken', formatDateLong(todayStr()),
     `<button class="btn btn-ghost" id="sendKitchen" style="height:44px;padding:0 18px;font-size:14px">Send til kjøkken nå</button>`);
   const page = el(`<div class="page" style="max-width:820px"></div>`);
   main.appendChild(page);
