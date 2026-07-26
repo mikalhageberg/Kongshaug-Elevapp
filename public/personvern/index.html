@@ -26,7 +26,7 @@
   <div class="wrap">
     <a class="back" href="/app/">← Tilbake til appen</a>
     <h1>Personvernerklæring</h1>
-    <div class="updated">Gjelder Kongshaug Elevapp · sist oppdatert 18. juli 2026</div>
+    <div class="updated">Gjelder Kongshaug Elevapp · sist oppdatert 26. juli 2026</div>
 
     <p>
       Denne appen brukes av elever og ansatte ved <b>Kongshaug Musikkgymnas</b> til brannliste
@@ -97,7 +97,13 @@
     <p>Appen bruker følgende tjenester til drift. Ingen av disse bruker dataen til egne formål.</p>
     <ul>
       <li><b>Railway</b> – hosting av server og database</li>
-      <li><b>OpenAI</b> – leser ukemeny-PDF-er og gjør dem om til tekst i appen. Kun menyens innhold sendes dit, aldri elevdata</li>
+      <li><b>OpenAI</b> – tolker filer som administrasjonen selv laster opp, slik at innholdet slipper å skrives inn manuelt. Dette skjer aldri automatisk, og aldri med oppmøte-, posisjons- eller middagsdata. Følgende sendes:
+        <ul>
+          <li><b>Ukeoppslag (PDF)</b>: middagsmeny og internatvakt leses ut. Oppslaget inneholder navn på ansatte som har internatvakt.</li>
+          <li><b>Kjøkkentjeneste (Excel)</b>: innholdet i det opplastede arket, som inneholder navnene på elevene som har tjeneste. Skolens elevliste sendes ikke.</li>
+          <li><b>Elevliste (Excel)</b>: kun de første radene i arket, slik at tjenesten kan kjenne igjen hvilke kolonner arket har. Resten av arket – og dermed de aller fleste elevene – tolkes på skolens egen server og sendes aldri ut.</li>
+        </ul>
+        Opplysningene overføres til OpenAI i USA. OpenAI oppgir at data som sendes inn via deres programmeringsgrensesnitt ikke brukes til å trene modellene deres.</li>
       <li><b>Brevo</b> – sender automatiske e-postoversikter til ansatte (brannliste/kjøkken), hvis skolen har aktivert dette</li>
     </ul>
     <p>
