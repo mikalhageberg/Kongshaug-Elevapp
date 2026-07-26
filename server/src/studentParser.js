@@ -1,46 +1,38 @@
 import OpenAI from 'openai';
 import { config } from './config.js';
 
-// Tolker et opplastet regneark med elevlista til strukturert data via OpenAI.
-// Speiler dutyParser.js (samme klient/config, temperature 0, strict json_schema).
-// Klasse- og internatverdiene sendes inn fra frontend, slik at CLASSES/DORMS i
-// admin.js forblir eneste fasit – vi dupliserer ikke listene her.
+// Tolker et opplastet regneark med elevlista.
+//
+// PERSONVERN: modellen får BARE de første radene i arket, og svarer bare med
+// hvilke kolonner som er hva (kolonnenumre – ingen persondata). Resten av arket
+// tolkes lokalt på skolens server. Navn, klasse, internat og romnummer for
+// resten av elevene forlater derfor aldri skolen.
+//
+// Modellens eneste jobb er å forstå STRUKTUREN i arket – aldri personene.
 
-const STUDENT_SCHEMA = {
+const SAMPLE_ROWS = 6;
+
+const LAYOUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    students: {
-      type: 'array',
-      description: 'Én rad per elev i arket.',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          fullName: { type: 'string', description: 'Elevens fulle navn slik det står.' },
-          className: { type: ['string', 'null'], description: 'Klasse, kun en av de tillatte verdiene. Null hvis ukjent.' },
-          dorm: { type: ['string', 'null'], description: 'Internat, kun en av de tillatte verdiene. Null hvis ukjent.' },
-          room: { type: ['string', 'null'], description: 'Romnummer, ellers null.' },
-        },
-        required: ['fullName', 'className', 'dorm', 'room'],
-      },
-    },
+    dataStartRow: { type: 'integer', description: '0-basert radnummer der elevradene starter (etter tittel/overskrift).' },
+    nameCol: { type: 'integer', description: '0-basert kolonnenummer for elevens fulle navn.' },
+    classCol: { type: ['integer', 'null'], description: '0-basert kolonne for klasse, eller null hvis arket ikke har det.' },
+    dormCol: { type: ['integer', 'null'], description: '0-basert kolonne for internat, eller null.' },
+    roomCol: { type: ['integer', 'null'], description: '0-basert kolonne for rom, eller null.' },
   },
-  required: ['students'],
+  required: ['dataStartRow', 'nameCol', 'classCol', 'dormCol', 'roomCol'],
 };
 
-function systemPrompt(classes, dorms) {
-  return [
-    'Du får innholdet i et regneark (rader og kolonner) med elevlista ved en norsk internatskole.',
-    'Hent ut én oppføring per elev: fullt navn, klasse, internat og rom.',
-    'Behold navnet nøyaktig slik det står (æ, ø, å beholdes).',
-    classes.length ? `Klasse MÅ være en av disse verdiene: ${classes.join(', ')}. Map varianter til riktig verdi (f.eks. «1A» → «${classes[0]}»).` : '',
-    dorms.length ? `Internat MÅ være en av disse verdiene: ${dorms.join(', ')}. Map skrivevarianter til riktig verdi.` : '',
-    'Hvis klasse, internat eller rom ikke går an å avgjøre fra arket, sett feltet til null – ikke gjett.',
-    'Ignorér overskriftsrader, tomme rader og kolonner som ikke hører til en elev.',
-    'Ikke dikt opp elever som ikke står i arket.',
-  ].filter(Boolean).join(' ');
-}
+const SYSTEM_PROMPT = [
+  'Du får de første radene i et regneark med elevlista ved en norsk internatskole.',
+  'Radene er nummerert fra 0, og kolonnene er skilt med tabulator (kolonne 0 er den første).',
+  'Finn ut hvordan arket er bygd opp: hvilken kolonne inneholder elevens fulle navn, klasse, internat og rom,',
+  'og på hvilken rad de faktiske elevradene begynner (hopp over tittel- og overskriftsrader og tomme rader).',
+  'Svar KUN med kolonnenumre og radnummer – ikke gjengi innholdet i cellene.',
+  'Hvis arket ikke har en kolonne for klasse, internat eller rom, sett feltet til null.',
+].join(' ');
 
 // Navnenormalisering: samme idé som slugName, men behold ordmellomrom.
 function normName(s) {
@@ -51,51 +43,79 @@ function normName(s) {
     .trim();
 }
 
-// Finn en tillatt verdi som matcher (normalisert), ellers null.
-function matchAllowed(value, allowed) {
-  const v = normName(value);
+// Klasse: «1A», «vg1a» og «VG 1A» skal alle treffe «VG1A».
+const classKey = (s) => normName(s).replace(/\s+/g, '').replace(/^vg/, '');
+function matchClass(value, classes) {
+  const v = classKey(value);
   if (!v) return null;
-  return allowed.find((a) => normName(a) === v) || null;
+  return classes.find((c) => classKey(c) === v) || null;
 }
 
-export async function parseStudentsXlsx(rows, { classes = [], dorms = [], existingNames = [] } = {}) {
-  if (!config.openai.enabled) throw new Error('OpenAI er ikke konfigurert (mangler OPENAI_API_KEY).');
-  const grid = (rows || []).map((r) => (r || []).join('\t')).join('\n').trim();
-  if (!grid) throw new Error('Regnearket er tomt.');
+// Internat: «treet 1», «Treet 1» og «treet1» skal alle treffe «Treet 1».
+function matchDorm(value, dorms) {
+  const v = normName(value);
+  if (!v) return null;
+  const tight = v.replace(/\s+/g, '');
+  return dorms.find((d) => normName(d) === v || normName(d).replace(/\s+/g, '') === tight) || null;
+}
+
+// Spør modellen om oppsettet, basert på et lite utdrag av arket.
+async function detectLayout(rows) {
+  const sample = rows.slice(0, SAMPLE_ROWS)
+    .map((r, i) => `${i}: ${(r || []).join('\t')}`)
+    .join('\n');
 
   const client = new OpenAI({ apiKey: config.openai.apiKey, baseURL: config.openai.baseUrl });
   const completion = await client.chat.completions.create({
     model: config.openai.menuModel,
     temperature: 0,
     messages: [
-      { role: 'system', content: systemPrompt(classes, dorms) },
-      { role: 'user', content: `Regneark:\n${grid}` },
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Første rader i arket:\n${sample}` },
     ],
-    response_format: { type: 'json_schema', json_schema: { name: 'student_list', strict: true, schema: STUDENT_SCHEMA } },
+    response_format: { type: 'json_schema', json_schema: { name: 'sheet_layout', strict: true, schema: LAYOUT_SCHEMA } },
   });
 
   const raw = completion.choices[0]?.message?.content;
   if (!raw) throw new Error('Tomt svar fra modellen.');
-  const parsed = JSON.parse(raw);
-  const list = Array.isArray(parsed?.students) ? parsed.students : [];
-  if (!list.length) throw new Error('Fant ingen elever i arket.');
+  return JSON.parse(raw);
+}
+
+export async function parseStudentsXlsx(rows, { classes = [], dorms = [], existingNames = [] } = {}) {
+  if (!config.openai.enabled) throw new Error('OpenAI er ikke konfigurert (mangler OPENAI_API_KEY).');
+  const grid = (rows || []).filter((r) => (r || []).some((c) => String(c || '').trim()));
+  if (!grid.length) throw new Error('Regnearket er tomt.');
+
+  const layout = await detectLayout(rows);
+  const nameCol = Number(layout?.nameCol);
+  if (!Number.isInteger(nameCol) || nameCol < 0) throw new Error('Fant ikke navnekolonnen i arket.');
+  const startRow = Math.max(0, Number(layout?.dataStartRow) || 0);
+  const col = (r, i) => (i == null || i < 0 ? '' : String((r || [])[i] ?? '').trim());
+
+  // Overskriftsteksten i navnekolonnen, så gjentatte overskrifter lenger ned hoppes over.
+  const headerNames = new Set(
+    rows.slice(0, startRow).map((r) => normName(col(r, nameCol))).filter(Boolean)
+  );
 
   const existingSet = new Set(existingNames.map(normName));
   const seen = new Set();
   const students = [], existing = [];
 
-  for (const s of list) {
-    const fullName = String(s?.fullName || '').trim().replace(/\s+/g, ' ');
+  // Resten av arket tolkes lokalt – ingenting av dette sendes ut.
+  for (let i = startRow; i < rows.length; i++) {
+    const row = rows[i];
+    const fullName = col(row, nameCol).replace(/\s+/g, ' ');
     if (!fullName) continue;
     const key = normName(fullName);
-    if (!key || seen.has(key)) continue;   // dupliserte rader i selve arket
+    if (!key || headerNames.has(key) || seen.has(key)) continue;
     seen.add(key);
     if (existingSet.has(key)) { existing.push(fullName); continue; }
+    const room = col(row, layout?.roomCol);
     students.push({
       fullName,
-      className: matchAllowed(s?.className, classes),
-      dorm: matchAllowed(s?.dorm, dorms),
-      room: s?.room != null && String(s.room).trim() ? String(s.room).trim() : null,
+      className: matchClass(col(row, layout?.classCol), classes),
+      dorm: matchDorm(col(row, layout?.dormCol), dorms),
+      room: room || null,
     });
   }
 

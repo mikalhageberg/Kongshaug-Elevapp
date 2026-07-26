@@ -35,8 +35,8 @@ const SYSTEM_PROMPT = [
   'Du får innholdet i et regneark (rader og kolonner) som viser kjøkkentjeneste-turnus for elever ved en norsk internatskole, uke for uke.',
   'Hent ut hvilke personer som har tjeneste hver uke.',
   'Returner ISO-ukenummeret for hver uke, en startdato hvis arket viser en, og de fulle navnene slik de står.',
-  'Ta med ALLE navn som står oppført for hver uke – også navn du ikke finner igjen i elevlista.',
-  'Hvis et navn i arket tydelig er samme person som en elev i lista, bruk elevens skrivemåte fra lista (behold æ, ø, å). Ellers tar du med navnet nøyaktig slik det står i arket.',
+  'Ta med ALLE navn som står oppført for hver uke.',
+  'Gjengi navnene nøyaktig slik de står i arket (behold æ, ø, å) – ikke rett opp eller gjett på skrivemåte.',
   'Ignorér overskrifter, tomme celler og kolonner som ikke er navn.',
   'Ikke dikt opp navn eller uker som ikke står i arket.',
 ].join(' ');
@@ -106,15 +106,16 @@ export async function parseDutyXlsx(rows, students) {
   if (!config.openai.enabled) throw new Error('OpenAI er ikke konfigurert (mangler OPENAI_API_KEY).');
   const grid = (rows || []).map((r) => (r || []).join('\t')).join('\n').trim();
   if (!grid) throw new Error('Regnearket er tomt.');
-  const roster = students.map((s) => s.full_name).join('\n');
 
+  // Personvern: elevlista sendes IKKE til OpenAI. Modellen får bare innholdet i
+  // det opplastede arket, og navnene kobles mot elevene lokalt (se resolveStudent).
   const client = new OpenAI({ apiKey: config.openai.apiKey, baseURL: config.openai.baseUrl });
   const completion = await client.chat.completions.create({
     model: config.openai.menuModel,
     temperature: 0,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Elever ved skolen (fasit for skrivemåte):\n${roster}\n\nRegneark:\n${grid}` },
+      { role: 'user', content: `Regneark:\n${grid}` },
     ],
     response_format: { type: 'json_schema', json_schema: { name: 'kitchen_duty_plan', strict: true, schema: DUTY_SCHEMA } },
   });
