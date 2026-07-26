@@ -713,7 +713,7 @@ async function renderAndakt(main) {
         <span class="pill pill-green" id="qrPill" style="margin-bottom:6px"><span class="dot" id="qrDot" style="background:var(--green)"></span><span id="qrPillText">Gyldig i dag</span></span>
         <div style="font-size:16px;font-weight:700;color:var(--slate);margin:8px 0 18px">${formatDateLong(todayStr())}</div>
         <div id="qrLive" style="display:flex;flex-direction:column;align-items:center">
-          <div style="width:244px;height:244px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
+          <div style="width:244px;height:244px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box"><img id="qr" alt="QR" style="width:100%;height:100%;image-rendering:pixelated" /></div>
           <p style="font-size:13px;color:var(--muted-2);line-height:1.5;margin:18px 0 20px;text-align:center">Koden roterer automatisk. Et avfotografert bilde slutter å virke etter noen sekunder.</p>
         </div>
         <div id="qrClosed" style="display:none;width:244px;min-height:244px;background:var(--soft,#f5f7f9);border:1px dashed var(--line-2);border-radius:16px;padding:20px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin-bottom:8px"></div>
@@ -741,7 +741,7 @@ async function renderAndakt(main) {
       const live = page.querySelector('#qrLive'), closed = page.querySelector('#qrClosed');
       if (d.open) {
         page.querySelector('#qr').src = d.qr;
-        live.style.display = ''; closed.style.display = 'none';
+        live.style.display = 'flex'; closed.style.display = 'none';
         pill.className = 'pill pill-green'; dot.style.background = 'var(--green)';
         pillText.textContent = `Gyldig nå · til kl. ${d.closesAt}`;
       } else {
