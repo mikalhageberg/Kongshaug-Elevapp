@@ -2,7 +2,7 @@ import express, { Router } from 'express';
 import crypto from 'node:crypto';
 import db from '../db.js';
 import { config } from '../config.js';
-import { hashPassword, requireAuth, requireAdmin } from '../auth.js';
+import { hashPassword, requireAuth, requireAdmin, normalizeUsername } from '../auth.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import { parseStudentsXlsx } from '../studentParser.js';
 
@@ -34,12 +34,11 @@ function generatePassword(len = 10) {
   return out;
 }
 
-// Brukernavn "fornavn.etternavn" fra fullt navn (norske tegn normalisert).
+// Brukernavn "fornavn.etternavn" fra fullt navn. Norske og andre bokstaver
+// beholdes som de er (Bjørn Åsen -> bjørn.åsen); kun mellomrom, punktum og
+// annen tegnsetting fjernes. \p{L} = alle bokstaver, \p{N} = alle sifre.
 function slugName(s) {
-  return String(s).toLowerCase()
-    .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]/g, '');
+  return normalizeUsername(s).replace(/[^\p{L}\p{N}]/gu, '');
 }
 function baseUsername(fullName) {
   const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
@@ -71,7 +70,7 @@ router.get('/', (req, res) => {
 // POST /api/users  – opprett bruker. Kun admin. Elever kan ikke registrere seg selv.
 router.post('/', async (req, res) => {
   let { username, password, fullName, role, className, dorm, room } = req.body || {};
-  username = String(username || '').trim().toLowerCase();
+  username = normalizeUsername(username);
   fullName = String(fullName || '').trim();
   role = role === 'admin' ? 'admin' : 'student';
 

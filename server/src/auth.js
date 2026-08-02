@@ -13,6 +13,18 @@ export async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
+// Brukernavn kan inneholde norske tegn (bjørn.åsen). Da må vi normalisere selv:
+//  · SQLite sin COLLATE NOCASE folder KUN A–Z, så «BJØRN.ÅSEN» ville ellers
+//    ikke funnet «bjørn.åsen» ved innlogging. Vi gjør derfor små bokstaver i JS,
+//    som håndterer Unicode riktig.
+//  · «å» kan skrives både som ett tegn (U+00E5) og som «a» + ring (U+0061 U+030A).
+//    De ser like ut, men er ulike bytes. NFC gjør dem til samme form, slik at
+//    lagring og oppslag alltid stemmer overens.
+// MÅ brukes både når brukernavn lagres og når det slås opp.
+export function normalizeUsername(s) {
+  return String(s || '').trim().toLowerCase().normalize('NFC');
+}
+
 // Er dette den ene, navngitte App/Play Store-reviewer-kontoen? Se
 // config.appReview – tom miljøvariabel = alltid false, altså av som standard.
 // Case-ufølsom: brukernavn lagres alltid med små bokstaver.

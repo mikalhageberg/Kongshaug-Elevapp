@@ -17,10 +17,10 @@ const initials = (n) => n.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]
 // Lager brukernavn "fornavn.etternavn" fra fullt navn.
 // Normaliserer norske tegn (æ→ae, ø→oe, å→aa) og fjerner aksenter.
 function slugName(s) {
-  return String(s).toLowerCase()
-    .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '');
+  // Norske og andre bokstaver beholdes (Bjørn Åsen -> bjørn.åsen). NFC gjør at
+  // «å» alltid lagres som ett tegn, slik at innlogging matcher. Speiler
+  // normalizeUsername/slugName på serveren.
+  return String(s).trim().toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]/gu, '');
 }
 function makeUsername(fullName) {
   const parts = String(fullName).trim().split(/\s+/).filter(Boolean);

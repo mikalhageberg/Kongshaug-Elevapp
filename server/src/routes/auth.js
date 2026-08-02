@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import db from '../db.js';
-import { verifyPassword, hashPassword, issueSession, signToken, clearSession, requireAuth, isAppReviewUser } from '../auth.js';
+import { verifyPassword, hashPassword, issueSession, signToken, clearSession, requireAuth, isAppReviewUser, normalizeUsername } from '../auth.js';
 
 const router = Router();
 
@@ -19,9 +19,10 @@ router.post('/login', loginLimiter, async (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'Brukernavn og passord kreves' });
   }
+  // Normaliseres i JS, ikke bare via COLLATE NOCASE – se normalizeUsername.
   const user = db
     .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
-    .get(String(username).trim());
+    .get(normalizeUsername(username));
 
   // Samme svar uansett om brukeren finnes eller passordet er feil (unngår lekkasje).
   if (!user || !user.active) {

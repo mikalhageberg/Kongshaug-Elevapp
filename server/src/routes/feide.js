@@ -8,7 +8,7 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import db from '../db.js';
 import { config } from '../config.js';
-import { issueSession } from '../auth.js';
+import { issueSession, normalizeUsername } from '../auth.js';
 
 const router = Router();
 
@@ -121,7 +121,7 @@ function resolveUser(info) {
 
   // 2) Match mot lokalt brukernavn via valgt claim (localpart før @).
   const claimVal = info[config.feide.matchClaim] || info.email || '';
-  const localpart = String(claimVal).split('@')[0].toLowerCase();
+  const localpart = normalizeUsername(String(claimVal).split('@')[0]);
   if (!localpart) return null;
   return db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE AND active = 1').get(localpart) || null;
 }
