@@ -308,6 +308,32 @@ async function renderUserList(main, cfg) {
   const bulkbar = page.querySelector('#bulkbar');
   let lastRows = [];
 
+  // ── Sortering på kolonne ───────────────────────────────────
+  // key = null betyr serverens rekkefølge (aktive først, så navn).
+  let sort = { key: null, dir: 1 };
+  // numeric: rom 3 < 8 < 53. 'nb': æ, ø, å havner sist, slik norsk krever.
+  const coll = new Intl.Collator('nb', { numeric: true, sensitivity: 'base' });
+  // Tomme felt («–») skal alltid ligge nederst, uansett sorteringsretning.
+  const cmp = (a, b, dir) => {
+    const ea = !a, eb = !b;
+    if (ea || eb) return ea && eb ? 0 : (ea ? 1 : -1);
+    return coll.compare(a, b) * dir;
+  };
+  // Lik verdi -> sorter på navn, så rekkefølgen er forutsigbar.
+  const byName = (fn) => (a, b, d) => fn(a, b, d) || coll.compare(a.fullName, b.fullName);
+  const sorters = {
+    name: (a, b, d) => cmp(a.fullName, b.fullName, d),
+    username: (a, b, d) => cmp(a.username, b.username, d),
+    class: byName((a, b, d) => cmp(a.className, b.className, d)),
+    dorm: byName((a, b, d) => cmp(a.dorm, b.dorm, d) || cmp(a.room, b.room, d)),
+    status: byName((a, b, d) => (Number(b.active) - Number(a.active)) * d),
+  };
+  const th = (key, label) => {
+    const on = sort.key === key;
+    const arrow = on ? (sort.dir === 1 ? '▲' : '▼') : '▾';
+    return `<div data-sort="${key}" title="Sorter på ${label.toLowerCase()}">${label}<span class="sortarrow" style="opacity:${on ? 1 : .3}">${arrow}</span></div>`;
+  };
+
   function updateBulk() {
     bulkbar.style.display = selected.size ? 'flex' : 'none';
     page.querySelector('#bulkcount').textContent = `${selected.size} valgt`;
@@ -333,11 +359,12 @@ async function renderUserList(main, cfg) {
     const q = cfg.search ? page.querySelector('#search').value.trim().toLowerCase() : '';
     const rows = users.filter((u) => u.role === cfg.role)
       .filter((u) => !q || u.fullName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q));
+    if (sort.key && sorters[sort.key]) rows.sort((a, b) => sorters[sort.key](a, b, sort.dir));
     lastRows = rows;
     const cols = isStudent ? '42px 1.6fr 1.4fr .8fr 1.2fr .9fr 60px' : '42px 1.8fr 1.6fr 1fr 60px';
     const headCells = '<div><input type="checkbox" id="selAll" style="width:18px;height:18px;cursor:pointer" /></div>' + (isStudent
-      ? '<div>Navn</div><div>Brukernavn</div><div>Klasse</div><div>Internat / rom</div><div>Status</div><div></div>'
-      : '<div>Navn</div><div>Brukernavn</div><div>Status</div><div></div>');
+      ? th('name', 'Navn') + th('username', 'Brukernavn') + th('class', 'Klasse') + th('dorm', 'Internat / rom') + th('status', 'Status') + '<div></div>'
+      : th('name', 'Navn') + th('username', 'Brukernavn') + th('status', 'Status') + '<div></div>');
     page.querySelector('#table').innerHTML = `
       <div class="th" style="grid-template-columns:${cols};gap:12px">${headCells}</div>
       ${rows.map((u) => `
@@ -350,6 +377,14 @@ async function renderUserList(main, cfg) {
           <div>${u.active ? '<span class="pill pill-green">Aktiv</span>' : '<span class="pill pill-grey">Deaktivert</span>'}</div>
           <div style="text-align:right"><button data-edit="${u.id}" title="Rediger" style="background:none;border:none;color:var(--muted-2);cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button></div>
         </div>`).join('') || '<div style="padding:26px;color:var(--muted-2)">Ingen treff.</div>'}`;
+
+    // Klikk på kolonneoverskrift: samme kolonne igjen snur retningen.
+    page.querySelectorAll('[data-sort]').forEach((h) => h.addEventListener('click', () => {
+      const key = h.dataset.sort;
+      if (sort.key === key) sort.dir = -sort.dir;
+      else { sort.key = key; sort.dir = 1; }
+      draw();
+    }));
 
     page.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => userModal(users.find((u) => u.id === Number(b.dataset.edit)), load, cfg)));
     page.querySelectorAll('[data-sel]').forEach((cb) => cb.addEventListener('change', () => {

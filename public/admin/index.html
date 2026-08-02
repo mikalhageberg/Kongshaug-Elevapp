@@ -32,6 +32,10 @@
     .th { display: grid; padding: 14px 22px; background: #f7f8fa; border-bottom: 1px solid var(--line);
       font-size: 12px; font-weight: 800; color: var(--muted-2); text-transform: uppercase; letter-spacing: .04em; }
     .tr { display: grid; padding: 15px 22px; align-items: center; border-bottom: 1px solid #f0f2f4; }
+    /* Sorterbare kolonneoverskrifter */
+    .th [data-sort] { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; }
+    .th [data-sort]:hover { color: var(--slate); }
+    .th .sortarrow { font-size: 9px; line-height: 1; }
     .modal-bg { position: fixed; inset: 0; background: rgba(15,26,43,.42); display: flex; align-items: center;
       justify-content: center; z-index: 40; }
     .modal { width: 520px; max-width: calc(100vw - 32px); background: #fff; border-radius: 20px;
