@@ -71,6 +71,12 @@
         "projectId": "316b5f66-d91b-46be-81e5-fb7b47b682ac"
       }
     },
-    "owner": "mikalhageberg"
+    "owner": "mikalhageberg",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/316b5f66-d91b-46be-81e5-fb7b47b682ac"
+    }
   }
 }
