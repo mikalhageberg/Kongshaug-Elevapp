@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from 'react-native';
 import { api, getPositionOnCampus } from '../api';
-import { C, formatTime, formatDateLong, formatWeekRange, initials, todayStr, greeting } from '../theme';
+import { C, formatTime, formatDateLong, formatDateShort, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button } from '../ui';
 
 // «sammen med X og Y» – hvem eleven deler tjenesteuken med.
@@ -82,7 +82,11 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
       {/* Gjeste-status: venter på godkjenning / godkjent med tildelt rom. */}
       {guests.map((g) => {
-        const dates = g.startDate === g.endDate ? formatDateLong(g.startDate) : `${g.startDate} – ${g.endDate}`;
+        // Samme formatering som elevappen på nett, så de to viser identisk tekst.
+        // (Intervallet viste tidligere rå ISO-datoer: «2026-08-28 – 2026-08-29».)
+        const dates = g.startDate === g.endDate
+          ? formatDateShort(g.startDate)
+          : `${formatDateShort(g.startDate)} – ${formatDateShort(g.endDate)}`;
         const approved = g.status === 'approved';
         const place = approved && g.dorm ? `${g.dorm}${g.room ? ' · rom ' + g.room : ''} · ` : '';
         return (
