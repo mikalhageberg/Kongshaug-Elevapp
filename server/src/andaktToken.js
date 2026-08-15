@@ -2,12 +2,20 @@ import crypto from 'node:crypto';
 import db from './db.js';
 import { config } from './config.js';
 
-// Dagens dato som 'YYYY-MM-DD' i lokal tid.
+// Dagens dato som 'YYYY-MM-DD' i SKOLENS tidssone.
+//
+// Serveren kjører UTC i drift (node:22-slim setter ingen TZ). Med serverens
+// egen klokke ville alt mellom midnatt og kl. 01 (vinter) / 02 (sommer) norsk
+// tid regnes som gårsdagen – f.eks. ville en elev som melder seg av middag
+// kl. 00:30 havnet på feil dag. Sommertid gjør vinduet dobbelt så langt.
+//
+// 'en-CA' gir nøyaktig formatet 'YYYY-MM-DD'. Samme teknikk som osloParts()
+// i fireWindow.js og zonedNow() i emailScheduler.js.
 export function todayDate(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: config.school.timeZone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
 }
 
 // Hent (eller opprett) andakts-økten for en gitt dato.
