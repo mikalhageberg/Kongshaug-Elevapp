@@ -160,3 +160,69 @@ export async function sendKitchenEmail({ date, recipient } = {}) {
   });
   return { ...r, date, eating: report.eating };
 }
+
+// ── Gjesteforespørsel fra elev ───────────────────────────────
+// Sendes med én gang en elev melder gjest, slik at internatledelsen kan
+// godkjenne uten å måtte sjekke admin-siden manuelt.
+
+// 'YYYY-MM-DD' -> dagen etter, lesbart. Datoene er NETTER: gjesten reiser
+// morgenen etter siste natt.
+function nightsLabel(startDate, endDate) {
+  const p = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const nights = Math.round((p(endDate) - p(startDate)) / 86400000) + 1;
+  const leaves = new Date(p(endDate)); leaves.setDate(leaves.getDate() + 1);
+  return {
+    nights,
+    text: `${nights} ${nights === 1 ? 'natt' : 'netter'}`,
+    leaving: dateLabel(`${leaves.getFullYear()}-${String(leaves.getMonth() + 1).padStart(2, '0')}-${String(leaves.getDate()).padStart(2, '0')}`),
+  };
+}
+
+export function buildGuestEmailHtml(g) {
+  const n = nightsLabel(g.startDate, g.endDate);
+  const link = `${config.publicUrl}/admin/#/gjester`;
+  const row = (k, v) => `
+    <tr><td style="padding:7px 0;color:#6b7280;font-size:14px;width:130px">${esc(k)}</td>
+        <td style="padding:7px 0;font-size:15px;font-weight:bold;color:#16202b">${esc(v)}</td></tr>`;
+  return `<!doctype html><html><head>${MAIL_HEAD}</head>
+    <body style="margin:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif">
+      <div style="max-width:520px;margin:0 auto;padding:26px 18px">
+        <div style="background:#fff;border-radius:14px;padding:26px 24px">
+          <div style="font-size:12px;font-weight:bold;color:#a8791a;letter-spacing:.06em;text-transform:uppercase">Venter på godkjenning</div>
+          <h1 style="margin:6px 0 4px;font-size:21px;color:#16202b">Ny gjesteforespørsel</h1>
+          <p style="margin:0 0 18px;color:#6b7280;font-size:14px;line-height:1.5">
+            ${esc(g.hostName)} har meldt en gjest på internatet. Besøket er ikke godkjent ennå.
+          </p>
+          <table style="width:100%;border-collapse:collapse;border-top:1px solid #eef0f3">
+            ${row('Gjest', g.guestName)}
+            ${g.note ? row('Kommentar', g.note) : ''}
+            ${row('Vert (elev)', g.hostName + (g.hostDorm ? ` · ${g.hostDorm}` : ''))}
+            ${row('Første natt', dateLabel(g.startDate))}
+            ${row('Siste natt', dateLabel(g.endDate))}
+            ${row('Varighet', `${n.text} · reiser ${n.leaving}`)}
+          </table>
+          <div style="margin-top:24px">
+            <a href="${link}" style="display:inline-block;background:#1e3a5f;color:#fff;text-decoration:none;font-weight:bold;font-size:15px;padding:13px 24px;border-radius:10px">Åpne og godkjenn</a>
+          </div>
+          <p style="margin:16px 0 0;font-size:12.5px;color:#8a93a3;line-height:1.5">
+            Du må tildele internat og rom når du godkjenner. Gjesten føres da automatisk på brannlisten for hver natt i perioden.
+          </p>
+        </div>
+        <p style="margin:18px 0 0;font-size:12px;color:#8a93a3;text-align:center">Automatisk sendt fra Kongshaug Elevapp.</p>
+      </div>
+    </body></html>`;
+}
+
+// Varsle om én ny gjesteforespørsel. Kaster hvis Brevo/mottaker mangler –
+// kalleren avgjør om det skal svelges (se firelist.js).
+export async function sendGuestRequestEmail(guest, { recipient } = {}) {
+  const settings = getSettings();
+  recipient = recipient || settings.guestEmailRecipient;
+  const n = nightsLabel(guest.startDate, guest.endDate);
+  const r = await sendViaBrevo({
+    recipient,
+    subject: `Gjesteforespørsel: ${guest.guestName} hos ${guest.hostName} (${n.text})`,
+    htmlContent: buildGuestEmailHtml(guest),
+  });
+  return { ...r, guestId: guest.id };
+}

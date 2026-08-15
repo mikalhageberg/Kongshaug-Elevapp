@@ -5,6 +5,8 @@ import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
 import { fireWindowNow, currentNightDate } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
+import { getSettings } from '../settings.js';
+import { sendGuestRequestEmail } from '../mail.js';
 
 // Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
 // NaN havner i databasen når klienten sender manglende/ugyldig posisjon.
@@ -294,7 +296,17 @@ router.post('/guests/request', (req, res) => {
      VALUES (?, ?, ?, '', ?, ?, 'pending', 'student')`
   ).run(req.auth.sub, value.guestName, value.note, value.startDate, value.endDate);
   const g = db.prepare(`${GUEST_SELECT} WHERE g.id = ?`).get(info.lastInsertRowid);
-  res.status(201).json({ guest: guestPublic(g) });
+  const guest = guestPublic(g);
+
+  // Varsle internatledelsen på e-post. Bevisst «fire and forget»: forespørselen
+  // er allerede lagret, og skal ikke feile fordi e-postutsendingen gjør det.
+  const s = getSettings();
+  if (s.guestEmailEnabled && s.guestEmailRecipient) {
+    sendGuestRequestEmail(guest).catch((ex) =>
+      console.error(`  ✉  Gjeste-varsel feilet: ${ex.message}`));
+  }
+
+  res.status(201).json({ guest });
 });
 
 // ELEV: trekk tilbake / slett egen gjest (kun sin egen).

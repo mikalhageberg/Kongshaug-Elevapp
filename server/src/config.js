@@ -22,6 +22,11 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   jwtSecret: requireEnv('JWT_SECRET'),
 
+  // Adressen appen nås på utenfra. Brukes i e-poster som trenger en klikkbar
+  // lenke tilbake til admin – der duger ikke localhost. Settes med PUBLIC_URL
+  // i drift hvis domenet endres.
+  publicUrl: (process.env.PUBLIC_URL || 'https://elevapp.online').replace(/\/+$/, ''),
+
   school: {
     lat: Number(process.env.SCHOOL_LAT ?? 60.18023),
     lng: Number(process.env.SCHOOL_LNG ?? 5.42007),

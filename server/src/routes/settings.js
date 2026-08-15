@@ -35,7 +35,8 @@ router.put('/', (req, res) => {
   if (b.fireEmailEnabled !== undefined) patch.fireEmailEnabled = b.fireEmailEnabled ? 'true' : 'false';
   if (b.kitchenEmailEnabled !== undefined) patch.kitchenEmailEnabled = b.kitchenEmailEnabled ? 'true' : 'false';
   if (b.fireReminderPushEnabled !== undefined) patch.fireReminderPushEnabled = b.fireReminderPushEnabled ? 'true' : 'false';
-  for (const k of ['fireEmailRecipient', 'kitchenEmailRecipient', 'kitchenEmailFrom']) {
+  if (b.guestEmailEnabled !== undefined) patch.guestEmailEnabled = b.guestEmailEnabled ? 'true' : 'false';
+  for (const k of ['fireEmailRecipient', 'kitchenEmailRecipient', 'kitchenEmailFrom', 'guestEmailRecipient']) {
     if (b[k] === undefined) continue;
     const r = String(b[k]).trim();
     if (r && !EMAIL_RE.test(r)) return res.status(400).json({ error: 'Ugyldig e-postadresse.' });

@@ -36,6 +36,8 @@ const DEFAULTS = {
   kitchenEmailFromName: 'Kongshaug Kjøkken', // avsendernavn for middags-e-posten
   kitchenEmailFrom: '',            // valgfri egen avsender-e-post (må være verifisert i Brevo)
   fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
+  guestEmailEnabled: false,        // varsle på e-post når en elev melder gjest
+  guestEmailRecipient: '',         // e-post som mottar gjesteforespørsler
 };
 
 export function getSettings() {
@@ -61,6 +63,8 @@ export function getSettings() {
     kitchenEmailFromName: s.kitchenEmailFromName ?? DEFAULTS.kitchenEmailFromName,
     kitchenEmailFrom: s.kitchenEmailFrom ?? DEFAULTS.kitchenEmailFrom,
     fireReminderPushEnabled: s.fireReminderPushEnabled != null ? s.fireReminderPushEnabled === 'true' : DEFAULTS.fireReminderPushEnabled,
+    guestEmailEnabled: s.guestEmailEnabled != null ? s.guestEmailEnabled === 'true' : DEFAULTS.guestEmailEnabled,
+    guestEmailRecipient: s.guestEmailRecipient ?? DEFAULTS.guestEmailRecipient,
   };
 }
 

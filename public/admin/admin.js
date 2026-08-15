@@ -1469,6 +1469,18 @@ async function renderSettings(main) {
       ${windowRow('Lørdag', 'fireOpenSaturday', s.fireOpenSaturday, 'fireCloseSaturday', s.fireCloseSaturday, 'Kan stenge etter midnatt.')}
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: gjesteforespørsler</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send en e-post med én gang en elev melder gjest, med direktelenke til godkjenning.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
+        <div><div style="font-size:15px;font-weight:700">Varsle ved ny forespørsel</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Sendes umiddelbart, ikke på et fast tidspunkt.</div></div>
+        <input type="checkbox" name="guestEmailEnabled" ${s.guestEmailEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+      </div>
+      <div style="padding:16px 0">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Mottaker (e-post)</div>
+        <input type="email" name="guestEmailRecipient" value="${s.guestEmailRecipient || ''}" placeholder="internatleder@kongshaug.no" class="field" style="height:46px" autocapitalize="none" spellcheck="false" />
+      </div>
+    </div>
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: brannliste</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send brannlisten automatisk til ansvarlig lærer, med PDF vedlagt.</div>
       ${!s.mailConfigured ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:6px 0 4px">⚠ Brevo er ikke satt opp ennå. Legg inn BREVO_API_KEY og MAIL_FROM i server/.env og start serveren på nytt.</div>` : ''}
@@ -1529,6 +1541,8 @@ async function renderSettings(main) {
       kitchenEmailRecipient: val('kitchenEmailRecipient').value.trim(),
       kitchenEmailTime: val('kitchenEmailTime').value,
       kitchenEmailFromName: val('kitchenEmailFromName').value.trim(),
+      guestEmailEnabled: val('guestEmailEnabled').checked,
+      guestEmailRecipient: val('guestEmailRecipient').value.trim(),
     };
   };
 
