@@ -4,3 +4,15 @@ dist/
 web-build/
 *.log
 .DS_Store
+
+# Firebase / push-varsler på Android
+# ---------------------------------
+# google-services.json er IKKE hemmelig – den ligger inni selve appen uansett,
+# og MÅ sjekkes inn for at EAS Build skal finne den. Derfor ikke ignorert her.
+#
+# Service account-nøkkelen (FCM V1) er derimot en ekte hemmelighet: den gir
+# rett til å sende varsler i skolens navn. Den lastes opp til Expo med
+# «eas credentials» og skal ALDRI ligge i repoet.
+*firebase-adminsdk*.json
+*service-account*.json
+fcm-*.json

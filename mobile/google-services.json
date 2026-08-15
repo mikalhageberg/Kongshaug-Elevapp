@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1031799102656",
+    "project_id": "kongshaug-elevapp",
+    "storage_bucket": "kongshaug-elevapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1031799102656:android:e0ef8adf139152d527e125",
+        "android_client_info": {
+          "package_name": "no.kongshaug.elevapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArsbD7o53PE9VVmZFCoIZa1ETpyTkTPfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
