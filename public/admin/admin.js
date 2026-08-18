@@ -1600,7 +1600,15 @@ async function renderSettings(main) {
       await api('/api/settings', { method: 'PUT', body: collectBody() }); // lagre periodene først
       const r = await api('/api/settings/run-retention', { method: 'POST' });
       const nullet = r.scrubbed.fire + r.scrubbed.andakt;
-      toast(`${r.deleted.total} rader slettet · ${nullet} posisjoner nullet`);
+      // Null på begge betyr at alt allerede er ryddet – ikke at noe gikk galt.
+      // «0 rader slettet · 0 posisjoner nullet» leses lett som en feil.
+      const antall = (n, ental, flertall) => `${n} ${n === 1 ? ental : flertall}`;
+      const deler = [];
+      if (r.deleted.total) deler.push(`${antall(r.deleted.total, 'rad', 'rader')} slettet`);
+      if (nullet) deler.push(`${antall(nullet, 'posisjon', 'posisjoner')} nullet`);
+      toast(deler.length
+        ? deler.join(' · ')
+        : `Alt er allerede ryddet – ingenting er eldre enn ${r.retentionDays} dager, og alle posisjoner er nullet.`);
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; btn.textContent = old; }
   });
