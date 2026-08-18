@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getSettings, setSettings, TIME_RE } from '../settings.js';
+import {
+  getSettings, setSettings, TIME_RE,
+  RETENTION_DAYS_MIN, RETENTION_DAYS_MAX, GPS_HOURS_MIN, GPS_HOURS_MAX,
+} from '../settings.js';
+import { runRetentionNow } from '../retention.js';
 import { config } from '../config.js';
 import { sendFireListEmail, sendKitchenEmail } from '../mail.js';
 import { sendFireListReminder } from '../fireReminder.js';
@@ -44,6 +48,22 @@ router.put('/', (req, res) => {
   }
   if (b.kitchenEmailFromName !== undefined) patch.kitchenEmailFromName = String(b.kitchenEmailFromName).trim().slice(0, 60);
 
+  // Lagringstid. Heltall innenfor grensene – utenfor er sannsynligvis en
+  // skrivefeil, og en feil her sletter data.
+  if (b.retentionEnabled !== undefined) patch.retentionEnabled = b.retentionEnabled ? 'true' : 'false';
+  const ints = {
+    retentionDays: { v: b.retentionDays, min: RETENTION_DAYS_MIN, max: RETENTION_DAYS_MAX, navn: 'Lagringstid (dager)' },
+    gpsRetentionHours: { v: b.gpsRetentionHours, min: GPS_HOURS_MIN, max: GPS_HOURS_MAX, navn: 'Lagringstid for GPS (timer)' },
+  };
+  for (const [k, { v, min, max, navn }] of Object.entries(ints)) {
+    if (v === undefined) continue;
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < min || n > max) {
+      return res.status(400).json({ error: `${navn} må være et helt tall mellom ${min} og ${max}.` });
+    }
+    patch[k] = n;
+  }
+
   res.json(setSettings(patch));
 });
 
@@ -72,6 +92,16 @@ router.post('/test-push-reminder', async (req, res) => {
   try {
     const result = await sendFireListReminder();
     res.json({ ok: true, ...result });
+  } catch (ex) {
+    res.status(400).json({ error: ex.message });
+  }
+});
+
+// Kjør sletting/nulling med én gang, i stedet for å vente på neste døgn.
+// Ignorerer av/på-bryteren: admin har trykket bevisst.
+router.post('/run-retention', (req, res) => {
+  try {
+    res.json({ ok: true, ...runRetentionNow() });
   } catch (ex) {
     res.status(400).json({ error: ex.message });
   }

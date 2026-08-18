@@ -16,6 +16,7 @@ import menuRoutes from './routes/menus.js';
 import pushRoutes from './routes/push.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
 import { startEmailSchedulers } from './emailScheduler.js';
+import { startRetentionScheduler } from './retention.js';
 
 await ensureBootstrapAdmin();
 
@@ -87,4 +88,5 @@ app.listen(config.port, () => {
   console.log(`  → Admin:    http://localhost:${config.port}/admin/`);
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);
   startEmailSchedulers();
+  startRetentionScheduler();
 });

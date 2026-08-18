@@ -38,7 +38,26 @@ const DEFAULTS = {
   fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
   guestEmailEnabled: false,        // varsle på e-post når en elev melder gjest
   guestEmailRecipient: '',         // e-post som mottar gjesteforespørsler
+  // Lagringstid (se retention.js). Standard: historikk slettes etter ett år,
+  // GPS-koordinatene nulles allerede etter et døgn.
+  retentionEnabled: true,          // slett datert historikk automatisk
+  retentionDays: 365,              // hvor lenge historikken beholdes
+  gpsRetentionHours: 24,           // hvor lenge koordinatene beholdes
 };
+
+// Grenser for lagringstiden. Nedre grense hindrer at et feiltrykk sletter
+// inneværende uke; øvre grense holder «for alltid» utenfor rekkevidde.
+export const RETENTION_DAYS_MIN = 30;
+export const RETENTION_DAYS_MAX = 3650;
+export const GPS_HOURS_MIN = 1;
+export const GPS_HOURS_MAX = 168;   // en uke
+
+// Leser et heltall fra settings-tabellen (alt lagres som tekst der), og faller
+// tilbake på standarden hvis verdien mangler eller er ulesbar.
+function intOr(value, fallback) {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+}
 
 export function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -65,6 +84,9 @@ export function getSettings() {
     fireReminderPushEnabled: s.fireReminderPushEnabled != null ? s.fireReminderPushEnabled === 'true' : DEFAULTS.fireReminderPushEnabled,
     guestEmailEnabled: s.guestEmailEnabled != null ? s.guestEmailEnabled === 'true' : DEFAULTS.guestEmailEnabled,
     guestEmailRecipient: s.guestEmailRecipient ?? DEFAULTS.guestEmailRecipient,
+    retentionEnabled: s.retentionEnabled != null ? s.retentionEnabled === 'true' : DEFAULTS.retentionEnabled,
+    retentionDays: intOr(s.retentionDays, DEFAULTS.retentionDays),
+    gpsRetentionHours: intOr(s.gpsRetentionHours, DEFAULTS.gpsRetentionHours),
   };
 }
 

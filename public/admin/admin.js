@@ -1427,7 +1427,7 @@ async function renderVarsler(main) {
 }
 
 async function renderSettings(main) {
-  header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post');
+  header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post, lagringstid');
   const page = el(`<div class="page" style="max-width:720px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
   main.appendChild(page);
 
@@ -1438,6 +1438,16 @@ async function renderSettings(main) {
     <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
       <div><div style="font-size:15px;font-weight:700">${label}</div>${hint ? `<div style="font-size:13px;color:var(--muted-2);margin-top:2px">${hint}</div>` : ''}</div>
       <input type="time" name="${name}" value="${val}" class="field" style="width:150px;height:46px;flex:0 0 auto" />
+    </div>`;
+
+  // Tallrad (lagringstid) – samme oppsett som timeRow, men med enhet bak feltet.
+  const numRow = (name, label, val, unit, min, max, hint) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
+      <div><div style="font-size:15px;font-weight:700">${label}</div>${hint ? `<div style="font-size:13px;color:var(--muted-2);margin-top:2px">${hint}</div>` : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+        <input type="number" name="${name}" value="${val}" min="${min}" max="${max}" step="1" class="field" style="width:100px;height:46px" />
+        <span style="color:var(--muted-2);font-weight:700;font-size:14px">${unit}</span>
+      </div>
     </div>`;
 
   // Åpne–lukke-par for brannliste-vinduet.
@@ -1518,6 +1528,19 @@ async function renderSettings(main) {
         <button class="btn btn-ghost" id="testKitchen" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
       </div>
     </div>
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Personvern: lagringstid</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Hvor lenge opplysningene blir liggende før de fjernes automatisk. Sletting er endelig – dataen kan ikke hentes tilbake etterpå.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
+        <div><div style="font-size:15px;font-weight:700">Slett gammel historikk automatisk</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Oppmøte, planlagt fravær, gjester, middagsvalg og kjøkkentjeneste eldre enn perioden under slettes for godt. Kjøres én gang i døgnet.</div></div>
+        <input type="checkbox" name="retentionEnabled" ${s.retentionEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+      </div>
+      ${numRow('retentionDays', 'Lagringstid', s.retentionDays, 'dager', 30, 3650, '365 dager ≈ ett skoleår.')}
+      ${numRow('gpsRetentionHours', 'GPS-koordinater', s.gpsRetentionHours, 'timer', 1, 168, 'Etter dette nulles posisjonen, mens statusen (til stede / borte / for sent) blir stående. Brannlista trenger statusen, ikke stedet.')}
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-ghost" id="runRetention" style="height:44px;padding:0 18px;font-size:14px">Kjør sletting nå</button>
+      </div>
+    </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px">
       <span id="msg" style="color:var(--green-ink);font-weight:700;display:none">Lagret ✓</span>
       <button class="btn btn-primary" id="save" style="height:48px;padding:0 26px">Lagre endringer</button>
@@ -1543,6 +1566,9 @@ async function renderSettings(main) {
       kitchenEmailFromName: val('kitchenEmailFromName').value.trim(),
       guestEmailEnabled: val('guestEmailEnabled').checked,
       guestEmailRecipient: val('guestEmailRecipient').value.trim(),
+      retentionEnabled: val('retentionEnabled').checked,
+      retentionDays: Number(val('retentionDays').value),
+      gpsRetentionHours: Number(val('gpsRetentionHours').value),
     };
   };
 
@@ -1562,6 +1588,19 @@ async function renderSettings(main) {
       await api('/api/settings', { method: 'PUT', body: collectBody() }); // lagre mottaker/tid først
       const r = await api('/api/settings/test-email', { method: 'POST' });
       toast('Test-e-post sendt til ' + r.recipient);
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  });
+
+  page.querySelector('#runRetention').addEventListener('click', async () => {
+    const dager = Number(page.querySelector('[name=retentionDays]').value);
+    if (!confirm(`Slette all historikk eldre enn ${dager} dager nå? Dette kan ikke angres.`)) return;
+    const btn = page.querySelector('#runRetention'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Rydder…';
+    try {
+      await api('/api/settings', { method: 'PUT', body: collectBody() }); // lagre periodene først
+      const r = await api('/api/settings/run-retention', { method: 'POST' });
+      const nullet = r.scrubbed.fire + r.scrubbed.andakt;
+      toast(`${r.deleted.total} rader slettet · ${nullet} posisjoner nullet`);
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; btn.textContent = old; }
   });

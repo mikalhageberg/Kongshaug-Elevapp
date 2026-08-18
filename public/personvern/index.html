@@ -59,7 +59,7 @@
         </tr>
         <tr>
           <td>Posisjon (GPS)</td>
-          <td>Koordinater, kun i det øyeblikket du melder deg til stede på brannliste eller andakt</td>
+          <td>Koordinater, kun i det øyeblikket du melder deg til stede på brannliste eller andakt. Selve koordinatene slettes automatisk etter et døgn – bare statusen (til stede / borte / for sent) blir stående.</td>
           <td>Bekrefte at du faktisk er fysisk på skolens område – hindrer at noen melder seg til stede uten å være der</td>
         </tr>
         <tr>
@@ -113,10 +113,20 @@
 
     <h2>Lagringstid</h2>
     <p>
-      Opplysninger lagres så lenge du er aktiv elev/ansatt ved skolen. Skolens administrasjon kan
-      slette en konto, som fjerner all tilhørende historikk (oppmøte, posisjon, middagsvalg)
+      Kontoopplysninger lagres så lenge du er aktiv elev/ansatt ved skolen. Skolens administrasjon
+      kan slette en konto, som fjerner all tilhørende historikk (oppmøte, posisjon, middagsvalg)
       permanent og umiddelbart.
     </p>
+    <p>Historikken slettes i tillegg automatisk, uten at noen trenger å gjøre noe:</p>
+    <ul>
+      <li><b>GPS-koordinater:</b> slettes etter <b>ett døgn</b>. Posisjonen er bare nødvendig i
+        selve øyeblikket registreringen skjer, for å bekrefte at du var på skolens område.
+        Etterpå står bare statusen igjen – ikke hvor du var.</li>
+      <li><b>Oppmøtehistorikk, planlagt fravær, gjesteregistreringer, middagsvalg og
+        kjøkkentjeneste:</b> slettes automatisk når de er eldre enn <b>ett skoleår</b> (365 dager).
+        Skolen kan sette en kortere periode.</li>
+    </ul>
+    <p>Sletting er endelig – opplysningene kan ikke hentes tilbake etterpå.</p>
 
     <h2>Dine rettigheter</h2>
     <p>Du har rett til å:</p>

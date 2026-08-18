@@ -72,6 +72,23 @@ Oppsett:
 Standard sendetidspunkt er **14:15**, som sender den siste ferdige natten
 (gårsdagens liste). Vil du ha den midt på natten, sett f.eks. 02:15.
 
+### Lagringstid og automatisk sletting
+
+Systemet rydder etter seg selv, styrt fra admin → **Innstillinger → Personvern:
+lagringstid** (`server/src/retention.js`):
+
+- **GPS-koordinatene nulles etter et døgn.** De brukes bare til å avgjøre om
+  eleven er på skolens område i selve registreringsøyeblikket, og leses aldri
+  igjen. Statusen (til stede / borte / for sent) blir stående – det er den
+  brannsikkerheten trenger, ikke stedet.
+- **Datert historikk slettes etter ett skoleår** (365 dager som standard):
+  brannliste, andakt, planlagt fravær, gjester, middagsvalg og kjøkkentjeneste.
+
+Nullingen kjøres hver 15. minutt, slettingen én gang i døgnet. Knappen
+**«Kjør sletting nå»** i Innstillinger kjører begge umiddelbart. Sletting er
+endelig – dataen kan ikke hentes tilbake. Husk å holde
+`public/personvern/index.html` i takt hvis periodene endres.
+
 ### Juksesikring (GPS)
 
 Både brannliste- og andaktsregistrering sender elevens GPS-posisjon. Serveren
@@ -100,6 +117,7 @@ Kongshaug/
 │  │  ├─ auth.js           # bcrypt + JWT-cookie
 │  │  ├─ geo.js            # GPS-avstand
 │  │  ├─ andaktToken.js    # roterende QR-token
+│  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata
 │  │  └─ routes/           # auth, users, firelist, andakt, history
 │  └─ data/                # SQLite-fil (opprettes automatisk)
