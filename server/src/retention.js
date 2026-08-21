@@ -34,6 +34,7 @@ const EXPIRING = [
   ['dinner_optouts', 'date', 'middagsavmelding'],
   ['fire_guests', 'end_date', 'gjester'],
   ['kitchen_duties', 'week_start', 'kjøkkentjeneste'],
+  ['dorm_duties', 'week_start', 'internatvask'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
 ];
 

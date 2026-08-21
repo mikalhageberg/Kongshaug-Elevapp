@@ -68,6 +68,11 @@
           <td>Brannsikkerhet (vite hvem som er på internatet om natten) og oppmøteoppfølging</td>
         </tr>
         <tr>
+          <td>Ukestjeneste</td>
+          <td>Hvilke uker du har kjøkkentjeneste eller internatvask</td>
+          <td>Vise rundgangen for elevene og la skolen planlegge tjenestene</td>
+        </tr>
+        <tr>
           <td>Middagsvalg</td>
           <td>Om du spiser middag en gitt dag, og eventuelt planlagt fravær</td>
           <td>Kjøkkenet skal vite hvor mange som skal ha middag, og redusere matsvinn</td>
@@ -100,7 +105,7 @@
       <li><b>OpenAI</b> – tolker filer som administrasjonen selv laster opp, slik at innholdet slipper å skrives inn manuelt. Dette skjer aldri automatisk, og aldri med oppmøte-, posisjons- eller middagsdata. Følgende sendes:
         <ul>
           <li><b>Ukeoppslag (PDF)</b>: middagsmeny og internatvakt leses ut. Oppslaget inneholder navn på ansatte som har internatvakt.</li>
-          <li><b>Kjøkkentjeneste (Excel)</b>: innholdet i det opplastede arket, som inneholder navnene på elevene som har tjeneste. Skolens elevliste sendes ikke.</li>
+          <li><b>Kjøkkentjeneste og internatvask (Excel)</b>: innholdet i det opplastede arket, som inneholder navnene på elevene som har tjeneste eller vask. Skolens elevliste sendes ikke.</li>
           <li><b>Elevliste (Excel)</b>: kun de første radene i arket, slik at tjenesten kan kjenne igjen hvilke kolonner arket har. Resten av arket – og dermed de aller fleste elevene – tolkes på skolens egen server og sendes aldri ut.</li>
         </ul>
         Opplysningene overføres til OpenAI i USA. OpenAI oppgir at data som sendes inn via deres programmeringsgrensesnitt ikke brukes til å trene modellene deres.</li>
@@ -122,8 +127,9 @@
       <li><b>GPS-koordinater:</b> slettes etter <b>ett døgn</b>. Posisjonen er bare nødvendig i
         selve øyeblikket registreringen skjer, for å bekrefte at du var på skolens område.
         Etterpå står bare statusen igjen – ikke hvor du var.</li>
-      <li><b>Oppmøtehistorikk, planlagt fravær, gjesteregistreringer, middagsvalg og
-        kjøkkentjeneste:</b> slettes automatisk når de er eldre enn <b>ett skoleår</b> (365 dager).
+      <li><b>Oppmøtehistorikk, planlagt fravær, gjesteregistreringer, middagsvalg,
+        kjøkkentjeneste og internatvask:</b> slettes automatisk når de er eldre enn
+        <b>ett skoleår</b> (365 dager).
         Skolen kan sette en kortere periode.</li>
     </ul>
     <p>Sletting er endelig – opplysningene kan ikke hentes tilbake etterpå.</p>

@@ -3,10 +3,13 @@ import { config } from './config.js';
 import { todayDate } from './andaktToken.js';
 import { isDateString, weekStartOf, mondayOfIsoWeek, isoWeekNumber } from './isoWeek.js';
 
-// Tolker et opplastet regneark med kjøkkentjeneste-turnus til strukturert data
-// via OpenAI, og løser opp ukenummer → mandagsdato og navn → elev-id lokalt.
+// Tolker et opplastet regneark med tjeneste-turnus til strukturert data via
+// OpenAI, og løser opp ukenummer → mandagsdato og navn → elev-id lokalt.
 // Speiler menuParser.js (samme klient/config, temperature 0, strict json_schema),
 // men med tekst-input i stedet for bilde.
+//
+// Samme parser for kjøkkentjeneste og internatvask – arkene ser like ut, og
+// `ledetekst` er det eneste som skiller dem (se duty.js).
 
 const DUTY_SCHEMA = {
   type: 'object',
@@ -31,8 +34,8 @@ const DUTY_SCHEMA = {
   required: ['year', 'weeks'],
 };
 
-const SYSTEM_PROMPT = [
-  'Du får innholdet i et regneark (rader og kolonner) som viser kjøkkentjeneste-turnus for elever ved en norsk internatskole, uke for uke.',
+const systemPrompt = (ledetekst) => [
+  `Du får innholdet i et regneark (rader og kolonner) som viser ${ledetekst}-turnus for elever ved en norsk internatskole, uke for uke.`,
   'Hent ut hvilke personer som har tjeneste hver uke.',
   'Returner ISO-ukenummeret for hver uke, en startdato hvis arket viser en, og de fulle navnene slik de står.',
   'Ta med ALLE navn som står oppført for hver uke.',
@@ -102,7 +105,7 @@ function resolveWeekStart(week, startDate, parsedYear, today) {
     Math.abs(new Date(d) - t) < Math.abs(new Date(best) - t) ? d : best);
 }
 
-export async function parseDutyXlsx(rows, students) {
+export async function parseDutyXlsx(rows, students, ledetekst = 'kjøkkentjeneste') {
   if (!config.openai.enabled) throw new Error('OpenAI er ikke konfigurert (mangler OPENAI_API_KEY).');
   const grid = (rows || []).map((r) => (r || []).join('\t')).join('\n').trim();
   if (!grid) throw new Error('Regnearket er tomt.');
@@ -114,10 +117,10 @@ export async function parseDutyXlsx(rows, students) {
     model: config.openai.menuModel,
     temperature: 0,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt(ledetekst) },
       { role: 'user', content: `Regneark:\n${grid}` },
     ],
-    response_format: { type: 'json_schema', json_schema: { name: 'kitchen_duty_plan', strict: true, schema: DUTY_SCHEMA } },
+    response_format: { type: 'json_schema', json_schema: { name: 'duty_plan', strict: true, schema: DUTY_SCHEMA } },
   });
 
   const raw = completion.choices[0]?.message?.content;

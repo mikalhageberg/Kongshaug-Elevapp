@@ -12,12 +12,14 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import BrannlisteScreen from './src/screens/BrannlisteScreen';
 import AndaktScreen from './src/screens/AndaktScreen';
 import MiddagScreen from './src/screens/MiddagScreen';
+import InternatScreen from './src/screens/InternatScreen';
 
 const TABS = [
   { key: 'home', label: 'Hjem', icon: '🏠' },
   { key: 'brann', label: 'Brannliste', icon: '🔥' },
   { key: 'andakt', label: 'Andakt', icon: '📖' },
   { key: 'middag', label: 'Middag', icon: '🍽️' },
+  { key: 'internat', label: 'Internat', icon: '🧹' },
 ];
 
 // Sesjonen varer i 90 dager, så appen låses i stedet bak Face ID / telefonkode.
@@ -131,6 +133,7 @@ function AppInner() {
         {tab === 'brann' && <BrannlisteScreen user={user} />}
         {tab === 'andakt' && <AndaktScreen user={user} />}
         {tab === 'middag' && <MiddagScreen user={user} />}
+        {tab === 'internat' && <InternatScreen user={user} />}
       </View>
 
       <View style={[styles.tabbar, { paddingBottom: 8 + insets.bottom }]}>
@@ -139,7 +142,7 @@ function AppInner() {
           return (
             <Pressable key={t.key} style={styles.tab} onPress={() => setTab(t.key)}>
               <Text style={{ fontSize: 22, opacity: active ? 1 : 0.45 }}>{t.icon}</Text>
-              <Text style={[styles.tabLabel, { color: active ? C.navy : C.muted2, fontWeight: active ? '700' : '600' }]}>
+              <Text numberOfLines={1} style={[styles.tabLabel, { color: active ? C.navy : C.muted2, fontWeight: active ? '700' : '600' }]}>
                 {t.label}
               </Text>
             </Pressable>
@@ -161,6 +164,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
     backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8,
   },
-  tab: { alignItems: 'center', gap: 3, paddingHorizontal: 10, paddingVertical: 4 },
+  // Fem faner må få plass på de smaleste telefonene: hver fane deler bredden
+  // likt, og etiketten klippes framfor å presse naboene ut.
+  tab: { flex: 1, alignItems: 'center', gap: 3, paddingHorizontal: 4, paddingVertical: 4 },
   tabLabel: { fontSize: 11 },
 });

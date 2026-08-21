@@ -60,6 +60,7 @@ const nav = {
   food: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/><path d="M17 2v20"/><path d="M17 8c0-3 1-6 3-6v20"/></svg>',
   guest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 19v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="7.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  broom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 3 12.75 11.25"/><path d="M10 8.5 15.5 14 9 20.5 3.5 15Z"/><path d="M6.75 11.75 12.25 17.25"/></svg>',
 };
 
 init();
@@ -81,6 +82,7 @@ function render() {
   if (route.startsWith('gjester')) return page('gjester', renderGuests);
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
+  if (route.startsWith('internat')) return page('internat', renderInternat);
   if (route.startsWith('varsler')) return page('varsler', renderVarsler);
   if (route.startsWith('innstillinger')) return page('innstillinger', renderSettings);
   return page('dashboard', renderDashboard);
@@ -180,6 +182,7 @@ function page(active, renderMain) {
     ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
     ['middag', 'Kjøkken', nav.food, '/middag'],
+    ['internat', 'Internat', nav.broom, '/internat'],
     ['varsler', 'Varsler', nav.bell, '/varsler'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
   ];
@@ -933,18 +936,40 @@ async function renderKitchen(main) {
         </div>`).join('') : '<div style="padding:22px;color:var(--muted-2)">Alle spiser middag i dag.</div>'}
     </div>`;
 
-  mountKitchenDuty(page);
+  mountDutyModule(page, 'kitchen');
   mountMenuManager(page);
 }
 
-// ── Kjøkkentjeneste ──────────────────────────────────────────
+// ── Ukestjeneste (kjøkkentjeneste / internatvask) ─────────────
 // Elevene har tjeneste én uke av gangen, på rundgang. Admin blar mellom uker og
 // legger til eksisterende elever; uken identifiseres av mandagsdatoen.
-function mountKitchenDuty(container) {
+//
+// Samme modul for begge tjenestene – de oppfører seg likt, og bare tekstene og
+// API-stien skiller dem. Serveren deler koden på samme måte (se duty.js), så de
+// to kan ikke komme i utakt.
+const DUTY_KINDS = {
+  kitchen: {
+    navn: 'Kjøkkentjeneste',
+    base: '/api/dinner/kitchen-duty',
+    hjelp: 'Legg til elevene som har tjeneste, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen tjenesteuke på hjemskjermen i appen.',
+    importHjelp: 'Last opp en Excel-liste med kjøkkentjeneste – OpenAI leser ut hvem som har tjeneste hvilke uker, og du bekrefter før det legges inn.',
+    lasteFeil: 'Kunne ikke laste kjøkkentjenesten.',
+  },
+  dorm: {
+    navn: 'Internatvask',
+    base: '/api/dorm-duty',
+    hjelp: 'Legg til elevene som har vask, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen vaskeuke på hjemskjermen i appen.',
+    importHjelp: 'Last opp en Excel-liste med internatvask – OpenAI leser ut hvem som har vask hvilke uker, og du bekrefter før det legges inn.',
+    lasteFeil: 'Kunne ikke laste internatvasken.',
+  },
+};
+
+function mountDutyModule(container, kind, { standalone = false } = {}) {
+  const cfg = DUTY_KINDS[kind];
   const card = el(`
-    <div style="margin-top:26px">
-      <div style="font-size:17px;font-weight:800;margin-bottom:2px">Kjøkkentjeneste</div>
-      <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">Legg til elevene som har tjeneste, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen tjenesteuke på hjemskjermen i appen.</div>
+    <div style="margin-top:${standalone ? 0 : 26}px">
+      <div style="font-size:17px;font-weight:800;margin-bottom:2px">${cfg.navn}</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">${cfg.hjelp}</div>
       <div style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden">
         <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f7f8fa;border-bottom:1px solid var(--line)">
           <button class="btn btn-ghost" id="prevWeek" title="Forrige uke" style="height:38px;width:38px;padding:0;font-size:16px">‹</button>
@@ -962,7 +987,7 @@ function mountKitchenDuty(container) {
       </div>
       <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
         <div style="font-size:14px;font-weight:800;margin-bottom:4px">Importer fra Excel</div>
-        <div style="font-size:12.5px;color:var(--muted-2);margin-bottom:12px">Last opp en Excel-liste med kjøkkentjeneste – OpenAI leser ut hvem som har tjeneste hvilke uker, og du bekrefter før det legges inn.</div>
+        <div style="font-size:12.5px;color:var(--muted-2);margin-bottom:12px">${cfg.importHjelp}</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input type="file" id="dutyXlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:14px" />
           <button class="btn btn-primary" id="dutyXlsxUpload" style="height:44px;padding:0 18px">Les inn Excel</button>
@@ -995,8 +1020,8 @@ function mountKitchenDuty(container) {
 
   async function loadWeek(ws) {
     const q = ws ? `?from=${ws}` : '';
-    const d = await api(`/api/dinner/kitchen-duty${q}`).catch(() => null);
-    if (!d) { listEl.innerHTML = '<div style="padding:22px;color:var(--muted-2)">Kunne ikke laste kjøkkentjenesten.</div>'; return; }
+    const d = await api(`${cfg.base}${q}`).catch(() => null);
+    if (!d) { listEl.innerHTML = `<div style="padding:22px;color:var(--muted-2)">${cfg.lasteFeil}</div>`; return; }
     currentStart = d.currentWeek.weekStart;
     renderWeek(d.weeks[0]);
   }
@@ -1016,7 +1041,7 @@ function mountKitchenDuty(container) {
     listEl.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true;
       try {
-        const r = await api(`/api/dinner/kitchen-duty/${weekStart}/${b.dataset.remove}`, { method: 'DELETE' });
+        const r = await api(`${cfg.base}/${weekStart}/${b.dataset.remove}`, { method: 'DELETE' });
         renderWeek(r.week); loadUpcoming();
       } catch (ex) { toast(ex.message); b.disabled = false; }
     }));
@@ -1024,7 +1049,7 @@ function mountKitchenDuty(container) {
 
   async function addStudent(id) {
     try {
-      const r = await api('/api/dinner/kitchen-duty', { method: 'POST', body: { weekStart, userIds: [id] } });
+      const r = await api(cfg.base, { method: 'POST', body: { weekStart, userIds: [id] } });
       searchEl.value = ''; resultsEl.style.display = 'none';
       renderWeek(r.week); loadUpcoming();
     } catch (ex) { toast(ex.message); }
@@ -1048,7 +1073,7 @@ function mountKitchenDuty(container) {
 
   // Oversikt over rundgangen framover, så admin ser hull før de oppstår.
   async function loadUpcoming() {
-    const d = await api('/api/dinner/kitchen-duty?weeks=8').catch(() => null);
+    const d = await api(`${cfg.base}?weeks=8`).catch(() => null);
     if (!d) { upcomingEl.innerHTML = ''; return; }
     upcomingEl.innerHTML = d.weeks.map((w) => `
       <button type="button" data-week="${w.weekStart}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:12px 18px;cursor:pointer">
@@ -1104,7 +1129,7 @@ function mountKitchenDuty(container) {
       if (!chosen.length) { toast('Ingen uker valgt'); return; }
       const btn = previewEl.querySelector('#dutyImportApply'); btn.disabled = true; btn.textContent = 'Legger til…';
       try {
-        const r = await api('/api/dinner/kitchen-duty/bulk', { method: 'POST', body: { weeks: chosen } });
+        const r = await api(`${cfg.base}/bulk`, { method: 'POST', body: { weeks: chosen } });
         const n = (r.weeks || []).length;
         previewEl.innerHTML = '';
         toast(`La til tjeneste for ${n} uke${n === 1 ? '' : 'r'}`);
@@ -1120,7 +1145,7 @@ function mountKitchenDuty(container) {
     const btn = card.querySelector('#dutyXlsxUpload'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
     previewEl.innerHTML = '<div style="color:var(--muted-2);font-size:13.5px">Leser arket med OpenAI…</div>';
     try {
-      const res = await fetch('/api/dinner/kitchen-duty/parse', {
+      const res = await fetch(`${cfg.base}/parse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
         body: file, credentials: 'same-origin',
@@ -1138,6 +1163,15 @@ function mountKitchenDuty(container) {
 }
 
 // ── Ukemeny (PDF): opplasting, OpenAI-tolkning, forhåndsvis + rediger ──
+// ── Internat ─────────────────────────────────────────────────
+// Egen side for internatvask, med samme modul som kjøkkentjenesten bruker.
+async function renderInternat(main) {
+  header(main, 'Internat', 'Internatvask – hvem vasker hvilken uke');
+  const page = el(`<div class="page" style="max-width:820px"></div>`);
+  main.appendChild(page);
+  mountDutyModule(page, 'dorm', { standalone: true });
+}
+
 // Selvstendig modul som monteres på Innstillinger-siden.
 function mountMenuManager(container) {
   const card = el(`
@@ -1371,6 +1405,17 @@ async function renderVarsler(main) {
           <button class="btn btn-ghost" id="testPushReminder" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
         </div>
       </div>
+      <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+        <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Varsel om ukestjeneste</div>
+        <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender et push-varsel søndag kl. 18:00 til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
+          <div><div style="font-size:15px;font-weight:700">Varsle om tjenesteuke</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Søndag kl. 18:00, uken før.</div></div>
+          <input type="checkbox" id="dutyPushEnabled" ${s?.dutyPushEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button class="btn btn-ghost" id="testDutyPush" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
+        </div>
+      </div>
       <div class="kpi" style="padding:24px">
         <div style="font-size:17px;font-weight:800;margin-bottom:14px">Send til alle nå</div>
         <div style="font-size:15px;font-weight:700;margin-bottom:6px">Tittel</div>
@@ -1396,6 +1441,31 @@ async function renderVarsler(main) {
     } finally {
       checkbox.disabled = false;
     }
+  });
+
+  page.querySelector('#dutyPushEnabled').addEventListener('change', async (e) => {
+    const checkbox = e.target;
+    checkbox.disabled = true;
+    try {
+      await api('/api/settings', { method: 'PUT', body: { dutyPushEnabled: checkbox.checked } });
+      toast(checkbox.checked ? 'Varsel om tjenesteuke slått på' : 'Varsel om tjenesteuke slått av');
+    } catch (ex) {
+      checkbox.checked = !checkbox.checked;
+      toast(ex.message);
+    } finally {
+      checkbox.disabled = false;
+    }
+  });
+
+  page.querySelector('#testDutyPush').addEventListener('click', async () => {
+    const btn = page.querySelector('#testDutyPush'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Sender…';
+    try {
+      const r = await api('/api/settings/test-duty-push', { method: 'POST' });
+      toast(r.targeted
+        ? `Uke ${r.isoWeek}: sendt til ${r.sent} av ${r.targeted} elever`
+        : `Ingen har tjeneste i uke ${r.isoWeek} ennå`);
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; btn.textContent = old; }
   });
 
   page.querySelector('#testPushReminder').addEventListener('click', async () => {

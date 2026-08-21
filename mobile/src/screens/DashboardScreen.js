@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from 'r
 import { api, getPositionOnCampus } from '../api';
 import { C, formatTime, formatDateLong, formatDateShort, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button } from '../ui';
+import { DUTY_KINDS } from '../DutyPlan';
 
 // «sammen med X og Y» – hvem eleven deler tjenesteuken med.
 function dutyPartners(week, meId) {
@@ -15,7 +16,7 @@ function dutyPartners(week, meId) {
 export default function DashboardScreen({ user, onLogout, goTo }) {
   const [fire, setFire] = useState(null);
   const [andakt, setAndakt] = useState(null);
-  const [duty, setDuty] = useState(null);
+  const [duties, setDuties] = useState({});  // { kitchen: {...}, dorm: {...} }
   const [todayMenu, setTodayMenu] = useState(null); // { dinner, guard } fra ukemenyen
   const [guests, setGuests] = useState([]); // egne gjester (venter/godkjent)
   const [geo, setGeo] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
@@ -23,18 +24,19 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
   const today = todayStr();
 
   const load = useCallback(async () => {
-    const [f, a, k, t, g] = await Promise.all([
+    const kinds = Object.keys(DUTY_KINDS);
+    const [f, a, t, g, ...d] = await Promise.all([
       api('/api/firelist/status').catch(() => null),
       api('/api/andakt/status').catch(() => null),
-      api('/api/dinner/kitchen-duty/me').catch(() => null),
       api('/api/menus/today').catch(() => null),
       api('/api/firelist/guests/me').catch(() => null),
+      ...kinds.map((k) => api(`${DUTY_KINDS[k].base}/me`).catch(() => null)),
     ]);
     setFire(f);
     setAndakt(a);
-    setDuty(k);
     setTodayMenu(t);
     setGuests(g?.guests || []);
+    setDuties(Object.fromEntries(kinds.map((k, i) => [k, d[i]])));
   }, []);
 
   useEffect(() => {
@@ -99,25 +101,39 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
         );
       })}
 
-      {/* Kjøkkentjeneste: tydelig kort i tjenesteuken, diskret varsel uken før. */}
-      {duty?.thisWeek ? (
-        <Card style={styles.dutyCard} onPress={() => goTo('middag')}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={[styles.cardIcon, { backgroundColor: C.amberInk }]}><Text style={{ fontSize: 24 }}>🍽️</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: C.amberInk }]}>Du har kjøkkentjeneste denne uken</Text>
-              <Text style={styles.dutySub}>
-                Uke {duty.thisWeek.isoWeek} · {formatWeekRange(duty.thisWeek.weekStart, duty.thisWeek.weekEnd)}
-                {dutyPartners(duty.thisWeek, user.id)}
-              </Text>
+      {/* Ukestjeneste: tydelig kort i tjenesteuken, diskret varsel uken før.
+          Samme oppsett for kjøkkentjeneste og internatvask – har eleven begge
+          samme uke, står de under hverandre. */}
+      {/* Denne uken før neste uke: det som haster skal stå øverst. */}
+      {Object.entries(DUTY_KINDS)
+        .sort(([a], [b]) => (duties[b]?.thisWeek ? 1 : 0) - (duties[a]?.thisWeek ? 1 : 0))
+        .map(([kind, cfg]) => {
+        const d = duties[kind];
+        if (d?.thisWeek) {
+          return (
+            <Card key={kind} style={styles.dutyCard} onPress={() => goTo(cfg.tab)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <View style={[styles.cardIcon, { backgroundColor: C.amberInk }]}><Text style={{ fontSize: 24 }}>{cfg.emoji}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardTitle, { color: C.amberInk }]}>Du har {cfg.liten} denne uken</Text>
+                  <Text style={styles.dutySub}>
+                    Uke {d.thisWeek.isoWeek} · {formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}
+                    {dutyPartners(d.thisWeek, user.id)}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          );
+        }
+        if (d?.nextWeek) {
+          return (
+            <View key={kind} style={{ marginBottom: 14 }}>
+              <Banner text={`${cfg.emoji} Du har ${cfg.liten} neste uke · uke ${d.nextWeek.isoWeek}`} />
             </View>
-          </View>
-        </Card>
-      ) : duty?.nextWeek ? (
-        <View style={{ marginBottom: 14 }}>
-          <Banner text={`🍽️ Du har kjøkkentjeneste neste uke · uke ${duty.nextWeek.isoWeek}`} />
-        </View>
-      ) : null}
+          );
+        }
+        return null;
+      })}
 
       {/* I dag: middagsrett + nattens internatvakt, fra ukemenyen. */}
       {todayMenu && (todayMenu.dinner || todayMenu.guard) ? (

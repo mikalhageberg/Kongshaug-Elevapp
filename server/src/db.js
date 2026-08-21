@@ -136,6 +136,19 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_kitchen_duty_week ON kitchen_duties(week_start);
 
+  -- Internatvask: elevene som har vask en gitt uke (rundgang), på samme form
+  -- som kitchen_duties over. Egen tabell framfor en type-kolonne i én felles
+  -- tabell: kitchen_duties har data fra før, og en migrering ville kostet mer
+  -- enn de fire linjene her sparer. Se duty.js, som deler koden mellom dem.
+  CREATE TABLE IF NOT EXISTS dorm_duties (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    week_start TEXT    NOT NULL,   -- 'YYYY-MM-DD' mandagen i uken
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, week_start)
+  );
+  CREATE INDEX IF NOT EXISTS idx_dorm_duty_week ON dorm_duties(week_start);
+
   -- Push-varsler: ett token per enhet (kan ha flere per bruker). Upsertes ved
   -- hver registrering, slik at samme enhet aldri får flere rader.
   CREATE TABLE IF NOT EXISTS push_tokens (

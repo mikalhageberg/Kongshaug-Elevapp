@@ -26,8 +26,12 @@
       box-shadow: 0 1px 3px rgba(16,24,40,.04); }
     .tabbar { display: flex; justify-content: space-around; align-items: center; padding: 10px 8px calc(12px + env(safe-area-inset-bottom));
       background: #fff; border-top: 1px solid var(--line); position: sticky; bottom: 0; }
+    /* Fem faner må få plass på en 375 px-skjerm: hver fane deler bredden likt og
+       klipper etiketten framfor å presse naboene ut. */
     .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #9aa3b2;
-      background: none; border: none; font-size: 11px; font-weight: 600; padding: 4px 10px; }
+      background: none; border: none; font-size: 11px; font-weight: 600; padding: 4px 4px;
+      flex: 1 1 0; min-width: 0; }
+    .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tab svg { width: 23px; height: 23px; }
     .tab.active { color: var(--navy); font-weight: 700; }
     .banner { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-radius: 12px;

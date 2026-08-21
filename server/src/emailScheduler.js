@@ -21,6 +21,7 @@ import { config } from './config.js';
 import { getSettings, getLastSent, setLastSent, hhmmToMinutes } from './settings.js';
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
 import { sendFireListReminder } from './fireReminder.js';
+import { sendDutyReminders, isSunday } from './dutyReminder.js';
 
 // Hvor lenge etter oppsatt tidspunkt vi fortsatt sender. Dekker drift og korte
 // nedetider, men hindrer at en e-post fra i formiddag plutselig går ut om
@@ -83,6 +84,16 @@ export async function runOnce(now = zonedNow(), log = console) {
       cfg: { enabled: s.fireReminderPushEnabled, recipient: true, time: '20:00' },
       send: sendFireListReminder,
       beskriv: (r) => `sendt til ${r.sent} av ${r.targeted} elever (natt ${r.nightDate})`,
+    },
+    {
+      navn: 'Tjenestevarsel',
+      key: 'dutyPushLastSent',
+      // Kun søndager: varselet gjelder uken som starter dagen etter. Ukedags-
+      // sjekken ligger her framfor inne i send-funksjonen, slik at jobben ikke
+      // markeres som kjørt – og logges som «sendt til 0» – de seks andre dagene.
+      cfg: { enabled: s.dutyPushEnabled && isSunday(now.dateKey), recipient: true, time: '18:00' },
+      send: sendDutyReminders,
+      beskriv: (r) => `sendt til ${r.sent} av ${r.targeted} elever (uke ${r.isoWeek})`,
     },
   ];
 

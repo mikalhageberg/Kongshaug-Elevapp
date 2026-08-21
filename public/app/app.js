@@ -50,6 +50,7 @@ function render() {
   if (route.startsWith('brannliste')) return renderBrannliste();
   if (route.startsWith('andakt')) return renderAndakt();
   if (route.startsWith('middag')) return renderMiddag();
+  if (route.startsWith('internat')) return renderInternat();
   return renderDashboard();
 }
 
@@ -158,6 +159,7 @@ function tabbar(active) {
     ${tab('brann', 'Brannliste', icon.flame, '/brannliste')}
     ${tab('andakt', 'Andakt', icon.book, '/andakt')}
     ${tab('middag', 'Middag', icon.food, '/middag')}
+    ${tab('internat', 'Internat', icon.broom, '/internat')}
   </div>`);
   bar.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   return bar;
@@ -177,7 +179,7 @@ async function renderDashboard() {
     </div>
     <div style="padding:0 22px"><div id="geo" class="banner pill-grey">Sjekker posisjon…</div></div>
     <div id="guestStatus" style="padding:0 22px"></div>
-    <div id="kitchenDuty" style="padding:0 22px"></div>
+    <div id="dutyBanners" style="padding:0 22px"></div>
     <div id="todayMenu" style="padding:0 22px"></div>
     <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:16px">
       <div class="card" data-go="/brannliste" style="cursor:pointer">
@@ -222,28 +224,37 @@ async function renderDashboard() {
       : `<span class="pill pill-grey"><span class="dot" style="background:var(--muted-2)"></span> Ikke registrert ennå</span>`;
   });
 
-  // Kjøkkentjeneste: tydelig kort i tjenesteuken, diskret varsel uken før.
-  api('/api/dinner/kitchen-duty/me').then((d) => {
-    const box = body.querySelector('#kitchenDuty');
-    if (d.thisWeek) {
-      box.innerHTML = `
-        <div class="card" data-go="/middag" style="cursor:pointer;margin-top:14px;border-color:var(--amber);background:var(--amber-bg)">
-          <div style="display:flex;align-items:center;gap:14px">
-            <div style="width:50px;height:50px;border-radius:15px;background:var(--amber-ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.food}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:17px;font-weight:800;color:var(--amber-ink)">Du har kjøkkentjeneste denne uken</div>
-              <div style="font-size:13.5px;font-weight:600;color:var(--amber-ink);opacity:.85;margin-top:2px">Uke ${d.thisWeek.isoWeek} · ${formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}${dutyPartners(d.thisWeek)}</div>
-            </div>
-          </div>
-        </div>`;
-    } else if (d.nextWeek) {
-      box.innerHTML = `
-        <div class="banner pill-grey" data-go="/middag" style="cursor:pointer;margin-top:12px;background:#e7edf5;color:var(--navy)">
-          ${icon.food} Du har kjøkkentjeneste neste uke · uke ${d.nextWeek.isoWeek}
-        </div>`;
-    } else { return; }
-    box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
-  }).catch(() => {});
+  // Ukestjeneste: tydelig kort i tjenesteuken, diskret varsel uken før. Samme
+  // oppsett for kjøkkentjeneste og internatvask. Har eleven begge deler, kommer
+  // denne uken alltid før neste uke – det som haster skal stå øverst.
+  const kinds = Object.entries(DUTY_KINDS);
+  Promise.all(kinds.map(([, cfg]) => api(`${cfg.base}/me`).catch(() => null)))
+    .then((svar) => {
+      const denne = [], neste = [];
+      kinds.forEach(([, cfg], i) => {
+        const d = svar[i];
+        if (d?.thisWeek) {
+          denne.push(`
+            <div class="card" data-go="${cfg.href}" style="cursor:pointer;margin-top:14px;border-color:var(--amber);background:var(--amber-bg)">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="width:50px;height:50px;border-radius:15px;background:var(--amber-ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${cfg.ic}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:17px;font-weight:800;color:var(--amber-ink)">Du har ${cfg.liten} denne uken</div>
+                  <div style="font-size:13.5px;font-weight:600;color:var(--amber-ink);opacity:.85;margin-top:2px">Uke ${d.thisWeek.isoWeek} · ${formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}${dutyPartners(d.thisWeek)}</div>
+                </div>
+              </div>
+            </div>`);
+        } else if (d?.nextWeek) {
+          neste.push(`
+            <div class="banner pill-grey" data-go="${cfg.href}" style="cursor:pointer;margin-top:12px;background:#e7edf5;color:var(--navy)">
+              ${cfg.ic} Du har ${cfg.liten} neste uke · uke ${d.nextWeek.isoWeek}
+            </div>`);
+        }
+      });
+      const box = body.querySelector('#dutyBanners');
+      box.innerHTML = denne.join('') + neste.join('');
+      box.querySelectorAll('[data-go]').forEach((c) => c.addEventListener('click', () => go(c.dataset.go)));
+    });
 
   // Gjeste-status: venter på godkjenning / godkjent (med tildelt internat+rom).
   api('/api/firelist/guests/me').then((d) => {
@@ -283,6 +294,28 @@ async function renderDashboard() {
   // GPS-banner
   updateGeoBanner(body.querySelector('#geo'));
 }
+
+// Ukestjenestene eleven kan ha: kjøkkentjeneste og internatvask. De vises likt,
+// og bare tekstene, ikonet og API-stien skiller dem. Serveren deler koden på
+// samme måte (se duty.js).
+const DUTY_KINDS = {
+  kitchen: {
+    base: '/api/dinner/kitchen-duty',
+    navn: 'Kjøkkentjeneste',
+    liten: 'kjøkkentjeneste',
+    href: '/middag',
+    neste: 'Din neste tjeneste',
+    get ic() { return icon.food; },
+  },
+  dorm: {
+    base: '/api/dorm-duty',
+    navn: 'Internatvask',
+    liten: 'internatvask',
+    href: '/internat',
+    neste: 'Din neste vaskeuke',
+    get ic() { return icon.broom; },
+  },
+};
 
 // «sammen med X og Y» – hvem eleven deler tjenesteuken med.
 function dutyPartners(week, meId = user.id) {
@@ -548,9 +581,11 @@ async function renderMenus(menusEl) {
   }
 }
 
-// Kjøkkentjeneste: denne uken i detalj, og hele planen framover.
-async function renderDutyPlan(node) {
-  const d = await api('/api/dinner/kitchen-duty?weeks=12').catch(() => null);
+// Ukestjeneste: denne uken i detalj, og hele planen framover. Samme visning for
+// kjøkkentjeneste (i «Middag») og internatvask (i «Internat»).
+async function renderDutyPlan(node, kind) {
+  const cfg = DUTY_KINDS[kind];
+  const d = await api(`${cfg.base}?weeks=12`).catch(() => null);
   const weeks = d?.weeks;
   if (!weeks?.length) return;
   const now = weeks[0];
@@ -565,7 +600,7 @@ async function renderDutyPlan(node) {
   const mine = upcoming.find((w) => w.students.some((s) => s.id === user.id));
 
   node.innerHTML = `
-    <div class="h1" style="font-size:19px">Kjøkkentjeneste</div>
+    <div class="h1" style="font-size:19px">${cfg.navn}</div>
     <div class="sub" style="font-weight:700;color:var(--muted-2);margin-top:2px">Uke ${now.isoWeek} · ${formatWeekRange(now.weekStart, now.weekEnd)}</div>
     <div class="card" style="border-radius:18px;margin-top:10px;padding:6px 0">
       ${now.students.length ? now.students.map((s, i) => `
@@ -575,7 +610,7 @@ async function renderDutyPlan(node) {
         </div>`).join('')
       : '<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">Ingen satt opp denne uken.</div>'}
     </div>
-    ${mine ? `<div class="banner pill-grey" style="margin-top:10px;background:#e7edf5;color:var(--navy)">${icon.clock} Din neste tjeneste: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}</div>` : ''}
+    ${mine ? `<div class="banner pill-grey" style="margin-top:10px;background:#e7edf5;color:var(--navy)">${icon.clock} ${cfg.neste}: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}</div>` : ''}
     ${upcoming.length ? `
       <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">Vis hele planen</button>
       <div id="planList" style="display:none;margin-top:10px"></div>` : ''}`;
@@ -604,6 +639,24 @@ async function renderDutyPlan(node) {
   });
 }
 
+// ── Internat ─────────────────────────────────────────────────
+// Egen fane for internatvask, med samme planvisning som kjøkkentjenesten.
+async function renderInternat() {
+  root.innerHTML = '';
+  const screen = el(`<div class="screen fadein"><div id="body" style="flex:1;overflow:auto" class="noscroll"></div></div>`);
+  const body = screen.querySelector('#body');
+  screen.appendChild(tabbar('internat'));
+  root.appendChild(screen);
+
+  body.innerHTML = `<div class="pad">
+    <div class="h1" style="font-size:24px">Internat</div>
+    <div class="sub" style="font-weight:700;color:var(--muted-2)">${formatDateLong(ymd(new Date()))}</div>
+    <div id="duty" style="margin-top:20px"></div>
+  </div>`;
+
+  renderDutyPlan(body.querySelector('#duty'), 'dorm');
+}
+
 // ── Middag ───────────────────────────────────────────────────
 async function renderMiddag() {
   root.innerHTML = '';
@@ -626,7 +679,7 @@ async function renderMiddag() {
 
   const menusEl = body.querySelector('#menus');
   renderMenus(menusEl);
-  renderDutyPlan(body.querySelector('#duty'));
+  renderDutyPlan(body.querySelector('#duty'), 'kitchen');
 
   const dinnerEl = body.querySelector('#dinner');
   async function loadDinner() {

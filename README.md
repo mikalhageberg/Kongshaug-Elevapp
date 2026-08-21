@@ -82,12 +82,32 @@ lagringstid** (`server/src/retention.js`):
   igjen. Statusen (til stede / borte / for sent) blir stående – det er den
   brannsikkerheten trenger, ikke stedet.
 - **Datert historikk slettes etter ett skoleår** (365 dager som standard):
-  brannliste, andakt, planlagt fravær, gjester, middagsvalg og kjøkkentjeneste.
+  brannliste, andakt, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste og
+  internatvask.
 
 Nullingen kjøres hver 15. minutt, slettingen én gang i døgnet. Knappen
 **«Kjør sletting nå»** i Innstillinger kjører begge umiddelbart. Sletting er
 endelig – dataen kan ikke hentes tilbake. Husk å holde
 `public/personvern/index.html` i takt hvis periodene endres.
+
+### Ukestjenester: kjøkkentjeneste og internatvask
+
+Begge går på rundgang, én uke av gangen, og er bygget på samme kode i alle lag –
+`server/src/duty.js`, ruteren i `server/src/routes/duty.js`, `mountDutyModule` i
+admin og `DutyPlan` i mobilappen. Bare tekstene, ikonet og tabellen skiller dem,
+så en endring i den ene gjelder automatisk for den andre.
+
+- **Admin**: «Kjøkken» og «Internat» har hver sin side med ukeblaing, søk etter
+  elev og Excel-import (OpenAI leser arket, du bekrefter før det lagres).
+- **Elevappen**: et tydelig kort på hjemskjermen i tjenesteuken, og et diskret
+  varsel uken før. Hele rundgangen ligger under «Middag» og «Internat».
+- **Push**: slås på under admin → **Varsler → Varsel om ukestjeneste**. Sendes
+  søndag kl. 18:00 til elevene som har tjeneste uken som starter dagen etter.
+  Har eleven begge deler samme uke, kommer det ett varsel om hver.
+
+API-et ligger på `/api/dorm-duty` for internatvask. Kjøkkentjenesten beholder
+`/api/dinner/kitchen-duty`: den stien ligger i utrullede app-versjoner, og en
+flytting ville brutt dem.
 
 ### Juksesikring (GPS)
 
@@ -117,6 +137,7 @@ Kongshaug/
 │  │  ├─ auth.js           # bcrypt + JWT-cookie
 │  │  ├─ geo.js            # GPS-avstand
 │  │  ├─ andaktToken.js    # roterende QR-token
+│  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
 │  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata
 │  │  └─ routes/           # auth, users, firelist, andakt, history

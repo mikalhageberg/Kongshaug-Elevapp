@@ -8,6 +8,7 @@ import { runRetentionNow } from '../retention.js';
 import { config } from '../config.js';
 import { sendFireListEmail, sendKitchenEmail } from '../mail.js';
 import { sendFireListReminder } from '../fireReminder.js';
+import { sendDutyReminders } from '../dutyReminder.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -39,6 +40,7 @@ router.put('/', (req, res) => {
   if (b.fireEmailEnabled !== undefined) patch.fireEmailEnabled = b.fireEmailEnabled ? 'true' : 'false';
   if (b.kitchenEmailEnabled !== undefined) patch.kitchenEmailEnabled = b.kitchenEmailEnabled ? 'true' : 'false';
   if (b.fireReminderPushEnabled !== undefined) patch.fireReminderPushEnabled = b.fireReminderPushEnabled ? 'true' : 'false';
+  if (b.dutyPushEnabled !== undefined) patch.dutyPushEnabled = b.dutyPushEnabled ? 'true' : 'false';
   if (b.guestEmailEnabled !== undefined) patch.guestEmailEnabled = b.guestEmailEnabled ? 'true' : 'false';
   for (const k of ['fireEmailRecipient', 'kitchenEmailRecipient', 'kitchenEmailFrom', 'guestEmailRecipient']) {
     if (b[k] === undefined) continue;
@@ -92,6 +94,16 @@ router.post('/test-push-reminder', async (req, res) => {
   try {
     const result = await sendFireListReminder();
     res.json({ ok: true, ...result });
+  } catch (ex) {
+    res.status(400).json({ error: ex.message });
+  }
+});
+
+// Send tjenestevarselet nå (for å teste oppsettet). Hopper over søndags-
+// sjekken planleggeren gjør – varselet gjelder uansett uken som kommer.
+router.post('/test-duty-push', async (req, res) => {
+  try {
+    res.json({ ok: true, ...(await sendDutyReminders()) });
   } catch (ex) {
     res.status(400).json({ error: ex.message });
   }
