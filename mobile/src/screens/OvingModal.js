@@ -7,7 +7,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, View, Text, Image, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { api, uploadBase64 } from '../api';
 import { C, formatDateLong } from '../theme';
 import { Button, Card, Banner } from '../ui';
@@ -40,6 +43,8 @@ function stempel(d = new Date()) {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}  ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+const KEEP_AWAKE_TAG = 'ovekonkurranse';
+
 export default function OvingModal({ visible, onClose }) {
   const [status, setStatus] = useState(null);
   const [økt, setØkt] = useState(null);          // pågående økt
@@ -49,6 +54,7 @@ export default function OvingModal({ visible, onClose }) {
   const [kameraPå, setKameraPå] = useState(false);
   const [bilde, setBilde] = useState(null);      // { base64, uri, tid }
   const [tillatelse, beOmTillatelse] = useCameraPermissions();
+  const insets = useSafeAreaInsets();
   const kamera = useRef(null);
   // Serverens fasit: sekunder gått ved siste svar, og klokkeslettet vi fikk det.
   const grunnlag = useRef({ sek: 0, ved: 0 });
@@ -79,6 +85,17 @@ export default function OvingModal({ visible, onClose }) {
       setNå(grunnlag.current.sek + (Date.now() - grunnlag.current.ved) / 1000);
     }, 250);
     return () => clearInterval(id);
+  }, [visible, løper]);
+
+  // Hold skjermen våken mens klokken går. Låser telefonen seg midt i en økt,
+  // ser eleven verken skiven eller stoppeklokken. Slås av igjen ved pause og
+  // når skjermen forlates, så den ikke tapper batteri i det stille.
+  useEffect(() => {
+    if (!visible || !løper) return undefined;
+    // Begge returnerer løfter. En avvisning her skal ikke bli en ubehandlet
+    // feil i appen – at skjermen låser seg er en ulempe, ikke en krasj.
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+    return () => { deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {}); };
   }, [visible, løper]);
 
   const oppvarming = økt?.warmupSeconds ?? status?.warmupSeconds ?? 0;
@@ -187,9 +204,83 @@ export default function OvingModal({ visible, onClose }) {
     );
   }
 
+  // Mens en økt pågår vies hele skjermen til klokken: ingen topplinje, ingen
+  // statuslinje, ingenting å bomme på. Eleven skal kunne sette telefonen fra
+  // seg og se hvor lang tid det er igjen fra andre siden av rommet.
+  if (visible && økt && !bilde) {
+    return (
+      <Modal visible animationType="slide" onRequestClose={onClose}>
+        <StatusBar hidden />
+        <View style={[styles.full, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
+          {feil ? <View style={{ marginBottom: 16, alignSelf: 'stretch' }}><Banner tone="red" text={feil} /></View> : null}
+
+          <View style={styles.fullMidt}>
+            <Text style={styles.fase}>
+              {iOppvarming ? 'OPPVARMING' : stoppet ? 'ØKTEN ER STOPPET' : pauset ? 'PÅ PAUSE' : 'ØVER NÅ'}
+            </Text>
+
+            {iOppvarming ? (
+              <View style={{ marginTop: 22, marginBottom: 22 }}>
+                <CountdownDial size={278} stroke={20} remaining={gjenstår} total={oppvarming}>
+                  <Text style={styles.dialTall}>{klokke(gjenstår)}</Text>
+                  <Text style={styles.dialSub}>igjen</Text>
+                </CountdownDial>
+              </View>
+            ) : (
+              <Text style={[styles.stoppeklokkeStor, pauset && { color: C.muted2 }]}>{klokke(nå)}</Text>
+            )}
+
+            <Text style={styles.hjelp}>
+              {iOppvarming
+                ? (pauset
+                  ? 'Oppvarmingen står på pause. Trykk «Fortsett» når du er klar.'
+                  : 'Varm opp før du begynner å øve. Stoppeklokken tar over av seg selv når skiven er tom, og oppvarmingen teller med i tiden din.')
+                : pauset
+                  ? 'Tiden står stille. Trykk «Fortsett» når du begynner igjen.'
+                  : `${varighet(oppvarming)} oppvarming er regnet med i tiden.`}
+              {økt.pausedSeconds ? ` ${varighet(økt.pausedSeconds)} pause er ikke regnet med.` : ''}
+            </Text>
+          </View>
+
+          <View style={{ alignSelf: 'stretch' }}>
+            {stoppet && måHaBilde ? (
+              <>
+                <Banner tone="amber" text={'📷 Denne økten må dokumenteres med et bilde før den kan registreres.'} />
+                <Text style={styles.personvern}>
+                  Ta bilde av instrumentet, notestativet eller rommet – helst ikke av deg selv eller andre.
+                </Text>
+                <Button title="Ta bilde" onPress={åpneKamera} style={{ marginTop: 14 }} />
+              </>
+            ) : stoppet ? (
+              <Button title="Registrer øving" onPress={registrer} loading={busy} />
+            ) : (
+              <>
+                <Button title={pauset ? 'Fortsett' : 'Pause'} onPress={pauset ? fortsett : pause} loading={busy}
+                  color={pauset ? C.navy : '#fff'} textColor={pauset ? '#fff' : C.slate}
+                  style={pauset ? null : { borderWidth: 1.5, borderColor: '#d3dae2' }} />
+                {!iOppvarming ? (
+                  <Button title="Stopp og registrer" onPress={stopp} loading={busy} style={{ marginTop: 10 }} />
+                ) : null}
+              </>
+            )}
+
+            <Button title="Avbryt økten" color="#fff" textColor={C.slate} onPress={avbryt} loading={busy}
+              style={{ marginTop: 10, borderWidth: 1.5, borderColor: '#d3dae2' }} />
+
+            {/* Økten lever på serveren, så det er trygt å gå ut – men det må stå
+                her, ellers tør ingen trykke. */}
+            <Pressable onPress={onClose} hitSlop={10} style={{ alignSelf: 'center', paddingVertical: 14 }}>
+              <Text style={styles.skjul}>Skjul – økten fortsetter</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: C.surface }}>
+      <View style={{ flex: 1, backgroundColor: C.surface, paddingTop: insets.top }}>
         <View style={styles.topp}>
           <View style={{ flex: 1 }}>
             <Text style={styles.h1}>Øvekonkurranse</Text>
@@ -202,7 +293,7 @@ export default function OvingModal({ visible, onClose }) {
           <Pressable onPress={onClose} hitSlop={12}><Text style={styles.lukk}>Lukk</Text></Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: 40 }}>
+        <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: insets.bottom + 40 }}>
           {status == null ? <ActivityIndicator color={C.navy} /> : null}
 
           {feil ? <View style={{ marginBottom: 14 }}><Banner tone="red" text={feil} /></View> : null}
@@ -213,7 +304,7 @@ export default function OvingModal({ visible, onClose }) {
               : '🎻 Ingen øvekonkurranse er satt opp for øyeblikket.'} />
           ) : null}
 
-          {/* ── Bilde tatt: vis det med stempel før det sendes ── */}
+          {/* Bildet er tatt: vis det med stempel før det sendes. */}
           {bilde ? (
             <Card style={{ padding: 0, overflow: 'hidden' }}>
               <View>
@@ -235,72 +326,8 @@ export default function OvingModal({ visible, onClose }) {
             </Card>
           ) : null}
 
-          {/* ── Pågående økt ── */}
-          {!bilde && økt ? (
-            <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
-              {iOppvarming ? (
-                <>
-                  <Text style={styles.fase}>OPPVARMING</Text>
-                  <View style={{ marginTop: 16, marginBottom: 18 }}>
-                    <CountdownDial remaining={gjenstår} total={oppvarming}>
-                      <Text style={styles.dialTall}>{klokke(gjenstår)}</Text>
-                      <Text style={styles.dialSub}>igjen</Text>
-                    </CountdownDial>
-                  </View>
-                  <Text style={styles.hjelp}>
-                    {pauset
-                      ? 'Oppvarmingen står på pause. Trykk «Fortsett» når du er klar.'
-                      : 'Varm opp før du begynner å øve. Stoppeklokken tar over av seg selv når skiven er tom, og oppvarmingen teller med i tiden din.'}
-                  </Text>
-                  <Button title={pauset ? 'Fortsett' : 'Pause'} onPress={pauset ? fortsett : pause} loading={busy}
-                    color={pauset ? C.navy : '#fff'} textColor={pauset ? '#fff' : C.slate}
-                    style={{ marginTop: 20, alignSelf: 'stretch', ...(pauset ? {} : { borderWidth: 1.5, borderColor: '#d3dae2' }) }} />
-                  <Button title="Avbryt økten" color="#fff" textColor={C.slate} onPress={avbryt} loading={busy}
-                    style={{ marginTop: 10, alignSelf: 'stretch', borderWidth: 1.5, borderColor: '#d3dae2' }} />
-                </>
-              ) : (
-                <>
-                  <Text style={styles.fase}>{stoppet ? 'ØKTEN ER STOPPET' : pauset ? 'PÅ PAUSE' : 'ØVER NÅ'}</Text>
-                  <Text style={[styles.stoppeklokke, pauset && { color: C.muted2 }]}>{klokke(nå)}</Text>
-                  <Text style={styles.hjelp}>
-                    {pauset
-                      ? 'Tiden står stille. Trykk «Fortsett» når du begynner igjen.'
-                      : `${varighet(oppvarming)} oppvarming er regnet med i tiden.`}
-                    {økt.pausedSeconds ? ` ${varighet(økt.pausedSeconds)} pause er ikke regnet med.` : ''}
-                  </Text>
-
-                  {!stoppet ? (
-                    <>
-                      <Button title={pauset ? 'Fortsett' : 'Pause'} onPress={pauset ? fortsett : pause} loading={busy}
-                        color={pauset ? C.navy : '#fff'} textColor={pauset ? '#fff' : C.slate}
-                        style={{ marginTop: 22, alignSelf: 'stretch', ...(pauset ? {} : { borderWidth: 1.5, borderColor: '#d3dae2' }) }} />
-                      <Button title="Stopp og registrer" onPress={stopp} loading={busy}
-                        style={{ marginTop: 10, alignSelf: 'stretch' }} />
-                    </>
-                  ) : måHaBilde ? (
-                    <>
-                      <View style={{ marginTop: 18, alignSelf: 'stretch' }}>
-                        <Banner tone="amber" text={'📷 Denne økten må dokumenteres med et bilde før den kan registreres.'} />
-                      </View>
-                      <Text style={styles.personvern}>
-                        Ta bilde av instrumentet, notestativet eller rommet – helst ikke av deg selv eller andre.
-                      </Text>
-                      <Button title="Ta bilde" onPress={åpneKamera} style={{ marginTop: 14, alignSelf: 'stretch' }} />
-                    </>
-                  ) : (
-                    <Button title="Registrer øving" onPress={registrer} loading={busy}
-                      style={{ marginTop: 22, alignSelf: 'stretch' }} />
-                  )}
-
-                  <Button title="Avbryt økten" color="#fff" textColor={C.slate} onPress={avbryt} loading={busy}
-                    style={{ marginTop: 10, alignSelf: 'stretch', borderWidth: 1.5, borderColor: '#d3dae2' }} />
-                </>
-              )}
-            </Card>
-          ) : null}
-
-          {/* ── Ingen økt: start en ny ── */}
-          {!bilde && !økt && status ? (
+          {/* Ingen økt: start en ny. */}
+          {!bilde && status ? (
             <>
               <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
                 <Text style={styles.fase}>DIN TOTALTID</Text>
@@ -323,7 +350,7 @@ export default function OvingModal({ visible, onClose }) {
             </>
           ) : null}
 
-          {/* ── Mine økter ── */}
+          {/* Mine økter */}
           {!bilde && status?.sessions?.length ? (
             <View style={{ marginTop: 26 }}>
               <Text style={styles.h2}>Mine økter</Text>
@@ -345,6 +372,10 @@ export default function OvingModal({ visible, onClose }) {
 }
 
 const styles = StyleSheet.create({
+  full: { flex: 1, backgroundColor: C.surface, paddingHorizontal: 26, justifyContent: 'space-between' },
+  fullMidt: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  stoppeklokkeStor: { fontSize: 76, fontWeight: '800', color: C.ink, marginVertical: 14, fontVariant: ['tabular-nums'] },
+  skjul: { fontSize: 14, fontWeight: '700', color: C.muted2 },
   topp: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 22, paddingTop: 18, paddingBottom: 12 },
   h1: { fontSize: 22, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
   h2: { fontSize: 17, fontWeight: '800', color: C.ink, marginBottom: 8 },
@@ -353,7 +384,6 @@ const styles = StyleSheet.create({
   fase: { fontSize: 12, fontWeight: '800', color: C.muted2, letterSpacing: 1.2 },
   dialTall: { fontSize: 40, fontWeight: '800', color: C.ink, fontVariant: ['tabular-nums'] },
   dialSub: { fontSize: 13, fontWeight: '700', color: C.muted2, marginTop: 2 },
-  stoppeklokke: { fontSize: 54, fontWeight: '800', color: C.ink, marginVertical: 10, fontVariant: ['tabular-nums'] },
   total: { fontSize: 40, fontWeight: '800', color: C.ink, marginVertical: 8 },
   hjelp: { fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 19, paddingHorizontal: 8 },
   hjelpUnder: { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 19, marginTop: 14, paddingHorizontal: 10 },
