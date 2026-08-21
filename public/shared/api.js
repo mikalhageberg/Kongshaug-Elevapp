@@ -97,6 +97,22 @@ export function formatWeekRange(startStr, endStr) {
   return `${d1}.–${d2}. ${MONTHS[m1 - 1]}`;
 }
 
+// <input type="date"> tegnes av nettleseren i MASKINENS lokalitet, ikke sidens.
+// Står maskinen på engelsk, viser feltet 08/21/2026 uansett hva siden ber om –
+// det kan ikke overstyres fra CSS eller HTML. Datoen skrives derfor ut på norsk
+// i et eget element ved siden av, så det aldri er tvil om hvilken dag som er
+// valgt. Feltet beholder den innebygde datovelgeren.
+// Returnerer oppdateringsfunksjonen: settes feltets verdi fra kode, fyrer
+// verken «input» eller «change», og teksten må oppdateres eksplisitt.
+export function visDatoPåNorsk(input, output) {
+  if (!input || !output) return () => {};
+  const oppdater = () => { output.textContent = input.value ? formatDateLong(input.value) : ''; };
+  input.addEventListener('input', oppdater);
+  input.addEventListener('change', oppdater);
+  oppdater();
+  return oppdater;
+}
+
 // Icon-hjelper (Feather-lignende SVG-er brukt i designet).
 export const icon = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>',

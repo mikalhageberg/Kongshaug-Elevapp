@@ -1,4 +1,4 @@
-import { api, getPosition, formatTime, formatDateLong, formatDateShort, formatWeekRange, formatNightRange, countNights, icon } from '/shared/api.js';
+import { api, getPosition, formatTime, formatDateLong, formatDateShort, formatWeekRange, formatNightRange, countNights, visDatoPåNorsk, icon } from '/shared/api.js';
 
 const root = document.getElementById('root');
 let user = null;
@@ -737,8 +737,10 @@ async function renderGjest() {
         <input class="field" id="gnote" placeholder="F.eks. foreldre, søsken…" />
         <label class="field-label" style="margin-top:14px">Første kveld</label>
         <input class="field" type="date" id="gfrom" value="${today}" />
+        <div id="gfromVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div>
         <label class="field-label" style="margin-top:14px">Siste kveld</label>
         <input class="field" type="date" id="gto" value="${today}" />
+        <div id="gtoVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div>
         <div id="gpreview" style="display:none;margin-top:12px;font-size:14px;font-weight:700;color:var(--navy);background:#f2f5f9;border-radius:10px;padding:10px 12px"></div>
         <p id="gerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
         <button class="btn btn-primary" id="gadd" style="width:100%;height:52px;margin-top:16px">Send til godkjenning</button>
@@ -782,6 +784,8 @@ async function renderGjest() {
   }
   body.querySelector('#gfrom').addEventListener('change', updateGuestPreview);
   body.querySelector('#gto').addEventListener('change', updateGuestPreview);
+  visDatoPåNorsk(body.querySelector('#gfrom'), body.querySelector('#gfromVist'));
+  visDatoPåNorsk(body.querySelector('#gto'), body.querySelector('#gtoVist'));
 
   const gconfirmEl = body.querySelector('#gconfirm');
   body.querySelector('#gadd').addEventListener('click', async () => {
@@ -833,8 +837,10 @@ async function renderPlanlegg() {
       <div class="card" style="border-radius:18px">
         <label class="field-label">Første kveld borte</label>
         <input class="field" type="date" id="from" />
+        <div id="fromVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div>
         <label class="field-label" style="margin-top:14px">Siste kveld borte</label>
         <input class="field" type="date" id="to" />
+        <div id="toVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div>
         <div id="preview" style="display:none;margin-top:12px;font-size:14px;font-weight:700;color:var(--navy);background:#f2f5f9;border-radius:10px;padding:10px 12px"></div>
         <label style="display:flex;align-items:center;gap:12px;margin-top:16px;cursor:pointer">
           <input type="checkbox" id="noDinner" checked style="width:22px;height:22px;flex:0 0 auto" />
@@ -877,6 +883,8 @@ async function renderPlanlegg() {
   }
   body.querySelector('#from').addEventListener('change', updatePreview);
   body.querySelector('#to').addEventListener('change', updatePreview);
+  const visFra = visDatoPåNorsk(body.querySelector('#from'), body.querySelector('#fromVist'));
+  const visTil = visDatoPåNorsk(body.querySelector('#to'), body.querySelector('#toVist'));
 
   const confirmEl = body.querySelector('#confirm');
   body.querySelector('#add').addEventListener('click', async () => {
@@ -900,6 +908,7 @@ async function renderPlanlegg() {
         </div>`;
       confirmEl.style.display = 'block';
       body.querySelector('#from').value = ''; body.querySelector('#to').value = '';
+      visFra(); visTil();
       updatePreview();
       load();
     } catch (ex) { perr.textContent = ex.message; perr.style.display = 'block'; }

@@ -1,4 +1,4 @@
-import { api, formatTime, formatDateLong, formatWeekRange, icon } from '/shared/api.js';
+import { api, formatTime, formatDateLong, formatWeekRange, visDatoPåNorsk, icon } from '/shared/api.js';
 
 const root = document.getElementById('root');
 let user = null;
@@ -534,7 +534,10 @@ function userModal(existing, onSaved, cfg) {
   bg.querySelector('#save').addEventListener('click', async () => {
     uerr.style.display = 'none';
     const body = { fullName: f.fullName.value };
-    if (isStudent) { body.className = f.className.value; body.dorm = f.dorm.value; body.room = f.room.value; }
+    if (isStudent) {
+      body.className = f.className.value; body.dorm = f.dorm.value; body.room = f.room.value;
+      body.instrument = f.instrument.value;
+    }
     if (f.password.value) body.password = f.password.value;
     const btn = bg.querySelector('#save'); btn.disabled = true;
     try {
@@ -557,7 +560,9 @@ function userModal(existing, onSaved, cfg) {
 // ── Legg til flere brukere (bulk) + brukerkort ───────────────
 // Samme flyt for elever og administratorer. Elever har klasse/internat/rom;
 // administratorer bare navn (brukernavn + passord genereres for begge).
-const BULK_COLS_STUDENT = '1fr 110px 150px 80px 150px 32px';
+// Navnekolonnen får en nedre grense: uten den spiser de faste kolonnene hele
+// bredden, og «Fullt navn» kollapser til et par tegn.
+const BULK_COLS_STUDENT = 'minmax(170px, 1fr) 96px 132px 68px 140px 30px';
 const BULK_COLS_ADMIN = '1fr 32px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
@@ -602,7 +607,7 @@ function bulkAddModal(cfg, onSaved) {
        <span></span>`
     : `<label class="field-label" style="margin:0">Navn</label><span></span>`;
   const bg = el(`
-    <div class="modal-bg"><div class="modal" style="width:${isStudent ? 660 : 520}px">
+    <div class="modal-bg"><div class="modal" style="width:${isStudent ? 780 : 520}px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
         <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Legg til flere ${unit}</div>
           <div style="font-size:13px;color:var(--muted-2);font-weight:600">Én rad per ${isStudent ? 'elev' : 'administrator'}. Brukernavn og passord lages automatisk.</div></div>
@@ -1321,20 +1326,8 @@ async function renderPractice(main) {
   const boardEl = page.querySelector('#board');
   const stateEl = page.querySelector('#compState');
 
-  // Nettleseren tegner selve <input type="date"> i SIN egen lokalitet – står
-  // maskinen på engelsk, viser feltet 08/21/2026 uansett hva siden ber om.
-  // Datoen skrives derfor ut på norsk rett under feltet, så det aldri er tvil
-  // om hvilken dag som er valgt.
-  function visDato(navn) {
-    const felt = page.querySelector(`[name=${navn}]`);
-    const ut = page.querySelector(`[data-vist="${navn}"]`);
-    ut.textContent = felt.value ? formatDateLong(felt.value) : '';
-  }
   for (const navn of ['practiceStartDate', 'practiceEndDate']) {
-    const felt = page.querySelector(`[name=${navn}]`);
-    felt.addEventListener('input', () => visDato(navn));
-    felt.addEventListener('change', () => visDato(navn));
-    visDato(navn);
+    visDatoPåNorsk(page.querySelector(`[name=${navn}]`), page.querySelector(`[data-vist="${navn}"]`));
   }
 
   function markerSort() {
@@ -2047,8 +2040,8 @@ async function renderGuests(main) {
         <div style="grid-column:1/3"><label class="field-label">Kommentar (valgfritt)</label><input class="field field-sm" id="gnote" placeholder="F.eks. foreldre, søsken…" /></div>
         <div><label class="field-label">Internat gjesten sover i</label><select class="field field-sm" id="gdorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Velg internat…', '')}</select></div>
         <div><label class="field-label">Rom (valgfritt)</label><input class="field field-sm" id="groom" placeholder="Rom" /></div>
-        <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /></div>
-        <div><label class="field-label">Siste natt</label><input class="field field-sm" type="date" id="gto" /></div>
+        <div><label class="field-label">Første natt</label><input class="field field-sm" type="date" id="gfrom" /><div id="gfromVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
+        <div><label class="field-label">Siste natt</label><input class="field field-sm" type="date" id="gto" /><div id="gtoVist" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
       </div>
       <div style="background:#eef4fb;border:1px solid #d7e4f4;border-radius:10px;padding:11px 14px;margin-top:12px">
         <div style="font-size:12.5px;color:var(--slate,#33415a);line-height:1.5">🌙 Datoene er <b>netter</b>. «Siste natt» er den siste natten gjesten sover på internatet – gjesten reiser <b>morgenen etter</b>. Velger du samme dato i begge felt, er det ett døgn (én natt).</div>
@@ -2128,6 +2121,8 @@ async function renderGuests(main) {
   }
   page.querySelector('#gfrom').addEventListener('change', updateGuestPreview);
   page.querySelector('#gto').addEventListener('change', updateGuestPreview);
+  visDatoPåNorsk(page.querySelector('#gfrom'), page.querySelector('#gfromVist'));
+  visDatoPåNorsk(page.querySelector('#gto'), page.querySelector('#gtoVist'));
   updateGuestPreview();
 
   // Godkjent/kommende gjest: viser tildelt internat + rom.
