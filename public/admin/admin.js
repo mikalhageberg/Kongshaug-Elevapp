@@ -1217,22 +1217,35 @@ function formatDuration(sec) {
   return m ? `${t} t ${m} min` : `${t} t`;
 }
 
+// Datoen et UTC-tidsstempel fra databasen faller på i norsk tid, som
+// 'YYYY-MM-DD'. Å klippe de ti første tegnene av tidsstempelet ville gitt
+// UTC-datoen, og bommet med en dag på alt som skjer sent på kvelden.
+function localDate(iso) {
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
 // Datostempelet på dokumentasjonsbildet, i formen gamle digitalkameraer brente
-// inn nederst til høyre: «2026 08 21  19:42».
+// inn nederst til høyre – med norsk datorekkefølge: «21.08.2026  19:42».
 function photoStamp(iso) {
   if (!iso) return '';
   const d = new Date(String(iso).replace(' ', 'T') + 'Z');
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()} ${p(d.getMonth() + 1)} ${p(d.getDate())}  ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}  ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 // Bildet med stempelet lagt over. Stempelet tegnes ved visning, fra serverens
 // tidsstempel på økten – ikke brent inn i filen av telefonen. Da kan det ikke
 // forfalskes av en app, og det ser likt ut overalt det vises.
-function stampedPhoto(sessionId, iso, { width = '100%', radius = 12, stampSize = 15 } = {}) {
+// `maxHeight` gjør at bildet skaleres ned til det får plass, i stedet for å
+// dytte vinduet utenfor skjermen. Rammen krymper med bildet (inline-block uten
+// fast bredde), slik at stempelet lander i hjørnet av selve bildet og ikke i
+// hjørnet av en tom boks rundt det.
+function stampedPhoto(sessionId, iso, { maxHeight = '60vh', radius = 12, stampSize = 15 } = {}) {
   return `
-    <div style="position:relative;display:inline-block;width:${width};background:#0b0e13;border-radius:${radius}px;overflow:hidden;line-height:0">
-      <img src="/api/practice/sessions/${sessionId}/photo" alt="Dokumentasjon" style="display:block;width:100%;height:auto" />
+    <div style="position:relative;display:inline-block;max-width:100%;background:#0b0e13;border-radius:${radius}px;overflow:hidden;line-height:0">
+      <img src="/api/practice/sessions/${sessionId}/photo" alt="Dokumentasjon" style="display:block;max-width:100%;max-height:${maxHeight};width:auto;height:auto" />
       <div style="position:absolute;right:${Math.round(stampSize * 0.7)}px;bottom:${Math.round(stampSize * 0.55)}px;font-family:'Courier New',ui-monospace,monospace;font-weight:700;font-size:${stampSize}px;letter-spacing:.08em;color:#ffa22b;text-shadow:0 0 7px rgba(255,120,0,.6),0 1px 2px rgba(0,0,0,.95);line-height:1.1">${photoStamp(iso)}</div>
     </div>`;
 }
@@ -1242,10 +1255,10 @@ function photoLightbox(sessionId, iso) {
     <div class="modal-bg"><div class="modal" style="max-width:640px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid #eef0f3">
         <div><div style="font-size:18px;font-weight:800;letter-spacing:-.02em">Dokumentasjon</div>
-          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Tatt ${formatDateLong(String(iso).slice(0, 10))} kl. ${formatTime(iso)}</div></div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Tatt ${formatDateLong(localDate(iso))} kl. ${formatTime(iso)}</div></div>
         <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
       </div>
-      <div style="padding:18px 24px 24px">${stampedPhoto(sessionId, iso, { stampSize: 20 })}</div>
+      <div style="padding:18px 24px 24px;text-align:center">${stampedPhoto(sessionId, iso, { stampSize: 20, maxHeight: 'calc(100vh - 220px)' })}</div>
     </div></div>`);
   document.body.appendChild(bg);
   const lukk = () => bg.remove();
@@ -1274,8 +1287,8 @@ async function renderPractice(main) {
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Konkurranseperiode</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Elevene kan bare registrere øving mellom disse datoene, begge dager inkludert. La feltene stå tomme for å slå konkurransen av.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 0">
-        <div><label class="field-label">Starter</label><input type="date" name="practiceStartDate" value="${s.practiceStartDate || ''}" class="field field-sm" /></div>
-        <div><label class="field-label">Slutter</label><input type="date" name="practiceEndDate" value="${s.practiceEndDate || ''}" class="field field-sm" /></div>
+        <div><label class="field-label">Starter</label><input type="date" name="practiceStartDate" value="${s.practiceStartDate || ''}" class="field field-sm" /><div data-vist="practiceStartDate" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
+        <div><label class="field-label">Slutter</label><input type="date" name="practiceEndDate" value="${s.practiceEndDate || ''}" class="field field-sm" /><div data-vist="practiceEndDate" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid #f0f2f4">
         <div><div style="font-size:15px;font-weight:700">Obligatorisk oppvarming</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Eleven må gjennom denne før stoppeklokken tar over. Tiden teller med i totalen.</div></div>
@@ -1307,6 +1320,22 @@ async function renderPractice(main) {
 
   const boardEl = page.querySelector('#board');
   const stateEl = page.querySelector('#compState');
+
+  // Nettleseren tegner selve <input type="date"> i SIN egen lokalitet – står
+  // maskinen på engelsk, viser feltet 08/21/2026 uansett hva siden ber om.
+  // Datoen skrives derfor ut på norsk rett under feltet, så det aldri er tvil
+  // om hvilken dag som er valgt.
+  function visDato(navn) {
+    const felt = page.querySelector(`[name=${navn}]`);
+    const ut = page.querySelector(`[data-vist="${navn}"]`);
+    ut.textContent = felt.value ? formatDateLong(felt.value) : '';
+  }
+  for (const navn of ['practiceStartDate', 'practiceEndDate']) {
+    const felt = page.querySelector(`[name=${navn}]`);
+    felt.addEventListener('input', () => visDato(navn));
+    felt.addEventListener('change', () => visDato(navn));
+    visDato(navn);
+  }
 
   function markerSort() {
     page.querySelectorAll('[data-sort]').forEach((b) => {

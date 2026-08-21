@@ -32,10 +32,12 @@ function varighet(sek) {
   return m ? `${t} t ${m} min` : `${t} t`;
 }
 
-// Datostempelet, i formen gamle digitalkameraer brente inn: «2026 08 21  19:42».
+// Datostempelet, i formen gamle digitalkameraer brente inn – med norsk
+// datorekkefølge: «21.08.2026  19:42». Må være identisk med photoStamp() i
+// admin, ellers ser samme bilde ulikt ut de to stedene.
 function stempel(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()} ${p(d.getMonth() + 1)} ${p(d.getDate())}  ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}  ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 export default function OvingModal({ visible, onClose }) {

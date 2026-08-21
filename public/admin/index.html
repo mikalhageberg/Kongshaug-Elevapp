@@ -38,8 +38,12 @@
     .th .sortarrow { font-size: 9px; line-height: 1; }
     .modal-bg { position: fixed; inset: 0; background: rgba(15,26,43,.42); display: flex; align-items: center;
       justify-content: center; z-index: 40; }
+    /* Maks-høyde er nødvendig, ikke pynt: uten den vokser et høyt vindu – en
+       lang skjema eller et portrettbilde – rett ut av skjermen, og toppen og
+       bunnen blir uleselige. Innholdet ruller i stedet inne i vinduet. */
     .modal { width: 520px; max-width: calc(100vw - 32px); background: #fff; border-radius: 20px;
-      box-shadow: 0 30px 60px -20px rgba(15,26,43,.5); overflow: hidden; }
+      box-shadow: 0 30px 60px -20px rgba(15,26,43,.5);
+      max-height: calc(100vh - 32px); overflow-x: hidden; overflow-y: auto; }
     .field-sm { height: 46px; border-radius: 11px; font-size: 14.5px; }
     @media (max-width: 720px) {
       aside.side { display: none; }
