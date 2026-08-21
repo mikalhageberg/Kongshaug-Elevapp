@@ -21,13 +21,13 @@ import { getSettings } from './settings.js';
 export const photoDir = path.join(paths.data, 'practice');
 fs.mkdirSync(photoDir, { recursive: true });
 
-// Hvor ofte eleven blir bedt om å dokumentere økten med et bilde. «Omtrent
-// halvparten av gangene» – trekkes på nytt for hver økt.
-export const PHOTO_CHANCE = 0.5;
-
-// En økt som har stått åpen lenger enn dette er glemt, ikke pågående: appen ble
-// drept, telefonen døde. Den forkastes i stedet for å bli til en rekord.
+// En økt med mer enn dette i faktisk øvetid er ikke en økt lenger.
 export const MAX_SESSION_SECONDS = 6 * 60 * 60;
+
+// En pause skal kunne vare noen timer – ikke evig. Uten en øvre grense på selve
+// klokketiden ville en økt satt på pause i forrige uke kunne registreres i dag,
+// og havnet på datoen den startet.
+export const MAX_WALL_SECONDS = 24 * 60 * 60;
 
 // Konkurransens tilstand akkurat nå.
 export function competitionState(today = todayDate(), s = getSettings()) {
@@ -43,14 +43,24 @@ export function competitionState(today = todayDate(), s = getSettings()) {
   };
 }
 
-// Sekunder som har gått siden økten startet, regnet på serveren. Har eleven
-// trykket «stopp», er det stopptidspunktet som gjelder – ikke klokka nå.
+// Faktisk øvetid, regnet på serveren: fra start til det tidligste av «stoppet»,
+// «på pause nå» og «nå», minus pausene som allerede er avsluttet. Står økten på
+// pause, står tallet stille.
 function elapsedSeconds(sessionId) {
   return db
     .prepare(
-      `SELECT CAST((julianday(COALESCE(stopped_at, 'now')) - julianday(started_at)) * 86400 AS INTEGER) AS n
+      `SELECT CAST((julianday(COALESCE(stopped_at, paused_at, 'now')) - julianday(started_at)) * 86400
+                   - paused_seconds AS INTEGER) AS n
          FROM practice_sessions WHERE id = ?`
     )
+    .get(sessionId).n;
+}
+
+// Klokketid siden start, pauser inkludert. Brukes bare til å luke bort økter
+// som har ligget for lenge.
+function wallSeconds(sessionId) {
+  return db
+    .prepare("SELECT CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER) AS n FROM practice_sessions WHERE id = ?")
     .get(sessionId).n;
 }
 
@@ -65,6 +75,8 @@ const publicSession = (r) => ({
   hasPhoto: !!r.photo_filename,
   photoAt: r.photo_at || null,
   stoppedAt: r.stopped_at || null,
+  pausedAt: r.paused_at || null,
+  pausedSeconds: r.paused_seconds || 0,
 });
 
 // Elevens pågående økt, hvis hun har en. Glemte økter ryddes bort her, slik at
@@ -74,7 +86,7 @@ export function pendingSession(userId) {
     .prepare('SELECT * FROM practice_sessions WHERE user_id = ? AND ended_at IS NULL ORDER BY id DESC LIMIT 1')
     .get(userId);
   if (!row) return null;
-  if (elapsedSeconds(row.id) > MAX_SESSION_SECONDS) {
+  if (elapsedSeconds(row.id) > MAX_SESSION_SECONDS || wallSeconds(row.id) > MAX_WALL_SECONDS) {
     discardSession(row.id);
     return null;
   }
@@ -94,10 +106,47 @@ export function startSession(userId) {
       `INSERT INTO practice_sessions (user_id, session_date, warmup_seconds, photo_required)
        VALUES (?, ?, ?, ?)`
     )
-    .run(userId, todayDate(), s.practiceWarmupMinutes * 60, Math.random() < PHOTO_CHANCE ? 1 : 0);
+    .run(userId, todayDate(), s.practiceWarmupMinutes * 60, Math.random() * 100 < s.practicePhotoPercent ? 1 : 0);
 
   const row = db.prepare('SELECT * FROM practice_sessions WHERE id = ?').get(info.lastInsertRowid);
   return { ...publicSession(row), elapsedSeconds: 0 };
+}
+
+// Sett økten på pause. Tiden står stille til den startes igjen.
+export function pauseSession(userId, sessionId) {
+  const row = db.prepare('SELECT * FROM practice_sessions WHERE id = ? AND user_id = ?').get(sessionId, userId);
+  if (!row) throw new Error('Fant ikke økten.');
+  if (row.ended_at) throw new Error('Økten er allerede registrert.');
+  if (row.stopped_at) throw new Error('Økten er stoppet.');
+  if (!row.paused_at) {
+    db.prepare("UPDATE practice_sessions SET paused_at = datetime('now') WHERE id = ?").run(row.id);
+  }
+  const oppdatert = db.prepare('SELECT * FROM practice_sessions WHERE id = ?').get(row.id);
+  return { ...publicSession(oppdatert), elapsedSeconds: elapsedSeconds(row.id) };
+}
+
+// Fortsett. Pausen som nettopp ble avsluttet legges til summen, slik at den
+// aldri teller som øvetid.
+export function resumeSession(userId, sessionId) {
+  const row = db.prepare('SELECT * FROM practice_sessions WHERE id = ? AND user_id = ?').get(sessionId, userId);
+  if (!row) throw new Error('Fant ikke økten.');
+  if (row.ended_at) throw new Error('Økten er allerede registrert.');
+  if (row.stopped_at) throw new Error('Økten er stoppet.');
+  if (wallSeconds(row.id) > MAX_WALL_SECONDS) {
+    discardSession(row.id);
+    throw new Error('Økten har stått på pause for lenge. Start en ny.');
+  }
+  if (row.paused_at) {
+    db.prepare(
+      `UPDATE practice_sessions
+          SET paused_seconds = paused_seconds
+              + CAST((julianday('now') - julianday(paused_at)) * 86400 AS INTEGER),
+              paused_at = NULL
+        WHERE id = ?`
+    ).run(row.id);
+  }
+  const oppdatert = db.prepare('SELECT * FROM practice_sessions WHERE id = ?').get(row.id);
+  return { ...publicSession(oppdatert), elapsedSeconds: elapsedSeconds(row.id) };
 }
 
 // Frys tiden. Eleven får ta seg tiden hun trenger på dokumentasjonsbildet
@@ -108,7 +157,10 @@ export function stopSession(userId, sessionId) {
   if (!row) throw new Error('Fant ikke økten.');
   if (row.ended_at) throw new Error('Økten er allerede registrert.');
   if (!row.stopped_at) {
-    db.prepare("UPDATE practice_sessions SET stopped_at = datetime('now') WHERE id = ?").run(row.id);
+    // Stopper eleven mens økten står på pause, er det pausetidspunktet som
+    // gjelder – tiden har jo stått stille siden da.
+    db.prepare("UPDATE practice_sessions SET stopped_at = COALESCE(paused_at, datetime('now')) WHERE id = ?")
+      .run(row.id);
   }
   const oppdatert = db.prepare('SELECT * FROM practice_sessions WHERE id = ?').get(row.id);
   return { ...publicSession(oppdatert), elapsedSeconds: elapsedSeconds(row.id) };
@@ -123,7 +175,7 @@ export function finishSession(userId, sessionId) {
   if (row.ended_at) throw new Error('Økten er allerede registrert.');
 
   const total = elapsedSeconds(row.id);
-  if (total > MAX_SESSION_SECONDS) {
+  if (total > MAX_SESSION_SECONDS || wallSeconds(row.id) > MAX_WALL_SECONDS) {
     discardSession(row.id);
     throw new Error('Økten har vart for lenge til å registreres. Start en ny.');
   }

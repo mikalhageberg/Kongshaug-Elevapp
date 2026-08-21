@@ -70,7 +70,7 @@ export default function OvingModal({ visible, onClose }) {
   }, [visible, last]);
 
   // Tikk bare mens en økt faktisk løper – en stoppet økt skal stå stille.
-  const løper = !!økt && !økt.stoppedAt;
+  const løper = !!økt && !økt.stoppedAt && !økt.pausedAt;
   useEffect(() => {
     if (!visible || !løper) return;
     const id = setInterval(() => {
@@ -83,6 +83,7 @@ export default function OvingModal({ visible, onClose }) {
   const iOppvarming = !!økt && nå < oppvarming;
   const gjenstår = Math.max(0, oppvarming - nå);
   const stoppet = !!økt?.stoppedAt;
+  const pauset = !!økt?.pausedAt && !stoppet;
 
   async function kjør(fn) {
     setBusy(true); setFeil(null);
@@ -91,6 +92,16 @@ export default function OvingModal({ visible, onClose }) {
 
   const start = () => kjør(async () => {
     const d = await api('/api/practice/start', { method: 'POST' });
+    settØkt(d.session);
+  });
+
+  const pause = () => kjør(async () => {
+    const d = await api(`/api/practice/${økt.id}/pause`, { method: 'POST' });
+    settØkt(d.session);
+  });
+
+  const fortsett = () => kjør(async () => {
+    const d = await api(`/api/practice/${økt.id}/resume`, { method: 'POST' });
     settØkt(d.session);
   });
 
@@ -235,22 +246,35 @@ export default function OvingModal({ visible, onClose }) {
                     </CountdownDial>
                   </View>
                   <Text style={styles.hjelp}>
-                    Varm opp før du begynner å øve. Stoppeklokken tar over av seg selv når skiven er tom,
-                    og oppvarmingen teller med i tiden din.
+                    {pauset
+                      ? 'Oppvarmingen står på pause. Trykk «Fortsett» når du er klar.'
+                      : 'Varm opp før du begynner å øve. Stoppeklokken tar over av seg selv når skiven er tom, og oppvarmingen teller med i tiden din.'}
                   </Text>
+                  <Button title={pauset ? 'Fortsett' : 'Pause'} onPress={pauset ? fortsett : pause} loading={busy}
+                    color={pauset ? C.navy : '#fff'} textColor={pauset ? '#fff' : C.slate}
+                    style={{ marginTop: 20, alignSelf: 'stretch', ...(pauset ? {} : { borderWidth: 1.5, borderColor: '#d3dae2' }) }} />
                   <Button title="Avbryt økten" color="#fff" textColor={C.slate} onPress={avbryt} loading={busy}
-                    style={{ marginTop: 20, alignSelf: 'stretch', borderWidth: 1.5, borderColor: '#d3dae2' }} />
+                    style={{ marginTop: 10, alignSelf: 'stretch', borderWidth: 1.5, borderColor: '#d3dae2' }} />
                 </>
               ) : (
                 <>
-                  <Text style={styles.fase}>{stoppet ? 'ØKTEN ER STOPPET' : 'ØVER NÅ'}</Text>
-                  <Text style={styles.stoppeklokke}>{klokke(nå)}</Text>
+                  <Text style={styles.fase}>{stoppet ? 'ØKTEN ER STOPPET' : pauset ? 'PÅ PAUSE' : 'ØVER NÅ'}</Text>
+                  <Text style={[styles.stoppeklokke, pauset && { color: C.muted2 }]}>{klokke(nå)}</Text>
                   <Text style={styles.hjelp}>
-                    {varighet(oppvarming)} oppvarming er regnet med i tiden.
+                    {pauset
+                      ? 'Tiden står stille. Trykk «Fortsett» når du begynner igjen.'
+                      : `${varighet(oppvarming)} oppvarming er regnet med i tiden.`}
+                    {økt.pausedSeconds ? ` ${varighet(økt.pausedSeconds)} pause er ikke regnet med.` : ''}
                   </Text>
 
                   {!stoppet ? (
-                    <Button title="Stopp" onPress={stopp} loading={busy} style={{ marginTop: 22, alignSelf: 'stretch' }} />
+                    <>
+                      <Button title={pauset ? 'Fortsett' : 'Pause'} onPress={pauset ? fortsett : pause} loading={busy}
+                        color={pauset ? C.navy : '#fff'} textColor={pauset ? '#fff' : C.slate}
+                        style={{ marginTop: 22, alignSelf: 'stretch', ...(pauset ? {} : { borderWidth: 1.5, borderColor: '#d3dae2' }) }} />
+                      <Button title="Stopp og registrer" onPress={stopp} loading={busy}
+                        style={{ marginTop: 10, alignSelf: 'stretch' }} />
+                    </>
                   ) : måHaBilde ? (
                     <>
                       <View style={{ marginTop: 18, alignSelf: 'stretch' }}>

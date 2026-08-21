@@ -1284,6 +1284,13 @@ async function renderPractice(main) {
           <span style="color:var(--muted-2);font-weight:700;font-size:14px">minutter</span>
         </div>
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid #f0f2f4">
+        <div><div style="font-size:15px;font-weight:700">Andel økter som må dokumenteres</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Trekkes for hver økt når eleven starter. Sett 100 % mens elevene læres opp, eller 0 % for å slå dokumentasjonen av.</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <input type="number" name="practicePhotoPercent" value="${s.practicePhotoPercent}" min="0" max="100" step="5" class="field" style="width:100px;height:46px" />
+          <span style="color:var(--muted-2);font-weight:700;font-size:14px">%</span>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-top:6px">
         <span id="msg" style="color:var(--green-ink);font-weight:700;display:none">Lagret ✓</span>
         <button class="btn btn-primary" id="saveComp" style="height:46px;padding:0 22px">Lagre</button>
@@ -1367,7 +1374,7 @@ async function renderPractice(main) {
         <span style="flex:0 0 168px;font-size:13.5px;font-weight:600">${formatDateLong(o.sessionDate)}</span>
         <span style="flex:0 0 60px;font-size:13px;color:var(--muted-2);font-weight:600">kl. ${formatTime(o.startedAt)}</span>
         <span style="flex:1;font-size:14px;font-weight:700">${formatDuration(o.totalSeconds)}</span>
-        <span style="flex:0 0 auto;font-size:12.5px;color:var(--muted-2);font-weight:600">${formatDuration(o.warmupSeconds)} oppvarming</span>
+        <span style="flex:0 0 auto;font-size:12.5px;color:var(--muted-2);font-weight:600">${formatDuration(o.warmupSeconds)} oppvarming${o.pausedSeconds ? ` · ${formatDuration(o.pausedSeconds)} pause` : ''}</span>
         <span style="flex:0 0 96px;text-align:right">
           ${o.hasPhoto
             ? `<button type="button" data-photo="${o.id}" data-tid="${o.photoAt || o.startedAt}" style="background:none;border:none;padding:0;cursor:pointer;line-height:0">
@@ -1401,6 +1408,7 @@ async function renderPractice(main) {
           practiceStartDate: v('practiceStartDate'),
           practiceEndDate: v('practiceEndDate'),
           practiceWarmupMinutes: Number(v('practiceWarmupMinutes')),
+          practicePhotoPercent: Number(v('practicePhotoPercent')),
         },
       });
       const msg = page.querySelector('#msg'); msg.style.display = 'inline';

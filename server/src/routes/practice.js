@@ -6,7 +6,8 @@ import path from 'node:path';
 import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import {
-  competitionState, startSession, stopSession, finishSession, discardSession, savePhoto,
+  competitionState, startSession, pauseSession, resumeSession, stopSession,
+  finishSession, discardSession, savePhoto,
   pendingSession, mySessions, myTotalSeconds, leaderboard, sessionsFor,
   photoDir, SORTS,
 } from '../practice.js';
@@ -35,6 +36,17 @@ router.post('/start', (req, res) => {
     return res.status(403).json({ error: comp.configured ? 'Konkurransen er ikke åpen nå.' : 'Ingen øvekonkurranse er satt opp.' });
   }
   res.status(201).json({ session: startSession(req.auth.sub) });
+});
+
+// Pause og fortsett. Tiden står stille mens økten er pauset.
+router.post('/:id/pause', (req, res) => {
+  try { res.json({ session: pauseSession(req.auth.sub, Number(req.params.id)) }); }
+  catch (ex) { res.status(400).json({ error: ex.message }); }
+});
+
+router.post('/:id/resume', (req, res) => {
+  try { res.json({ session: resumeSession(req.auth.sub, Number(req.params.id)) }); }
+  catch (ex) { res.status(400).json({ error: ex.message }); }
 });
 
 // Stopp klokken. Økten registreres ikke ennå – dokumentasjonsbildet kan tas

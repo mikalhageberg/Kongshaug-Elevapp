@@ -41,6 +41,7 @@ const DEFAULTS = {
   practiceStartDate: '',           // 'YYYY-MM-DD', første dag
   practiceEndDate: '',             // 'YYYY-MM-DD', siste dag (inklusiv)
   practiceWarmupMinutes: 10,       // obligatorisk oppvarming før øvingen
+  practicePhotoPercent: 50,        // hvor stor andel av øktene som må dokumenteres
   guestEmailEnabled: false,        // varsle på e-post når en elev melder gjest
   guestEmailRecipient: '',         // e-post som mottar gjesteforespørsler
   // Lagringstid (se retention.js). Standard: historikk slettes etter ett år,
@@ -60,6 +61,10 @@ export const GPS_HOURS_MAX = 168;   // en uke
 // praksis; taket hindrer at et feiltrykk låser elevene ute av å øve.
 export const WARMUP_MIN = 1;
 export const WARMUP_MAX = 60;
+// Andelen økter som må dokumenteres. 0 = aldri, 100 = alltid – begge er gyldige
+// valg: 100 mens elevene læres opp, 0 hvis skolen dropper dokumentasjonen.
+export const PHOTO_PERCENT_MIN = 0;
+export const PHOTO_PERCENT_MAX = 100;
 
 // Leser et heltall fra settings-tabellen (alt lagres som tekst der), og faller
 // tilbake på standarden hvis verdien mangler eller er ulesbar.
@@ -100,6 +105,10 @@ export function getSettings() {
     practiceStartDate: s.practiceStartDate ?? DEFAULTS.practiceStartDate,
     practiceEndDate: s.practiceEndDate ?? DEFAULTS.practiceEndDate,
     practiceWarmupMinutes: intOr(s.practiceWarmupMinutes, DEFAULTS.practiceWarmupMinutes),
+    // Egen lesing her: intOr forkaster 0, og 0 % er en gyldig innstilling.
+    practicePhotoPercent: Number.isInteger(Number(s.practicePhotoPercent))
+      ? Number(s.practicePhotoPercent)
+      : DEFAULTS.practicePhotoPercent,
   };
 }
 

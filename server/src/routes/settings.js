@@ -3,7 +3,7 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import {
   getSettings, setSettings, TIME_RE,
   RETENTION_DAYS_MIN, RETENTION_DAYS_MAX, GPS_HOURS_MIN, GPS_HOURS_MAX,
-  WARMUP_MIN, WARMUP_MAX,
+  WARMUP_MIN, WARMUP_MAX, PHOTO_PERCENT_MIN, PHOTO_PERCENT_MAX,
 } from '../settings.js';
 import { isDateString } from '../isoWeek.js';
 import { runRetentionNow } from '../retention.js';
@@ -59,6 +59,7 @@ router.put('/', (req, res) => {
     retentionDays: { v: b.retentionDays, min: RETENTION_DAYS_MIN, max: RETENTION_DAYS_MAX, navn: 'Lagringstid (dager)' },
     gpsRetentionHours: { v: b.gpsRetentionHours, min: GPS_HOURS_MIN, max: GPS_HOURS_MAX, navn: 'Lagringstid for GPS (timer)' },
     practiceWarmupMinutes: { v: b.practiceWarmupMinutes, min: WARMUP_MIN, max: WARMUP_MAX, navn: 'Oppvarming (minutter)' },
+    practicePhotoPercent: { v: b.practicePhotoPercent, min: PHOTO_PERCENT_MIN, max: PHOTO_PERCENT_MAX, navn: 'Andel økter med bilde (%)' },
   };
   for (const [k, { v, min, max, navn }] of Object.entries(ints)) {
     if (v === undefined) continue;

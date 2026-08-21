@@ -100,20 +100,29 @@ oppvarmingen, og stillingen med øktene til hver elev.
 Eleven starter en økt i mobilappen. Den begynner med en obligatorisk oppvarming
 som vises som en sirkulær skive – den tømmer seg mot klokken, med nedtellingen
 inni. Når skiven er tom tar stoppeklokken over. Oppvarmingen teller med i tiden.
+Økten kan pauses og tas opp igjen senere; pausen holdes utenfor øvetiden.
 
 **Tre ting ligger bevisst på serveren, ikke i appen** (`server/src/practice.js`):
 
 - **Lengden på økten.** Appen sender aldri hvor lenge det ble øvd; serveren
   regner den ut fra sine egne tidsstempler. «Stopp» fryser tiden, slik at
   minuttene det tar å ta dokumentasjonsbildet ikke teller som øving.
-- **Om økten må dokumenteres.** Terningkastet (ca. halvparten, `PHOTO_CHANCE`)
-  skjer når økten starter og lagres på raden – ellers kunne appen latt være å
-  spørre.
+- **Om økten må dokumenteres.** Terningkastet skjer når økten starter og lagres
+  på raden – ellers kunne appen latt være å spørre. Andelen settes i admin
+  (standard 50 %). Sett den til 100 % for å teste flyten uten å vente på flaks,
+  eller mens elevene læres opp.
+- **Pausene.** `paused_at` står så lenge økten er pauset, og `paused_seconds`
+  summerer pausene som er avsluttet. Øvetiden er
+  `(stopp ?? pause ?? nå) − start − paused_seconds`, så en pause kan verken
+  legge til eller trekke fra tid. Stopper eleven mens økten står på pause, er
+  det pausetidspunktet som gjelder.
 - **Om konkurransen er åpen.** Økter kan verken startes eller registreres
   utenfor perioden.
 
 Lukkes appen midt i en økt, plukkes den samme økten opp igjen der den var.
-Økter som har stått åpne i mer enn seks timer forkastes.
+Økter forkastes når de passerer seks timer faktisk øvetid, eller et døgn i
+klokketid – uten den siste grensen kunne en økt satt på pause forrige uke blitt
+registrert i dag, på datoen den startet.
 
 Dokumentasjonsbildet får et dato- og klokkeslettstempel i stil med gamle
 digitalkameraer. Stempelet **tegnes ved visning**, fra serverens tidsstempel –

@@ -212,6 +212,11 @@ ensureColumn('practice_sessions', 'photo_at', 'TEXT');
 // Når eleven trykket «stopp». Tiden fryses her, ikke når økten registreres –
 // ellers ville minuttene det tar å ta dokumentasjonsbildet telt som øving.
 ensureColumn('practice_sessions', 'stopped_at', 'TEXT');
+// Pause. paused_at er satt så lenge økten står på pause; paused_seconds er
+// summen av pausene som er avsluttet. Tiden regnes fortsatt av serveren:
+// elapsed = (stopp ?? pause ?? nå) − start − paused_seconds.
+ensureColumn('practice_sessions', 'paused_at', 'TEXT');
+ensureColumn('practice_sessions', 'paused_seconds', 'INTEGER NOT NULL DEFAULT 0');
 // Meny-tolkning via OpenAI: strukturert JSON + status for hver opplastet PDF.
 ensureColumn('menus', 'parsed_json', 'TEXT');                        // JSON: { days: [{ day, dishes }], note }
 ensureColumn('menus', 'parse_status', "TEXT NOT NULL DEFAULT 'none'"); // 'none' | 'pending' | 'ok' | 'error'
