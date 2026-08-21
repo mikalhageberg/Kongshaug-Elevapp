@@ -4,6 +4,17 @@ import { api, getPositionOnCampus } from '../api';
 import { C, formatTime, formatDateLong, formatDateShort, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button } from '../ui';
 import { DUTY_KINDS } from '../DutyPlan';
+import OvingModal from './OvingModal';
+
+// Totaltid i øvekonkurransen, kort form: «2 t 15 min».
+function practiceTotal(sek) {
+  const n = Math.max(0, Math.round(sek || 0));
+  if (n < 60) return `${n} sek`;
+  const t = Math.floor(n / 3600);
+  const m = Math.round((n % 3600) / 60);
+  if (!t) return `${m} min`;
+  return m ? `${t} t ${m} min` : `${t} t`;
+}
 
 // «sammen med X og Y» – hvem eleven deler tjenesteuken med.
 function dutyPartners(week, meId) {
@@ -19,23 +30,27 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
   const [duties, setDuties] = useState({});  // { kitchen: {...}, dorm: {...} }
   const [todayMenu, setTodayMenu] = useState(null); // { dinner, guard } fra ukemenyen
   const [guests, setGuests] = useState([]); // egne gjester (venter/godkjent)
+  const [practice, setPractice] = useState(null);   // øvekonkurransen, null = ikke lastet
+  const [ovingOpen, setOvingOpen] = useState(false);
   const [geo, setGeo] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
   const [refreshing, setRefreshing] = useState(false);
   const today = todayStr();
 
   const load = useCallback(async () => {
     const kinds = Object.keys(DUTY_KINDS);
-    const [f, a, t, g, ...d] = await Promise.all([
+    const [f, a, t, g, p, ...d] = await Promise.all([
       api('/api/firelist/status').catch(() => null),
       api('/api/andakt/status').catch(() => null),
       api('/api/menus/today').catch(() => null),
       api('/api/firelist/guests/me').catch(() => null),
+      api('/api/practice/status').catch(() => null),
       ...kinds.map((k) => api(`${DUTY_KINDS[k].base}/me`).catch(() => null)),
     ]);
     setFire(f);
     setAndakt(a);
     setTodayMenu(t);
     setGuests(g?.guests || []);
+    setPractice(p);
     setDuties(Object.fromEntries(kinds.map((k, i) => [k, d[i]])));
   }, []);
 
@@ -135,6 +150,27 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
         return null;
       })}
 
+      {/* Øvekonkurranse: bare synlig mens en konkurranse faktisk pågår. Den
+          arrangeres av og til, og et kort som står tomt resten av året ville
+          bare vært støy på hjemskjermen. */}
+      {practice?.competition?.active ? (
+        <Card style={styles.ovingCard} onPress={() => setOvingOpen(true)}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={[styles.cardIcon, { backgroundColor: C.navy }]}><Text style={{ fontSize: 24 }}>🎻</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Øvekonkurranse</Text>
+              <Text style={styles.ovingSub}>
+                {practice.pending
+                  ? 'Du har en økt som pågår – trykk for å fortsette'
+                  : practice.totalSeconds
+                    ? `Du har øvd ${practiceTotal(practice.totalSeconds)} så langt`
+                    : 'Start en økt og få tiden registrert'}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
       {/* I dag: middagsrett + nattens internatvakt, fra ukemenyen. */}
       {todayMenu && (todayMenu.dinner || todayMenu.guard) ? (
         <Card style={{ marginBottom: 14, paddingVertical: 6 }}>
@@ -185,6 +221,8 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
       <Button title="Logg ut" onPress={onLogout} color="#fff" textColor={C.slate}
         style={{ marginTop: 24, borderWidth: 1.5, borderColor: '#d3dae2', height: 48 }} />
+
+      <OvingModal visible={ovingOpen} onClose={() => { setOvingOpen(false); load(); }} />
     </ScrollView>
   );
 }
@@ -199,6 +237,8 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: '800', color: C.ink },
   cardSub: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 2 },
   dutyCard: { marginBottom: 14, backgroundColor: C.amberBg, borderColor: C.amber },
+  ovingCard: { marginBottom: 14 },
+  ovingSub: { fontSize: 13, color: C.muted, fontWeight: '600', marginTop: 3, lineHeight: 18 },
   dutySub: { fontSize: 13, color: C.amberInk, fontWeight: '600', marginTop: 3, lineHeight: 18 },
   todayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
   todayIcon: { fontSize: 22, lineHeight: 26 },

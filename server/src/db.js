@@ -149,6 +149,25 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_dorm_duty_week ON dorm_duties(week_start);
 
+  -- Øvekonkurranse: én rad per øveøkt en elev registrerer. Økten opprettes når
+  -- eleven starter (ended_at = NULL), og fullføres når hun trykker «registrer».
+  -- Serveren regner selv ut lengden fra sine egne tidsstempler – klienten kan
+  -- ikke oppgi hvor lenge det ble øvd.
+  CREATE TABLE IF NOT EXISTS practice_sessions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    started_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    ended_at       TEXT,                          -- NULL = økten pågår fortsatt
+    session_date   TEXT    NOT NULL,              -- 'YYYY-MM-DD' i skolens tidssone
+    warmup_seconds INTEGER NOT NULL,              -- oppvarmingen som gjaldt da økten startet
+    total_seconds  INTEGER,                       -- hele økten, oppvarming inkludert
+    photo_required INTEGER NOT NULL DEFAULT 0,    -- 1 = må dokumenteres med bilde
+    photo_filename TEXT,                          -- <id>.jpg i data/practice
+    created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_practice_user ON practice_sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_practice_date ON practice_sessions(session_date);
+
   -- Push-varsler: ett token per enhet (kan ha flere per bruker). Upsertes ved
   -- hver registrering, slik at samme enhet aldri får flere rader.
   CREATE TABLE IF NOT EXISTS push_tokens (
@@ -185,6 +204,14 @@ ensureColumn('fire_away_periods', 'no_dinner', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'auth_provider', "TEXT NOT NULL DEFAULT 'local'");
 ensureColumn('users', 'feide_id', 'TEXT');
+// Hovedinstrument – brukes til gruppering i øvekonkurransen.
+ensureColumn('users', 'instrument', 'TEXT');
+// Når dokumentasjonsbildet ble tatt. Bildet tas på slutten av økten, så
+// starttidspunktet ville gitt feil stempel på bildet.
+ensureColumn('practice_sessions', 'photo_at', 'TEXT');
+// Når eleven trykket «stopp». Tiden fryses her, ikke når økten registreres –
+// ellers ville minuttene det tar å ta dokumentasjonsbildet telt som øving.
+ensureColumn('practice_sessions', 'stopped_at', 'TEXT');
 // Meny-tolkning via OpenAI: strukturert JSON + status for hver opplastet PDF.
 ensureColumn('menus', 'parsed_json', 'TEXT');                        // JSON: { days: [{ day, dishes }], note }
 ensureColumn('menus', 'parse_status', "TEXT NOT NULL DEFAULT 'none'"); // 'none' | 'pending' | 'ok' | 'error'

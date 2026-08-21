@@ -18,6 +18,7 @@ function publicUser(u) {
     className: u.class_name,
     dorm: u.dorm,
     room: u.room,
+    instrument: u.instrument,
     active: !!u.active,
     mustChangePassword: !!u.must_change_password,
     authProvider: u.auth_provider || 'local',
@@ -69,7 +70,7 @@ router.get('/', (req, res) => {
 
 // POST /api/users  – opprett bruker. Kun admin. Elever kan ikke registrere seg selv.
 router.post('/', async (req, res) => {
-  let { username, password, fullName, role, className, dorm, room } = req.body || {};
+  let { username, password, fullName, role, className, dorm, room, instrument } = req.body || {};
   username = normalizeUsername(username);
   fullName = String(fullName || '').trim();
   role = role === 'admin' ? 'admin' : 'student';
@@ -91,10 +92,10 @@ router.post('/', async (req, res) => {
   // Nye kontoer får et midlertidig passord som må byttes ved første innlogging.
   const info = db
     .prepare(
-      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
+      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`
     )
-    .run(username, password_hash, fullName, role, className || null, dorm || null, room || null);
+    .run(username, password_hash, fullName, role, className || null, dorm || null, room || null, instrument || null);
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json({
@@ -119,6 +120,7 @@ router.post('/parse-xlsx', express.raw({ type: () => true, limit: '5mb' }), asyn
     const preview = await parseStudentsXlsx(rows, {
       classes: split(req.query.classes),
       dorms: split(req.query.dorms),
+      instruments: split(req.query.instruments),
       existingNames,
     });
     res.json(preview);
@@ -145,8 +147,8 @@ router.post('/bulk', async (req, res) => {
   const errors = [];
 
   const insert = db.prepare(
-    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, must_change_password)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
+    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, must_change_password)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`
   );
 
   for (let i = 0; i < list.length; i++) {
@@ -162,7 +164,8 @@ router.post('/bulk', async (req, res) => {
         username, hash, fullName, role,
         isStudent ? (row.className || null) : null,
         isStudent ? (row.dorm || null) : null,
-        isStudent ? (row.room || null) : null
+        isStudent ? (row.room || null) : null,
+        isStudent ? (row.instrument || null) : null
       );
       const u = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
       created.push({ ...publicUser(u), password });
@@ -180,13 +183,14 @@ router.patch('/:id', async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   if (!user) return res.status(404).json({ error: 'Fant ikke brukeren' });
 
-  const { fullName, className, dorm, room, active, password } = req.body || {};
+  const { fullName, className, dorm, room, instrument, active, password } = req.body || {};
   const fields = [];
   const vals = [];
   if (fullName !== undefined) { fields.push('full_name = ?'); vals.push(String(fullName).trim()); }
   if (className !== undefined) { fields.push('class_name = ?'); vals.push(className || null); }
   if (dorm !== undefined) { fields.push('dorm = ?'); vals.push(dorm || null); }
   if (room !== undefined) { fields.push('room = ?'); vals.push(room || null); }
+  if (instrument !== undefined) { fields.push('instrument = ?'); vals.push(instrument || null); }
   if (active !== undefined) { fields.push('active = ?'); vals.push(active ? 1 : 0); }
   if (password) {
     if (String(password).length < 6) return res.status(400).json({ error: 'Passord må ha minst 6 tegn' });

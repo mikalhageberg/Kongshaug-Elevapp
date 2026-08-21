@@ -3,7 +3,9 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import {
   getSettings, setSettings, TIME_RE,
   RETENTION_DAYS_MIN, RETENTION_DAYS_MAX, GPS_HOURS_MIN, GPS_HOURS_MAX,
+  WARMUP_MIN, WARMUP_MAX,
 } from '../settings.js';
+import { isDateString } from '../isoWeek.js';
 import { runRetentionNow } from '../retention.js';
 import { config } from '../config.js';
 import { sendFireListEmail, sendKitchenEmail } from '../mail.js';
@@ -56,6 +58,7 @@ router.put('/', (req, res) => {
   const ints = {
     retentionDays: { v: b.retentionDays, min: RETENTION_DAYS_MIN, max: RETENTION_DAYS_MAX, navn: 'Lagringstid (dager)' },
     gpsRetentionHours: { v: b.gpsRetentionHours, min: GPS_HOURS_MIN, max: GPS_HOURS_MAX, navn: 'Lagringstid for GPS (timer)' },
+    practiceWarmupMinutes: { v: b.practiceWarmupMinutes, min: WARMUP_MIN, max: WARMUP_MAX, navn: 'Oppvarming (minutter)' },
   };
   for (const [k, { v, min, max, navn }] of Object.entries(ints)) {
     if (v === undefined) continue;
@@ -64,6 +67,20 @@ router.put('/', (req, res) => {
       return res.status(400).json({ error: `${navn} må være et helt tall mellom ${min} og ${max}.` });
     }
     patch[k] = n;
+  }
+
+  // Øvekonkurransens periode. Tomme datoer betyr «ingen konkurranse», og er
+  // den eneste måten å slå den av på.
+  for (const k of ['practiceStartDate', 'practiceEndDate']) {
+    if (b[k] === undefined) continue;
+    const v = String(b[k] || '').trim();
+    if (v && !isDateString(v)) return res.status(400).json({ error: 'Ugyldig dato for øvekonkurransen. Bruk ÅÅÅÅ-MM-DD.' });
+    patch[k] = v;
+  }
+  const start = patch.practiceStartDate ?? getSettings().practiceStartDate;
+  const end = patch.practiceEndDate ?? getSettings().practiceEndDate;
+  if (start && end && end < start) {
+    return res.status(400).json({ error: 'Sluttdato kan ikke være før startdato.' });
   }
 
   res.json(setSettings(patch));

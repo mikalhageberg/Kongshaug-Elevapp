@@ -35,6 +35,32 @@ const todayStr = () => ymd(new Date());
 // Klasser: VGXY der X = 1/2/3 og Y = A/B.
 const CLASSES = ['VG1A', 'VG1B', 'VG2A', 'VG2B', 'VG3A', 'VG3B'];
 
+// Hovedinstrument, brukt til gruppering i øvekonkurransen. Endre denne listen
+// hvis skolen har andre instrumenter – den er fasit både i elevskjemaet og når
+// OpenAI tolker en opplastet elevliste.
+const INSTRUMENTS = [
+  'Sang',
+  'Piano',
+  'Orgel',
+  'Gitar',
+  'Bassgitar',
+  'Trommer/slagverk',
+  'Fiolin',
+  'Bratsj',
+  'Cello',
+  'Kontrabass',
+  'Fløyte',
+  'Klarinett',
+  'Obo',
+  'Fagott',
+  'Saksofon',
+  'Trompet',
+  'Trombone',
+  'Horn',
+  'Tuba',
+  'Harpe',
+];
+
 // Skolens internat. Endre denne listen hvis navn skal legges til/fjernes.
 const DORMS = [
   'Treet 1',
@@ -61,6 +87,7 @@ const nav = {
   guest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 19v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="7.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
   broom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 3 12.75 11.25"/><path d="M10 8.5 15.5 14 9 20.5 3.5 15Z"/><path d="M6.75 11.75 12.25 17.25"/></svg>',
+  timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="8"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="m18.5 6.5 1.5-1.5"/></svg>',
 };
 
 init();
@@ -83,6 +110,7 @@ function render() {
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
   if (route.startsWith('internat')) return page('internat', renderInternat);
+  if (route.startsWith('ovekonkurranse')) return page('ovekonkurranse', renderPractice);
   if (route.startsWith('varsler')) return page('varsler', renderVarsler);
   if (route.startsWith('innstillinger')) return page('innstillinger', renderSettings);
   return page('dashboard', renderDashboard);
@@ -183,6 +211,7 @@ function page(active, renderMain) {
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
     ['middag', 'Kjøkken', nav.food, '/middag'],
     ['internat', 'Internat', nav.broom, '/internat'],
+    ['ovekonkurranse', 'Øvekonkurranse', nav.timer, '/ovekonkurranse'],
     ['varsler', 'Varsler', nav.bell, '/varsler'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
   ];
@@ -436,11 +465,16 @@ function userModal(existing, onSaved, cfg) {
   const canDelete = isEdit && existing.id !== user.id;
   const dormOptions = optionsHTML(DORMS, 'Velg internat…', existing?.dorm);
   const classOptions = optionsHTML(CLASSES, 'Velg klasse…', existing?.className);
+  const instrumentOptions = optionsHTML(INSTRUMENTS, 'Velg instrument…', existing?.instrument);
   const studentFields = isStudent ? `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px">
           <div><label class="field-label">Klasse</label><select class="field field-sm" name="className" style="background:#f7f8fa">${classOptions}</select></div>
           <div><label class="field-label">Internat</label><select class="field field-sm" name="dorm" style="background:#f7f8fa">${dormOptions}</select></div>
           <div><label class="field-label">Rom</label><input class="field field-sm" name="room" value="${existing?.room || ''}" placeholder="9" /></div>
+        </div>
+        <div style="margin-top:16px">
+          <label class="field-label">Hovedinstrument</label>
+          <select class="field field-sm" name="instrument" style="background:#f7f8fa">${instrumentOptions}</select>
         </div>` : '';
   const bg = el(`
     <div class="modal-bg"><div class="modal">
@@ -523,7 +557,7 @@ function userModal(existing, onSaved, cfg) {
 // ── Legg til flere brukere (bulk) + brukerkort ───────────────
 // Samme flyt for elever og administratorer. Elever har klasse/internat/rom;
 // administratorer bare navn (brukernavn + passord genereres for begge).
-const BULK_COLS_STUDENT = '1fr 120px 170px 90px 32px';
+const BULK_COLS_STUDENT = '1fr 110px 150px 80px 150px 32px';
 const BULK_COLS_ADMIN = '1fr 32px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
@@ -532,7 +566,8 @@ function bulkRowHTML(isStudent) {
   const studentFields = isStudent ? `
       <select class="field field-sm" name="className" style="background:#f7f8fa">${optionsHTML(CLASSES, 'Klasse', '')}</select>
       <select class="field field-sm" name="dorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Internat', '')}</select>
-      <input class="field field-sm" name="room" placeholder="Rom" />` : '';
+      <input class="field field-sm" name="room" placeholder="Rom" />
+      <select class="field field-sm" name="instrument" style="background:#f7f8fa">${optionsHTML(INSTRUMENTS, 'Instrument', '')}</select>` : '';
   return `
     <div class="brow" style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:8px">
       <input class="field field-sm" name="fullName" placeholder="Fullt navn" />
@@ -548,6 +583,7 @@ function parseBulkRows(rowsEl, isStudent) {
       base.className = row.querySelector('[name="className"]').value;
       base.dorm = row.querySelector('[name="dorm"]').value;
       base.room = row.querySelector('[name="room"]').value.trim();
+      base.instrument = row.querySelector('[name="instrument"]').value;
     }
     return base;
   }).filter((s) => s.fullName);
@@ -562,6 +598,7 @@ function bulkAddModal(cfg, onSaved) {
        <label class="field-label" style="margin:0">Klasse</label>
        <label class="field-label" style="margin:0">Internat</label>
        <label class="field-label" style="margin:0">Rom</label>
+       <label class="field-label" style="margin:0">Instrument</label>
        <span></span>`
     : `<label class="field-label" style="margin:0">Navn</label><span></span>`;
   const bg = el(`
@@ -635,7 +672,8 @@ function bulkAddModal(cfg, onSaved) {
       const btn = bg.querySelector('#bxlsxRead'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
       showNote('Leser arket med OpenAI…');
       try {
-        const qs = `classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`;
+        const qs = `classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`
+          + `&instruments=${encodeURIComponent(INSTRUMENTS.join(','))}`;
         const res = await fetch(`/api/users/parse-xlsx?${qs}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
@@ -648,6 +686,7 @@ function bulkAddModal(cfg, onSaved) {
           const row = addRow(false);
           row.querySelector('[name="fullName"]').value = s.fullName;
           if (s.className) row.querySelector('[name="className"]').value = s.className;
+          if (s.instrument) row.querySelector('[name="instrument"]').value = s.instrument;
           if (s.dorm) row.querySelector('[name="dorm"]').value = s.dorm;
           if (s.room) row.querySelector('[name="room"]').value = s.room;
         }
@@ -1163,6 +1202,217 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
 }
 
 // ── Ukemeny (PDF): opplasting, OpenAI-tolkning, forhåndsvis + rediger ──
+// ── Øvekonkurranse ───────────────────────────────────────────
+// Elevene øver på hovedinstrumentet sitt i en avgrenset periode. Her setter
+// admin perioden og oppvarmingen, og ser stillingen med øktene under hver elev.
+
+// «1 t 25 min» / «42 min» / «40 sek». Sekunder vises bare for de helt korte
+// øktene – ellers er de bare støy i en oversikt over timer.
+function formatDuration(sec) {
+  const n = Math.max(0, Math.round(Number(sec) || 0));
+  if (n < 60) return `${n} sek`;
+  const t = Math.floor(n / 3600);
+  const m = Math.round((n % 3600) / 60);
+  if (!t) return `${m} min`;
+  return m ? `${t} t ${m} min` : `${t} t`;
+}
+
+// Datostempelet på dokumentasjonsbildet, i formen gamle digitalkameraer brente
+// inn nederst til høyre: «2026 08 21  19:42».
+function photoStamp(iso) {
+  if (!iso) return '';
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()} ${p(d.getMonth() + 1)} ${p(d.getDate())}  ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// Bildet med stempelet lagt over. Stempelet tegnes ved visning, fra serverens
+// tidsstempel på økten – ikke brent inn i filen av telefonen. Da kan det ikke
+// forfalskes av en app, og det ser likt ut overalt det vises.
+function stampedPhoto(sessionId, iso, { width = '100%', radius = 12, stampSize = 15 } = {}) {
+  return `
+    <div style="position:relative;display:inline-block;width:${width};background:#0b0e13;border-radius:${radius}px;overflow:hidden;line-height:0">
+      <img src="/api/practice/sessions/${sessionId}/photo" alt="Dokumentasjon" style="display:block;width:100%;height:auto" />
+      <div style="position:absolute;right:${Math.round(stampSize * 0.7)}px;bottom:${Math.round(stampSize * 0.55)}px;font-family:'Courier New',ui-monospace,monospace;font-weight:700;font-size:${stampSize}px;letter-spacing:.08em;color:#ffa22b;text-shadow:0 0 7px rgba(255,120,0,.6),0 1px 2px rgba(0,0,0,.95);line-height:1.1">${photoStamp(iso)}</div>
+    </div>`;
+}
+
+function photoLightbox(sessionId, iso) {
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="max-width:640px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:18px;font-weight:800;letter-spacing:-.02em">Dokumentasjon</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Tatt ${formatDateLong(String(iso).slice(0, 10))} kl. ${formatTime(iso)}</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:18px 24px 24px">${stampedPhoto(sessionId, iso, { stampSize: 20 })}</div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const lukk = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', lukk);
+  bg.addEventListener('click', (e) => { if (e.target === bg) lukk(); });
+}
+
+const PRACTICE_SORTS = [
+  ['time', 'Total tid'],
+  ['class', 'Klasse'],
+  ['instrument', 'Instrument'],
+];
+
+async function renderPractice(main) {
+  header(main, 'Øvekonkurranse', 'Periode, stilling og dokumentasjon');
+  const page = el(`<div class="page" style="max-width:880px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
+  main.appendChild(page);
+
+  const s = await api('/api/settings').catch(() => null);
+  if (!s) { page.querySelector('#body').textContent = 'Kunne ikke laste innstillingene.'; return; }
+
+  let sort = 'time';
+
+  page.querySelector('#body').innerHTML = `
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:22px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Konkurranseperiode</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Elevene kan bare registrere øving mellom disse datoene, begge dager inkludert. La feltene stå tomme for å slå konkurransen av.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 0">
+        <div><label class="field-label">Starter</label><input type="date" name="practiceStartDate" value="${s.practiceStartDate || ''}" class="field field-sm" /></div>
+        <div><label class="field-label">Slutter</label><input type="date" name="practiceEndDate" value="${s.practiceEndDate || ''}" class="field field-sm" /></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid #f0f2f4">
+        <div><div style="font-size:15px;font-weight:700">Obligatorisk oppvarming</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Eleven må gjennom denne før stoppeklokken tar over. Tiden teller med i totalen.</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <input type="number" name="practiceWarmupMinutes" value="${s.practiceWarmupMinutes}" min="1" max="60" step="1" class="field" style="width:100px;height:46px" />
+          <span style="color:var(--muted-2);font-weight:700;font-size:14px">minutter</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-top:6px">
+        <span id="msg" style="color:var(--green-ink);font-weight:700;display:none">Lagret ✓</span>
+        <button class="btn btn-primary" id="saveComp" style="height:46px;padding:0 22px">Lagre</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px">
+      <div><div style="font-size:17px;font-weight:800">Stilling</div><div id="compState" style="font-size:13px;color:var(--muted-2);font-weight:600"></div></div>
+      <div style="display:flex;gap:6px;flex:0 0 auto">
+        ${PRACTICE_SORTS.map(([k, navn]) => `<button class="btn btn-ghost" data-sort="${k}" style="height:36px;padding:0 14px;font-size:13px">${navn}</button>`).join('')}
+      </div>
+    </div>
+    <div id="board" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"><div style="padding:22px;color:var(--muted-2)">Laster…</div></div>`;
+
+  const boardEl = page.querySelector('#board');
+  const stateEl = page.querySelector('#compState');
+
+  function markerSort() {
+    page.querySelectorAll('[data-sort]').forEach((b) => {
+      const aktiv = b.dataset.sort === sort;
+      b.style.background = aktiv ? 'var(--navy)' : '#fff';
+      b.style.color = aktiv ? '#fff' : 'var(--slate)';
+      b.style.fontWeight = aktiv ? '700' : '600';
+    });
+  }
+
+  async function loadBoard() {
+    markerSort();
+    const d = await api(`/api/practice/leaderboard?sort=${sort}`).catch(() => null);
+    if (!d) { boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2)">Kunne ikke laste stillingen.</div>'; return; }
+
+    const c = d.competition;
+    stateEl.textContent = !c.configured
+      ? 'Ingen periode satt opp ennå'
+      : `${formatDateLong(c.startDate)} – ${formatDateLong(c.endDate)} · ${c.active ? 'pågår nå' : 'ikke aktiv'} · ${formatDuration(d.totalSeconds)} øvd til sammen`;
+
+    if (!c.configured) {
+      boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2);font-size:14px">Sett en start- og sluttdato over for å åpne konkurransen. Elevene ser den i appen først da.</div>';
+      return;
+    }
+    if (!d.students.length) {
+      boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen aktive elever å vise.</div>';
+      return;
+    }
+
+    // Plassering gis bare når det faktisk er øvd, og bare når lista er sortert
+    // på tid – i en klasse- eller instrumentsortering ville tallene lyve.
+    let plass = 0;
+    boardEl.innerHTML = d.students.map((r) => {
+      if (r.totalSeconds > 0) plass++;
+      const nr = sort === 'time' && r.totalSeconds > 0 ? `${plass}.` : '';
+      return `
+      <div data-rad="${r.id}">
+        <button type="button" data-open="${r.id}" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:13px 20px;cursor:pointer">
+          <span style="flex:0 0 34px;font-size:14px;font-weight:800;color:var(--muted-2)">${nr}</span>
+          <span style="flex:1;min-width:0;font-size:14.5px;font-weight:700">${esc(r.fullName)}</span>
+          <span style="flex:0 0 74px;font-size:13px;color:var(--muted-2);font-weight:600">${esc(r.className || '')}</span>
+          <span style="flex:0 0 150px;font-size:13px;color:var(--muted-2);font-weight:600">${esc(r.instrument || '– uten instrument')}</span>
+          <span style="flex:0 0 62px;font-size:13px;color:var(--muted-2);font-weight:600;text-align:right">${r.sessions || ''}${r.sessions ? ' økt' + (r.sessions === 1 ? '' : 'er') : ''}</span>
+          <span style="flex:0 0 96px;text-align:right;font-size:14.5px;font-weight:800;color:${r.totalSeconds ? 'inherit' : 'var(--muted-2)'}">${r.totalSeconds ? formatDuration(r.totalSeconds) : '–'}</span>
+        </button>
+        <div data-panel="${r.id}" style="display:none;background:#f7f8fa;border-bottom:1px solid #f2f4f6"></div>
+      </div>`;
+    }).join('');
+
+    boardEl.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => toggle(Number(b.dataset.open))));
+  }
+
+  async function toggle(userId) {
+    const panel = boardEl.querySelector(`[data-panel="${userId}"]`);
+    if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    panel.innerHTML = '<div style="padding:16px 20px;color:var(--muted-2);font-size:13.5px">Laster økter…</div>';
+
+    const d = await api(`/api/practice/sessions/${userId}`).catch(() => null);
+    if (!d) { panel.innerHTML = '<div style="padding:16px 20px;color:var(--muted-2);font-size:13.5px">Kunne ikke laste øktene.</div>'; return; }
+    if (!d.sessions.length) { panel.innerHTML = '<div style="padding:16px 20px;color:var(--muted-2);font-size:13.5px">Ingen registrerte økter i perioden.</div>'; return; }
+
+    panel.innerHTML = d.sessions.map((o) => `
+      <div style="display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid #edeff2">
+        <span style="flex:0 0 168px;font-size:13.5px;font-weight:600">${formatDateLong(o.sessionDate)}</span>
+        <span style="flex:0 0 60px;font-size:13px;color:var(--muted-2);font-weight:600">kl. ${formatTime(o.startedAt)}</span>
+        <span style="flex:1;font-size:14px;font-weight:700">${formatDuration(o.totalSeconds)}</span>
+        <span style="flex:0 0 auto;font-size:12.5px;color:var(--muted-2);font-weight:600">${formatDuration(o.warmupSeconds)} oppvarming</span>
+        <span style="flex:0 0 96px;text-align:right">
+          ${o.hasPhoto
+            ? `<button type="button" data-photo="${o.id}" data-tid="${o.photoAt || o.startedAt}" style="background:none;border:none;padding:0;cursor:pointer;line-height:0">
+                 <img src="/api/practice/sessions/${o.id}/photo" alt="Dokumentasjon" style="width:58px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line)" /></button>`
+            : o.photoRequired
+              ? '<span class="pill pill-red" style="font-size:11.5px">Bilde mangler</span>'
+              : '<span style="font-size:12.5px;color:var(--muted-2);font-weight:600">Ikke krevd</span>'}
+        </span>
+        <button type="button" data-del="${o.id}" title="Slett økten" style="background:none;border:none;cursor:pointer;color:var(--muted-2);padding:6px;flex:0 0 auto"><span style="width:17px;height:17px;display:block">${nav.trash}</span></button>
+      </div>`).join('');
+
+    panel.querySelectorAll('[data-photo]').forEach((b) =>
+      b.addEventListener('click', () => photoLightbox(Number(b.dataset.photo), b.dataset.tid)));
+    panel.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('Slette denne økten? Tiden forsvinner fra stillingen, og dokumentasjonsbildet slettes.')) return;
+      b.disabled = true;
+      try { await api(`/api/practice/sessions/${b.dataset.del}`, { method: 'DELETE' }); await loadBoard(); toggle(userId); }
+      catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+  }
+
+  page.querySelectorAll('[data-sort]').forEach((b) => b.addEventListener('click', () => { sort = b.dataset.sort; loadBoard(); }));
+
+  page.querySelector('#saveComp').addEventListener('click', async () => {
+    const btn = page.querySelector('#saveComp'); btn.disabled = true;
+    const v = (n) => page.querySelector(`[name=${n}]`).value;
+    try {
+      await api('/api/settings', {
+        method: 'PUT',
+        body: {
+          practiceStartDate: v('practiceStartDate'),
+          practiceEndDate: v('practiceEndDate'),
+          practiceWarmupMinutes: Number(v('practiceWarmupMinutes')),
+        },
+      });
+      const msg = page.querySelector('#msg'); msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 2500);
+      loadBoard();
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; }
+  });
+
+  loadBoard();
+}
+
 // ── Internat ─────────────────────────────────────────────────
 // Egen side for internatvask, med samme modul som kjøkkentjenesten bruker.
 async function renderInternat(main) {

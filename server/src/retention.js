@@ -18,6 +18,7 @@
 import db from './db.js';
 import { getSettings, getLastSent, setLastSent } from './settings.js';
 import { zonedNow } from './emailScheduler.js';
+import { deletePhotoFile } from './practice.js';
 
 const TICK_INTERVAL_MS = 15 * 60 * 1000;
 // Hvilken dato slettejobben sist kjørte. Ligger i settings-tabellen på samme
@@ -35,6 +36,7 @@ const EXPIRING = [
   ['fire_guests', 'end_date', 'gjester'],
   ['kitchen_duties', 'week_start', 'kjøkkentjeneste'],
   ['dorm_duties', 'week_start', 'internatvask'],
+  ['practice_sessions', 'session_date', 'øveøkter'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
 ];
 
@@ -62,7 +64,18 @@ export function scrubCoordinates(hours) {
 // Sletter all datert historikk eldre enn `days` dager. Alt eller ingenting.
 export function deleteExpired(days) {
   const cutoff = `-${positiveInt(days, 'antall dager')} days`;
-  return db.transaction(() => {
+
+  // Dokumentasjonsbildene fra øvekonkurransen ligger som filer på disk, ikke i
+  // databasen. Filnavnene hentes ut FØR radene slettes, og selve filene fjernes
+  // etter at transaksjonen har gått gjennom – ruller den tilbake, står bildene
+  // fortsatt til radene som fortsatt finnes.
+  const bilder = db
+    .prepare(`SELECT photo_filename FROM practice_sessions
+               WHERE photo_filename IS NOT NULL AND session_date < date('now', ?)`)
+    .all(cutoff)
+    .map((r) => r.photo_filename);
+
+  const resultat = db.transaction(() => {
     const perTabell = {};
     let total = 0;
     for (const [table, column, label] of EXPIRING) {
@@ -72,6 +85,9 @@ export function deleteExpired(days) {
     }
     return { total, perTabell };
   })();
+
+  for (const f of bilder) deletePhotoFile(f);
+  return resultat;
 }
 
 // Kort, lesbar oppsummering til loggen: «brannliste 12, andakt 9».

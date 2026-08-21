@@ -82,13 +82,47 @@ lagringstid** (`server/src/retention.js`):
   igjen. Statusen (til stede / borte / for sent) blir stående – det er den
   brannsikkerheten trenger, ikke stedet.
 - **Datert historikk slettes etter ett skoleår** (365 dager som standard):
-  brannliste, andakt, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste og
-  internatvask.
+  brannliste, andakt, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste,
+  internatvask og øveøkter. Dokumentasjonsbildene fra øvekonkurransen ligger som
+  filer i `data/practice/` og slettes sammen med øktene sine.
 
 Nullingen kjøres hver 15. minutt, slettingen én gang i døgnet. Knappen
 **«Kjør sletting nå»** i Innstillinger kjører begge umiddelbart. Sletting er
 endelig – dataen kan ikke hentes tilbake. Husk å holde
 `public/personvern/index.html` i takt hvis periodene endres.
+
+### Øvekonkurranse
+
+Elevene konkurrerer om å øve mest på hovedinstrumentet sitt i en avgrenset
+periode. Admin styrer alt fra fanen **Øvekonkurranse**: periode, lengden på
+oppvarmingen, og stillingen med øktene til hver elev.
+
+Eleven starter en økt i mobilappen. Den begynner med en obligatorisk oppvarming
+som vises som en sirkulær skive – den tømmer seg mot klokken, med nedtellingen
+inni. Når skiven er tom tar stoppeklokken over. Oppvarmingen teller med i tiden.
+
+**Tre ting ligger bevisst på serveren, ikke i appen** (`server/src/practice.js`):
+
+- **Lengden på økten.** Appen sender aldri hvor lenge det ble øvd; serveren
+  regner den ut fra sine egne tidsstempler. «Stopp» fryser tiden, slik at
+  minuttene det tar å ta dokumentasjonsbildet ikke teller som øving.
+- **Om økten må dokumenteres.** Terningkastet (ca. halvparten, `PHOTO_CHANCE`)
+  skjer når økten starter og lagres på raden – ellers kunne appen latt være å
+  spørre.
+- **Om konkurransen er åpen.** Økter kan verken startes eller registreres
+  utenfor perioden.
+
+Lukkes appen midt i en økt, plukkes den samme økten opp igjen der den var.
+Økter som har stått åpne i mer enn seks timer forkastes.
+
+Dokumentasjonsbildet får et dato- og klokkeslettstempel i stil med gamle
+digitalkameraer. Stempelet **tegnes ved visning**, fra serverens tidsstempel –
+det brennes ikke inn av telefonen. Da kan det ikke forfalskes av en app, og det
+ser likt ut i elevappen og i admin. Appen ber eleven om å ta bilde av
+instrumentet eller notestativet, ikke av seg selv.
+
+Hovedinstrument settes på eleven i admin (`INSTRUMENTS` i `admin.js` er fasit)
+og leses også ut av en opplastet elevliste.
 
 ### Ukestjenester: kjøkkentjeneste og internatvask
 
@@ -138,6 +172,7 @@ Kongshaug/
 │  │  ├─ geo.js            # GPS-avstand
 │  │  ├─ andaktToken.js    # roterende QR-token
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
+│  │  ├─ practice.js       # øvekonkurransen
 │  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata
 │  │  └─ routes/           # auth, users, firelist, andakt, history

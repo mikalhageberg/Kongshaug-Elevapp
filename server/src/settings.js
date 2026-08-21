@@ -37,6 +37,10 @@ const DEFAULTS = {
   kitchenEmailFrom: '',            // valgfri egen avsender-e-post (må være verifisert i Brevo)
   fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
   dutyPushEnabled: false,          // varsle om kjøkkentjeneste/internatvask søndag kl 18:00
+  // Øvekonkurransen. Tom periode = ingen konkurranse satt opp.
+  practiceStartDate: '',           // 'YYYY-MM-DD', første dag
+  practiceEndDate: '',             // 'YYYY-MM-DD', siste dag (inklusiv)
+  practiceWarmupMinutes: 10,       // obligatorisk oppvarming før øvingen
   guestEmailEnabled: false,        // varsle på e-post når en elev melder gjest
   guestEmailRecipient: '',         // e-post som mottar gjesteforespørsler
   // Lagringstid (se retention.js). Standard: historikk slettes etter ett år,
@@ -52,6 +56,10 @@ export const RETENTION_DAYS_MIN = 30;
 export const RETENTION_DAYS_MAX = 3650;
 export const GPS_HOURS_MIN = 1;
 export const GPS_HOURS_MAX = 168;   // en uke
+// Oppvarmingen. Null ville gjort den obligatoriske oppvarmingen valgfri i
+// praksis; taket hindrer at et feiltrykk låser elevene ute av å øve.
+export const WARMUP_MIN = 1;
+export const WARMUP_MAX = 60;
 
 // Leser et heltall fra settings-tabellen (alt lagres som tekst der), og faller
 // tilbake på standarden hvis verdien mangler eller er ulesbar.
@@ -89,6 +97,9 @@ export function getSettings() {
     retentionEnabled: s.retentionEnabled != null ? s.retentionEnabled === 'true' : DEFAULTS.retentionEnabled,
     retentionDays: intOr(s.retentionDays, DEFAULTS.retentionDays),
     gpsRetentionHours: intOr(s.gpsRetentionHours, DEFAULTS.gpsRetentionHours),
+    practiceStartDate: s.practiceStartDate ?? DEFAULTS.practiceStartDate,
+    practiceEndDate: s.practiceEndDate ?? DEFAULTS.practiceEndDate,
+    practiceWarmupMinutes: intOr(s.practiceWarmupMinutes, DEFAULTS.practiceWarmupMinutes),
   };
 }
 

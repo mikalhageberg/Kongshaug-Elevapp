@@ -38,6 +38,24 @@ export async function setToken(t) {
   else await SecureStore.deleteItemAsync('kongshaug_token');
 }
 
+// Last opp et bilde som base64. React Native har ingen pålitelig måte å sende
+// rå bytes på, så bildet går som base64-tekst med en egen Content-Type –
+// serveren dekoder. Den globale JSON-parseren (100 kB) rører den ikke.
+export async function uploadBase64(path, base64) {
+  const res = await fetch(BASE_URL + path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/base64',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: base64,
+  });
+  let data = null;
+  try { data = await res.json(); } catch { /* tomt */ }
+  if (!res.ok) throw new Error(data?.error || 'Kunne ikke laste opp bildet');
+  return data;
+}
+
 // ── Fetch-hjelper ────────────────────────────────────────────
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(BASE_URL + path, {

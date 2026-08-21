@@ -21,17 +21,19 @@ const LAYOUT_SCHEMA = {
     classCol: { type: ['integer', 'null'], description: '0-basert kolonne for klasse, eller null hvis arket ikke har det.' },
     dormCol: { type: ['integer', 'null'], description: '0-basert kolonne for internat, eller null.' },
     roomCol: { type: ['integer', 'null'], description: '0-basert kolonne for rom, eller null.' },
+    instrumentCol: { type: ['integer', 'null'], description: '0-basert kolonne for elevens hovedinstrument, eller null hvis arket ikke har det.' },
   },
-  required: ['dataStartRow', 'nameCol', 'classCol', 'dormCol', 'roomCol'],
+  required: ['dataStartRow', 'nameCol', 'classCol', 'dormCol', 'roomCol', 'instrumentCol'],
 };
 
 const SYSTEM_PROMPT = [
   'Du får de første radene i et regneark med elevlista ved en norsk internatskole.',
   'Radene er nummerert fra 0, og kolonnene er skilt med tabulator (kolonne 0 er den første).',
-  'Finn ut hvordan arket er bygd opp: hvilken kolonne inneholder elevens fulle navn, klasse, internat og rom,',
+  'Finn ut hvordan arket er bygd opp: hvilken kolonne inneholder elevens fulle navn, klasse, internat, rom og hovedinstrument,',
   'og på hvilken rad de faktiske elevradene begynner (hopp over tittel- og overskriftsrader og tomme rader).',
+  'Hovedinstrument er instrumentet eleven har som sitt viktigste – kolonnen kan hete «instrument», «hovedinstrument» eller «hovedinstr.».',
   'Svar KUN med kolonnenumre og radnummer – ikke gjengi innholdet i cellene.',
-  'Hvis arket ikke har en kolonne for klasse, internat eller rom, sett feltet til null.',
+  'Hvis arket ikke har en kolonne for klasse, internat, rom eller hovedinstrument, sett feltet til null.',
 ].join(' ');
 
 // Navnenormalisering: samme idé som slugName, men behold ordmellomrom.
@@ -59,6 +61,22 @@ function matchDorm(value, dorms) {
   return dorms.find((d) => normName(d) === v || normName(d).replace(/\s+/g, '') === tight) || null;
 }
 
+// Hovedinstrument mot den faste lista. Godtar hele ordet og de vanligste
+// forkortelsene arkene bruker («fio» → Fiolin, «trm»/«slagverk» → Trommer).
+// Uten treff blir feltet null, og admin velger selv i forhåndsvisningen.
+function matchInstrument(value, instruments) {
+  const v = normName(value);
+  if (!v) return null;
+  const exact = instruments.find((i) => normName(i) === v);
+  if (exact) return exact;
+  // «Trommer/slagverk» skal treffes av både «trommer» og «slagverk».
+  const delvis = instruments.filter((i) => {
+    const deler = normName(i).split(/[^a-z0-9]+/).filter(Boolean);
+    return deler.some((d) => d === v || d.startsWith(v));
+  });
+  return delvis.length === 1 ? delvis[0] : null;
+}
+
 // Spør modellen om oppsettet, basert på et lite utdrag av arket.
 async function detectLayout(rows) {
   const sample = rows.slice(0, SAMPLE_ROWS)
@@ -81,7 +99,7 @@ async function detectLayout(rows) {
   return JSON.parse(raw);
 }
 
-export async function parseStudentsXlsx(rows, { classes = [], dorms = [], existingNames = [] } = {}) {
+export async function parseStudentsXlsx(rows, { classes = [], dorms = [], instruments = [], existingNames = [] } = {}) {
   if (!config.openai.enabled) throw new Error('OpenAI er ikke konfigurert (mangler OPENAI_API_KEY).');
   const grid = (rows || []).filter((r) => (r || []).some((c) => String(c || '').trim()));
   if (!grid.length) throw new Error('Regnearket er tomt.');
@@ -116,6 +134,7 @@ export async function parseStudentsXlsx(rows, { classes = [], dorms = [], existi
       className: matchClass(col(row, layout?.classCol), classes),
       dorm: matchDorm(col(row, layout?.dormCol), dorms),
       room: room || null,
+      instrument: matchInstrument(col(row, layout?.instrumentCol), instruments),
     });
   }
 
