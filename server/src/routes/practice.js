@@ -9,7 +9,7 @@ import {
   competitionState, startSession, pauseSession, resumeSession, stopSession,
   finishSession, discardSession, savePhoto,
   pendingSession, mySessions, myTotalSeconds, leaderboard, sessionsFor,
-  photoDir, SORTS,
+  competitionStats, resetCompetition, photoDir, SORTS,
 } from '../practice.js';
 
 const router = Router();
@@ -132,6 +132,18 @@ router.get('/sessions/:userId', requireAdmin, (req, res) => {
     student: { id: u.id, fullName: u.full_name, className: u.class_name, instrument: u.instrument },
     sessions: sessionsFor(u.id),
   });
+});
+
+// Hvor mange økter og bilder som finnes – til bekreftelsen før nullstilling.
+router.get('/stats', requireAdmin, (req, res) => res.json(competitionStats()));
+
+// Nullstill konkurransen: sletter ALLE øveøkter og alle dokumentasjonsbilder,
+// for alle elever. Perioden og innstillingene beholdes. Kan ikke angres.
+router.post('/reset', requireAdmin, (req, res) => {
+  const før = competitionStats();
+  const slettet = resetCompetition();
+  console.warn(`[nullstilling] ${req.auth.username} slettet ${slettet.sessions} øveøkter og ${slettet.photos} bilder`);
+  res.json({ ok: true, ...slettet, students: før.students });
 });
 
 // Admin kan slette en økt som åpenbart ikke stemmer.

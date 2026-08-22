@@ -124,6 +124,12 @@ Lukkes appen midt i en økt, plukkes den samme økten opp igjen der den var.
 klokketid – uten den siste grensen kunne en økt satt på pause forrige uke blitt
 registrert i dag, på datoen den startet.
 
+Nederst på admin-siden ligger **Nullstill konkurransen**: sletter alle
+øveøkter og alle dokumentasjonsbilder, for alle elever. Perioden og
+innstillingene beholdes – det er resultatene som nullstilles. Bekreftelsen
+krever at ordet skrives inn, og viser hvor mange økter og bilder som forsvinner
+før noe skjer. Handlingen logges på serveren med hvem som utførte den.
+
 Dokumentasjonsbildet får et dato- og klokkeslettstempel i stil med gamle
 digitalkameraer. Stempelet **tegnes ved visning**, fra serverens tidsstempel –
 det brennes ikke inn av telefonen. Da kan det ikke forfalskes av en app, og det

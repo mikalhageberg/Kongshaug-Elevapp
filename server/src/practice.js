@@ -211,6 +211,46 @@ export function savePhoto(userId, sessionId, buffer) {
   return filename;
 }
 
+// Hvor mye som finnes akkurat nå. Vises i bekreftelsen før nullstilling, slik
+// at admin ser omfanget av det hun er i ferd med å slette.
+export function competitionStats() {
+  const rader = db.prepare('SELECT COUNT(*) AS n FROM practice_sessions').get().n;
+  const bilder = db.prepare('SELECT COUNT(*) AS n FROM practice_sessions WHERE photo_filename IS NOT NULL').get().n;
+  const elever = db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM practice_sessions').get().n;
+  return { sessions: rader, photos: bilder, students: elever };
+}
+
+// Nullstill konkurransen: alle øveøkter og alle dokumentasjonsbilder slettes.
+// Perioden og innstillingene står igjen – det er resultatene som nullstilles,
+// ikke oppsettet.
+//
+// Filene fjernes ETTER at radene er slettet. Feiler slettingen i databasen,
+// står bildene igjen sammen med radene sine; motsatt rekkefølge ville etterlatt
+// rader som peker på filer som ikke finnes.
+export function resetCompetition() {
+  const filnavn = db
+    .prepare('SELECT photo_filename FROM practice_sessions WHERE photo_filename IS NOT NULL')
+    .all()
+    .map((r) => r.photo_filename);
+
+  const sessions = db.prepare('DELETE FROM practice_sessions').run().changes;
+  for (const f of filnavn) deletePhotoFile(f);
+
+  // Ta med bilder som har mistet raden sin underveis. Mønsteret er bevisst
+  // stramt: bare filer vi selv har skrevet (<id>.jpg) røres, aldri noe annet
+  // som måtte ligge i mappen.
+  let foreldreløse = 0;
+  try {
+    for (const f of fs.readdirSync(photoDir)) {
+      if (!/^\d+\.jpg$/.test(f)) continue;
+      deletePhotoFile(f);
+      foreldreløse++;
+    }
+  } catch { /* mappen kan mangle */ }
+
+  return { sessions, photos: filnavn.length + foreldreløse };
+}
+
 // Elevens egne fullførte økter, nyeste først.
 export function mySessions(userId, limit = 50) {
   return db

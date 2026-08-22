@@ -1309,6 +1309,70 @@ function summaryCard(tittel, rader) {
     </div>`;
 }
 
+// Nullstilling av konkurransen. Sletter alt for alle elever, så bekreftelsen
+// krever at ordet skrives inn – et «er du sikker?» klikkes bort på refleks.
+function resetPracticeModal(onDone) {
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="max-width:460px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Nullstill konkurransen</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Dette kan ikke angres.</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:22px 26px">
+        <div id="omfang" style="color:var(--muted-2);font-size:14px">Teller opp…</div>
+        <p style="font-size:14px;line-height:1.55;color:var(--slate,#33415a);margin:14px 0 0">
+          Perioden og innstillingene beholdes – det er resultatene som nullstilles.
+          Elever som har en økt i gang mister den.
+        </p>
+        <label class="field-label" style="margin-top:18px">Skriv <b>NULLSTILL</b> for å bekrefte</label>
+        <input class="field field-sm" id="bekreft" autocomplete="off" autocapitalize="characters" placeholder="NULLSTILL" />
+        <p id="rerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding:0 26px 22px">
+        <button class="btn btn-ghost" id="avbryt" style="height:46px;padding:0 18px">Avbryt</button>
+        <button class="btn" id="slett" disabled style="height:46px;padding:0 20px;background:var(--red);color:#fff;opacity:.45">Slett alt</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+
+  const lukk = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', lukk);
+  bg.querySelector('#avbryt').addEventListener('click', lukk);
+  bg.addEventListener('click', (e) => { if (e.target === bg) lukk(); });
+
+  // Vis omfanget før noe slettes, slik at tallene er kjent på forhånd.
+  api('/api/practice/stats')
+    .then((st) => {
+      bg.querySelector('#omfang').innerHTML = st.sessions
+        ? `Sletter <b>${st.sessions} økt${st.sessions === 1 ? '' : 'er'}</b> fordelt på <b>${st.students} elev${st.students === 1 ? '' : 'er'}</b>, og <b>${st.photos} dokumentasjonsbilde${st.photos === 1 ? '' : 'r'}</b>.`
+        : 'Det finnes ingen registrerte økter å slette.';
+    })
+    .catch(() => { bg.querySelector('#omfang').textContent = 'Kunne ikke hente omfanget.'; });
+
+  const felt = bg.querySelector('#bekreft');
+  const knapp = bg.querySelector('#slett');
+  felt.addEventListener('input', () => {
+    const ok = felt.value.trim().toUpperCase() === 'NULLSTILL';
+    knapp.disabled = !ok;
+    knapp.style.opacity = ok ? '1' : '.45';
+  });
+
+  knapp.addEventListener('click', async () => {
+    knapp.disabled = true; knapp.textContent = 'Sletter…';
+    try {
+      const r = await api('/api/practice/reset', { method: 'POST' });
+      lukk();
+      toast(`Nullstilt · ${r.sessions} økter og ${r.photos} bilder slettet`);
+      onDone();
+    } catch (ex) {
+      const feil = bg.querySelector('#rerr');
+      feil.textContent = ex.message; feil.style.display = 'block';
+      knapp.disabled = false; knapp.textContent = 'Slett alt';
+    }
+  });
+}
+
 const PRACTICE_SORTS = [
   ['time', 'Total tid'],
   ['class', 'Klasse'],
@@ -1361,7 +1425,15 @@ async function renderPractice(main) {
         ${PRACTICE_SORTS.map(([k, navn]) => `<button class="btn btn-ghost" data-sort="${k}" style="height:36px;padding:0 14px;font-size:13px">${navn}</button>`).join('')}
       </div>
     </div>
-    <div id="board" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"><div style="padding:22px;color:var(--muted-2)">Laster…</div></div>`;
+    <div id="board" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"><div style="padding:22px;color:var(--muted-2)">Laster…</div></div>
+
+    <div style="background:#fff;border:1px solid #f0c4c0;border-radius:16px;padding:18px 22px;margin-top:26px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:15px;font-weight:800;color:var(--red-ink)">Nullstill konkurransen</div>
+        <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">Sletter alle øveøkter og alle dokumentasjonsbilder, for alle elever. Perioden og innstillingene beholdes. Kan ikke angres.</div>
+      </div>
+      <button class="btn" id="resetComp" style="height:44px;padding:0 18px;font-size:14px;background:#fff;color:var(--red-ink);border:1.5px solid #f0c4c0;flex:0 0 auto">Nullstill…</button>
+    </div>`;
 
   const boardEl = page.querySelector('#board');
   const stateEl = page.querySelector('#compState');
@@ -1481,6 +1553,8 @@ async function renderPractice(main) {
   }
 
   page.querySelectorAll('[data-sort]').forEach((b) => b.addEventListener('click', () => { sort = b.dataset.sort; loadBoard(); }));
+
+  page.querySelector('#resetComp').addEventListener('click', () => resetPracticeModal(loadBoard));
 
   page.querySelector('#saveComp').addEventListener('click', async () => {
     const btn = page.querySelector('#saveComp'); btn.disabled = true;
