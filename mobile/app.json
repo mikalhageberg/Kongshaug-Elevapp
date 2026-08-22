@@ -12,7 +12,7 @@
       "bundleIdentifier": "no.kongshaug.elevapp",
       "supportsTablet": false,
       "infoPlist": {
-        "NSCameraUsageDescription": "Appen bruker kamera for å skanne QR-koden til andakt.",
+        "NSCameraUsageDescription": "Appen bruker kamera til å skanne QR-koden til andakt, og til å ta bilder som dokumenterer øving i øvekonkurransen.",
         "NSLocationWhenInUseUsageDescription": "Appen bruker posisjon for å bekrefte at du er på skolen.",
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -30,7 +30,6 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -40,7 +39,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Appen bruker kamera for å skanne QR-koden til andakt."
+          "cameraPermission": "Appen bruker kamera til å skanne QR-koden til andakt, og til å ta bilder som dokumenterer øving i øvekonkurransen.",
+          "recordAudioAndroid": false
         }
       ],
       [
