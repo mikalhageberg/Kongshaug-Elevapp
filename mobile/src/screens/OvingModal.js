@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import LottieView from 'lottie-react-native';
 import { api, uploadBase64 } from '../api';
 import { C, formatDateLong } from '../theme';
 import { Button, Card, Banner } from '../ui';
@@ -44,6 +45,7 @@ function stempel(d = new Date()) {
 }
 
 const KEEP_AWAKE_TAG = 'ovekonkurranse';
+const KVITTERING = require('../../assets/animations/registrert.json');
 
 export default function OvingModal({ visible, onClose }) {
   const [status, setStatus] = useState(null);
@@ -53,6 +55,7 @@ export default function OvingModal({ visible, onClose }) {
   const [feil, setFeil] = useState(null);
   const [kameraPå, setKameraPå] = useState(false);
   const [bilde, setBilde] = useState(null);      // { base64, uri, tid }
+  const [kvittering, setKvittering] = useState(null); // { totalSeconds } etter registrering
   const [tillatelse, beOmTillatelse] = useCameraPermissions();
   const insets = useSafeAreaInsets();
   const kamera = useRef(null);
@@ -73,7 +76,7 @@ export default function OvingModal({ visible, onClose }) {
 
   useEffect(() => {
     if (!visible) return;
-    setFeil(null); setBilde(null); setKameraPå(false);
+    setFeil(null); setBilde(null); setKameraPå(false); setKvittering(null);
     last();
   }, [visible, last]);
 
@@ -137,10 +140,18 @@ export default function OvingModal({ visible, onClose }) {
   });
 
   const registrer = () => kjør(async () => {
-    await api(`/api/practice/${økt.id}/finish`, { method: 'POST' });
+    const d = await api(`/api/practice/${økt.id}/finish`, { method: 'POST' });
     setBilde(null);
-    await last();
+    setKvittering({ totalSeconds: d.session.totalSeconds });
   });
+
+  // Lukker kvitteringen og henter tallene på nytt. Oppdateringen skjer først
+  // her, ikke rett etter registreringen: byttes økten ut med en gang, forsvinner
+  // kvitteringen før animasjonen har spilt ferdig.
+  const lukkKvittering = useCallback(() => {
+    setKvittering(null);
+    last();
+  }, [last]);
 
   async function taBilde() {
     if (!kamera.current) return;
@@ -200,6 +211,31 @@ export default function OvingModal({ visible, onClose }) {
             <View style={{ width: 62 }} />
           </View>
         </View>
+      </Modal>
+    );
+  }
+
+  // Kvittering: hele skjermen, animasjonen spiller én gang og lukker seg selv.
+  // Et trykk hvor som helst hopper over – den som har øvd i to timer skal ikke
+  // måtte vente på konfetti.
+  if (visible && kvittering) {
+    return (
+      <Modal visible animationType="fade" onRequestClose={lukkKvittering}>
+        <StatusBar hidden />
+        <Pressable
+          onPress={lukkKvittering}
+          style={[styles.kvittering, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        >
+          <LottieView
+            source={KVITTERING}
+            autoPlay
+            loop={false}
+            onAnimationFinish={lukkKvittering}
+            style={styles.animasjon}
+          />
+          <Text style={styles.kvitteringTittel}>Økten er registrert</Text>
+          <Text style={styles.kvitteringTid}>{varighet(kvittering.totalSeconds)} lagt til</Text>
+        </Pressable>
       </Modal>
     );
   }
@@ -372,6 +408,10 @@ export default function OvingModal({ visible, onClose }) {
 }
 
 const styles = StyleSheet.create({
+  kvittering: { flex: 1, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
+  animasjon: { width: 260, height: 260 },
+  kvitteringTittel: { fontSize: 26, fontWeight: '800', color: C.ink, letterSpacing: -0.5, marginTop: 6, textAlign: 'center' },
+  kvitteringTid: { fontSize: 16, fontWeight: '700', color: C.muted2, marginTop: 6, textAlign: 'center' },
   full: { flex: 1, backgroundColor: C.surface, paddingHorizontal: 26, justifyContent: 'space-between' },
   fullMidt: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stoppeklokkeStor: { fontSize: 76, fontWeight: '800', color: C.ink, marginVertical: 14, fontVariant: ['tabular-nums'] },
