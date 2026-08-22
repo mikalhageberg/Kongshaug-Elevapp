@@ -1271,6 +1271,44 @@ function photoLightbox(sessionId, iso) {
   bg.addEventListener('click', (e) => { if (e.target === bg) lukk(); });
 }
 
+// Summerer stillingen på en nøkkel (klasse eller instrument). Elever uten verdi
+// samles i én gruppe framfor å forsvinne – at tolv elever mangler instrument er
+// nettopp det skolen trenger å se.
+function summerPå(students, felt, tomtNavn) {
+  const grupper = new Map();
+  for (const r of students) {
+    const nøkkel = (r[felt] || '').trim() || tomtNavn;
+    const g = grupper.get(nøkkel) || { navn: nøkkel, totalSeconds: 0, sessions: 0, elever: 0, tom: !r[felt] };
+    g.totalSeconds += r.totalSeconds;
+    g.sessions += r.sessions;
+    g.elever += 1;
+    grupper.set(nøkkel, g);
+  }
+  // Mest øvd først. Like tall sorteres på navn, så rekkefølgen ikke hopper
+  // mellom to oppdateringer.
+  return [...grupper.values()].sort((a, b) =>
+    b.totalSeconds - a.totalSeconds || a.navn.localeCompare(b.navn, 'nb'));
+}
+
+// Ett kort med én rad per gruppe. Stolpen viser andelen av den største gruppen,
+// så forskjellene leses uten å regne.
+function summaryCard(tittel, rader) {
+  const størst = Math.max(1, ...rader.map((r) => r.totalSeconds));
+  return `
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
+      <div style="padding:13px 18px;background:#f7f8fa;border-bottom:1px solid var(--line);font-size:14px;font-weight:800">${tittel}</div>
+      ${rader.length ? rader.map((r) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #f2f4f6">
+          <span style="flex:0 0 120px;min-width:0;font-size:13.5px;font-weight:700;${r.tom ? 'color:var(--muted-2)' : ''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.navn)}</span>
+          <span style="flex:1;height:6px;background:#eef1f5;border-radius:3px;overflow:hidden">
+            <span style="display:block;height:100%;width:${Math.round((r.totalSeconds / størst) * 100)}%;background:${r.totalSeconds ? 'var(--navy)' : 'transparent'};border-radius:3px"></span>
+          </span>
+          <span style="flex:0 0 42px;text-align:right;font-size:12px;color:var(--muted-2);font-weight:600" title="${r.elever} elev${r.elever === 1 ? '' : 'er'}">${r.elever} stk</span>
+          <span style="flex:0 0 76px;text-align:right;font-size:13.5px;font-weight:800;${r.totalSeconds ? '' : 'color:var(--muted-2)'}">${r.totalSeconds ? formatDuration(r.totalSeconds) : '–'}</span>
+        </div>`).join('') : '<div style="padding:18px;color:var(--muted-2);font-size:13.5px">Ingen data.</div>'}
+    </div>`;
+}
+
 const PRACTICE_SORTS = [
   ['time', 'Total tid'],
   ['class', 'Klasse'],
@@ -1315,6 +1353,8 @@ async function renderPractice(main) {
       </div>
     </div>
 
+    <div id="summary" style="margin-bottom:24px"></div>
+
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px">
       <div><div style="font-size:17px;font-weight:800">Stilling</div><div id="compState" style="font-size:13px;color:var(--muted-2);font-weight:600"></div></div>
       <div style="display:flex;gap:6px;flex:0 0 auto">
@@ -1325,6 +1365,7 @@ async function renderPractice(main) {
 
   const boardEl = page.querySelector('#board');
   const stateEl = page.querySelector('#compState');
+  const summaryEl = page.querySelector('#summary');
 
   for (const navn of ['practiceStartDate', 'practiceEndDate']) {
     visDatoPåNorsk(page.querySelector(`[name=${navn}]`), page.querySelector(`[data-vist="${navn}"]`));
@@ -1350,9 +1391,30 @@ async function renderPractice(main) {
       : `${formatDateLong(c.startDate)} – ${formatDateLong(c.endDate)} · ${c.active ? 'pågår nå' : 'ikke aktiv'} · ${formatDuration(d.totalSeconds)} øvd til sammen`;
 
     if (!c.configured) {
+      summaryEl.innerHTML = '';
       boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2);font-size:14px">Sett en start- og sluttdato over for å åpne konkurransen. Elevene ser den i appen først da.</div>';
       return;
     }
+
+    // Samlet, per klasse og per instrument. Regnes ut av den samme lista som
+    // stillingen bruker, så tallene kan ikke sprike fra hverandre.
+    const økter = d.students.reduce((n, r) => n + r.sessions, 0);
+    const harØvd = d.students.filter((r) => r.totalSeconds > 0).length;
+    summaryEl.innerHTML = `
+      <div class="kpi" style="display:flex;align-items:center;gap:22px;padding:20px 24px;margin-bottom:16px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px">Samlet øvetid</div>
+          <div style="font-size:38px;font-weight:800;line-height:1;letter-spacing:-.02em">${formatDuration(d.totalSeconds)}</div>
+        </div>
+        <div style="flex:0 0 auto;text-align:right;font-size:13.5px;color:var(--muted-2);font-weight:600;line-height:1.6">
+          ${økter} økt${økter === 1 ? '' : 'er'}<br>
+          ${harØvd} av ${d.students.length} elever har øvd
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+        ${summaryCard('Per klasse', summerPå(d.students, 'className', 'Uten klasse'))}
+        ${summaryCard('Per instrument', summerPå(d.students, 'instrument', 'Uten instrument'))}
+      </div>`;
     if (!d.students.length) {
       boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen aktive elever å vise.</div>';
       return;
