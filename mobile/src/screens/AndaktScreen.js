@@ -1,25 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { api, getPosition, getPositionOnCampus } from '../api';
+import { api, resolveCampusStatus, getFreshPosition } from '../api';
 import { C, formatTime, formatDateLong } from '../theme';
-import { Button, Banner } from '../ui';
+import { Button, Banner, campusBanner } from '../ui';
 
 export default function AndaktScreen({ user }) {
   // status: loading | scanning | result
   const [status, setStatus] = useState('loading');
   const [result, setResult] = useState(null); // { kind:'present'|'late'|'error', ... }
   const [permission, requestPermission] = useCameraPermissions();
-  const [geoText, setGeoText] = useState({ tone: 'grey', text: 'Sjekker posisjon…' });
+  const [geoText, setGeoText] = useState(campusBanner(null));
   const [win, setWin] = useState(null); // tidsvindu for QR (åpner/stengte kl. …)
   const [bypassBusy, setBypassBusy] = useState(false);
-  const coordsRef = useRef(null);
   const scannedRef = useRef(false);
 
   // Kun App/Play Store-reviewer-kontoen (serveren bestemmer dette, ikke appen).
   // En reviewer har ingen storskjerm å skanne QR fra, så uten dette ville de
   // stått fast på kameraskjermen og aldri fått testet funksjonen.
   const canSkipQr = !!user?.appReviewBypass;
+
+  const cancelGeo = useRef(null);
+  useEffect(() => () => cancelGeo.current?.(), []);
 
   useEffect(() => {
     (async () => {
@@ -34,13 +36,8 @@ export default function AndaktScreen({ user }) {
       // ingen storskjerm og får gå videre til kameraet uansett.
       if (s.qrOpen === false && !canSkipQr) { setWin(s); setStatus('closed'); return; }
       if (!permission?.granted) await requestPermission();
-      getPositionOnCampus()
-        .then(({ coords, ok, distance }) => {
-          coordsRef.current = coords;
-          if (ok) setGeoText({ tone: 'green', text: '📍 Du er ved skolen · GPS OK' });
-          else setGeoText({ tone: 'red', text: `📍 Du er ikke ved skolen · ${distance} m unna\nDin posisjon: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` });
-        })
-        .catch((ex) => setGeoText({ tone: 'red', text: '📍 ' + ex.message }));
+      // Kun til visning. Koordinaten som registreres hentes fersk ved skanning.
+      cancelGeo.current = resolveCampusStatus((st) => setGeoText(campusBanner(st)));
       setStatus('scanning');
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,11 +46,21 @@ export default function AndaktScreen({ user }) {
   async function onScan({ data }) {
     if (scannedRef.current) return;
     scannedRef.current = true;
+    // Fersk posisjon i det QR-en skannes. QR-koden er gyldig i et halvt minutt
+    // til, så det er tid nok – og da er det eleven som står her nå som
+    // registreres, ikke der telefonen var da kameraet ble åpnet.
+    let coords;
     try {
-      if (!coordsRef.current) coordsRef.current = await getPosition();
+      coords = await getFreshPosition();
+    } catch (ex) {
+      setResult({ kind: 'error', code: 'nogps', message: ex.message });
+      setStatus('result');
+      return;
+    }
+    try {
       const r = await api('/api/andakt/checkin', {
         method: 'POST',
-        body: { token: data, ...coordsRef.current },
+        body: { token: data, ...coords },
       });
       setResult({ kind: r.status, checkedAt: r.checkedAt, date: r.sessionDate });
     } catch (ex) {
@@ -67,9 +74,10 @@ export default function AndaktScreen({ user }) {
   async function registerWithoutQr() {
     setBypassBusy(true);
     try {
+      const coords = await getFreshPosition().catch(() => ({}));
       const r = await api('/api/andakt/checkin', {
         method: 'POST',
-        body: { token: 'app-review', ...(coordsRef.current || {}) },
+        body: { token: 'app-review', ...coords },
       });
       setResult({ kind: r.status, checkedAt: r.checkedAt, date: r.sessionDate });
     } catch (ex) {
@@ -193,20 +201,22 @@ function ResultView({ result, onAgain }) {
   const offsite = result.code === 'offsite';
   const expired = result.code === 'expired';
   const closed = result.code === 'closed';
+  const nogps = result.code === 'nogps';
   return (
     <View style={styles.center}>
       <View style={[styles.ringBig, { backgroundColor: closed ? C.amberBg : C.redBg }]}>
-        <View style={[styles.ringInner, { backgroundColor: closed ? C.amber : C.red }]}><Text style={styles.tick}>{closed ? '🕘' : offsite ? '📍' : '✕'}</Text></View>
+        <View style={[styles.ringInner, { backgroundColor: closed ? C.amber : C.red }]}><Text style={styles.tick}>{closed ? '🕘' : offsite || nogps ? '📍' : '✕'}</Text></View>
       </View>
       <Text style={styles.title}>
         {offsite ? 'Du er ikke på skolens område'
+          : nogps ? 'Fikk ikke posisjonen din'
           : closed ? 'Registreringen er stengt'
           : expired ? 'QR-koden er ikke gyldig lenger'
           : 'Ugyldig QR-kode'}
       </Text>
       <Text style={styles.sub}>{result.message}</Text>
       <View style={{ height: 24 }} />
-      <Button title={closed ? 'Tilbake' : offsite ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
+      <Button title={closed ? 'Tilbake' : offsite || nogps ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
     </View>
   );
 }

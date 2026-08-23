@@ -63,6 +63,28 @@ export function Banner({ text, tone = 'grey' }) {
   );
 }
 
+// Teksten i GPS-banneret, felles for Hjem, Brannliste og Andakt.
+// Et foreløpig svar (fra siste kjente posisjon) vises grått og med «bekrefter»,
+// aldri som et endelig grønt/rødt: det kan rette seg når den ferske fiksen
+// lander, og da skal banneret ikke ha lovet noe det tar tilbake.
+export function campusBanner(status) {
+  if (!status) return { tone: 'grey', text: 'Sjekker posisjon…' };
+  if (status.error) return { tone: 'red', text: '📍 ' + status.error };
+  if (status.provisional) {
+    return {
+      tone: 'grey',
+      text: status.ok
+        ? '📍 Du ser ut til å være ved skolen · bekrefter…'
+        : `📍 Du ser ut til å være ${status.distance} m unna skolen · bekrefter…`,
+    };
+  }
+  if (status.ok) return { tone: 'green', text: '📍 Du er ved skolen · GPS OK' };
+  return {
+    tone: 'red',
+    text: `📍 Du er ikke ved skolen · ${status.distance} m unna\nDin posisjon: ${status.coords.lat.toFixed(5)}, ${status.coords.lng.toFixed(5)}`,
+  };
+}
+
 const styles = StyleSheet.create({
   btn: {
     height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18,

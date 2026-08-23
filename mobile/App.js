@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, AppState } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import { api, loadToken, setToken } from './src/api';
+import { api, loadToken, setToken, refreshCampus } from './src/api';
+import { loadCachedCampus } from './src/campus';
 import { registerForPushNotifications, unregisterPushToken } from './src/push';
 import { C } from './src/theme';
 import LockScreen from './src/screens/LockScreen';
@@ -51,6 +52,7 @@ function AppInner() {
   useEffect(() => {
     (async () => {
       await loadToken();
+      await loadCachedCampus(); // skolens område fra forrige økt – før noe vises
       try {
         const d = await api('/api/auth/me');
         if (d.user.role === 'admin') { await setToken(null); }
@@ -59,6 +61,10 @@ function AppInner() {
       setBooting(false);
     })();
   }, []);
+
+  // Skolens område hentes én gang per innlogging og caches lokalt, slik at
+  // posisjonssjekken kan regnes ut på telefonen (se src/campus.js).
+  useEffect(() => { if (user) refreshCampus(); }, [user]);
 
   // Lås igjen når appen har vært i bakgrunnen en stund.
   useEffect(() => {

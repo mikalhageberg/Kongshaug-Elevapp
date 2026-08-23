@@ -54,8 +54,10 @@ About the GPS requirement:
 Two features (fire roll call and morning assembly) require the user to be
 physically on school grounds to register attendance. This is genuine fire
 safety functionality - a boarding school must know who is present at night -
-not tracking. Location is used only at the moment the user taps "register",
-never continuously.
+not tracking. Location is read while the screen is open, to show whether the
+user is on school grounds, and once more the moment they tap "register" - that
+last reading is the one that is stored. Never in the background, never
+continuously.
 
 The test account above is exempt from this requirement (this one account
 only), so you can test the full flow without being on site. A normal student
@@ -127,8 +129,9 @@ Om GPS-kravet:
 Appen har to funksjoner (brannliste og andakt) som krever at brukeren er
 fysisk på skolens område for å registrere oppmøte – dette er reell
 brannsikkerhets-funksjonalitet (internatskole må vite hvem som er til stede om
-natten), ikke sporing. Posisjon brukes kun i det øyeblikket man trykker
-"registrer", aldri kontinuerlig.
+natten), ikke sporing. Posisjon leses mens skjermen er åpen, for å vise om
+eleven er på skolens område, og på nytt i det man trykker "registrer" – det er
+den siste avlesningen som lagres. Aldri i bakgrunnen, aldri kontinuerlig.
 
 Testkontoen over er unntatt dette kravet (kun denne ene kontoen), slik at dere
 kan teste hele flyten uten å være fysisk til stede. En vanlig elevkonto ville

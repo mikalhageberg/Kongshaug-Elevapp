@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from 'react-native';
-import { api, getPositionOnCampus } from '../api';
+import { api, resolveCampusStatus } from '../api';
 import { C, formatTime, formatDateLong, formatDateShort, formatWeekRange, initials, todayStr, greeting } from '../theme';
-import { Card, Pill, Banner, Button } from '../ui';
+import { Card, Pill, Banner, Button, campusBanner } from '../ui';
 import { DUTY_KINDS } from '../DutyPlan';
 import OvingModal from './OvingModal';
 
@@ -56,11 +56,9 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
   useEffect(() => {
     load();
-    getPositionOnCampus()
-      .then(({ coords, ok, distance }) => setGeo(ok
-        ? { tone: 'green', text: '📍 Du er ved skolen · GPS OK' }
-        : { tone: 'red', text: `📍 Du er ikke ved skolen · ${distance} m unna\nDin posisjon: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` }))
-      .catch((ex) => setGeo({ tone: 'red', text: '📍 ' + ex.message }));
+    // Banneret oppdaterer seg selv: først et foreløpig svar hvis telefonen har
+    // en fersk posisjon fra før, så det endelige. Avbrytes ved unmount.
+    return resolveCampusStatus((s) => setGeo(campusBanner(s)));
   }, [load]);
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };

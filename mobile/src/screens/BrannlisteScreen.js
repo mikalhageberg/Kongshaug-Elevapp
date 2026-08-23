@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
-import { api, getPositionOnCampus } from '../api';
+import { api, resolveCampusStatus, getFreshPosition } from '../api';
 import { C, formatTime, formatDateLong, shiftDate } from '../theme';
-import { Button, Banner, Card } from '../ui';
+import { Button, Banner, Card, campusBanner } from '../ui';
 import PlanleggModal from './PlanleggModal';
 import GjestModal from './GjestModal';
 
@@ -37,7 +37,7 @@ function NightGuardsCard({ guards }) {
 export default function BrannlisteScreen({ user }) {
   const [state, setState] = useState('loading'); // loading | ready | blocked | closed | done | away
   const [guestOpen, setGuestOpen] = useState(false);
-  const [coords, setCoords] = useState(null);
+  const [geo, setGeo] = useState(null); // { ok, distance, coords, provisional } | { error }
   const [info, setInfo] = useState(null); // { checkedAt, nightDate }
   const [scheduled, setScheduled] = useState(false);
   const [msg, setMsg] = useState('Sjekker posisjon…');
@@ -50,20 +50,28 @@ export default function BrannlisteScreen({ user }) {
 
   useEffect(() => { fetchLatestNightGuards().then(setNightGuards).catch(() => {}); }, []);
 
-  async function loadPosition(closesAt) {
+  const cancelGeo = useRef(null);
+  useEffect(() => () => cancelGeo.current?.(), []);
+
+  function loadPosition(closesAt) {
     setState('loading');
-    try {
-      const { coords: c, ok, distance } = await getPositionOnCampus();
-      if (ok) {
-        setCoords(c); setState('ready');
+    setGeo(null);
+    setMsg('Sjekker posisjon…');
+    cancelGeo.current?.();
+    cancelGeo.current = resolveCampusStatus((s) => {
+      setGeo(s);
+      if (s.error) { setState('blocked'); setMsg(s.error); return; }
+      if (s.ok) {
+        setState('ready');
         setMsg(closesAt ? `Meld deg til stede før kl. ${closesAt}.` : 'Gjelder natten som kommer.');
-      } else {
-        setState('blocked');
-        setMsg(`Du er ${distance} m unna skolen (din posisjon: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}).`);
+        return;
       }
-    } catch (ex) {
-      setState('blocked'); setMsg(ex.message);
-    }
+      // Utenfor området: et foreløpig svar er ikke nok til å låse skjermen –
+      // det kan rette seg når den ferske fiksen lander et øyeblikk etter.
+      if (s.provisional) return;
+      setState('blocked');
+      setMsg('Du må være innenfor skolens område for å melde deg til stede.');
+    });
   }
 
   const refresh = useCallback(async () => {
@@ -87,7 +95,11 @@ export default function BrannlisteScreen({ user }) {
 
   async function submit() {
     setBusy(true);
+    setMsg('Bekrefter posisjonen din…');
     try {
+      // Fersk posisjon i det knappen trykkes – ikke den skjermen viste da den
+      // ble åpnet. Det er denne koordinaten som havner på brannlisten.
+      const coords = await getFreshPosition();
       const r = await api('/api/firelist/checkin', { method: 'POST', body: coords });
       setInfo({ checkedAt: r.checkedAt, nightDate: r.nightDate }); setState('done');
     } catch (ex) {
@@ -181,13 +193,9 @@ export default function BrannlisteScreen({ user }) {
       <Text style={styles.p}>Kryss av så vi vet hvem som er på skolen i natt ved brann.</Text>
 
       <View style={{ marginTop: 8 }}>
-        {state === 'ready'
-          ? <Banner tone="green" text="📍 Posisjon funnet · bekreftes mot skolens område" />
-          : state === 'closed' && win
-            ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
-            : state === 'blocked'
-              ? <Banner tone="red" text={'✕ ' + msg} />
-              : <Banner tone="grey" text="Sjekker posisjon…" />}
+        {state === 'closed' && win
+          ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
+          : <Banner {...campusBanner(geo)} />}
       </View>
 
       <View style={{ flex: 1, minHeight: 20 }} />
