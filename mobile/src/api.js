@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import * as Location from 'expo-location';
+import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import { getCampus, setCampus, isOnCampus, isCampusLoaded } from './campus';
 
@@ -39,18 +40,105 @@ export async function setToken(t) {
   else await SecureStore.deleteItemAsync('kongshaug_token');
 }
 
+// ── Nettverk ─────────────────────────────────────────────────
+//
+// Android-telefonene på skolen mister kontakten med serveren ofte nok til at
+// det merkes: et wifi uten fungerende rute ut, et bytte mellom wifi og
+// mobildata, eller en forbindelse som døde mens appen lå stille. Uten
+// tidsavbrudd og gjenforsøk ble ett slikt blaff umiddelbart til «Network
+// request failed» i ansiktet på eleven.
+//
+// Derfor: alle kall får en frist, og de som trygt kan sendes to ganger får ett
+// stille forsøk til. Feiler det likevel, sier meldingen hva telefonen mente om
+// nettet sitt – det er den opplysningen som skiller «skolens wifi er nede» fra
+// «serveren er nede».
+
+const REQUEST_TIMEOUT_MS = 15 * 1000;
+const UPLOAD_TIMEOUT_MS = 60 * 1000;   // bilder er store og trenger lengre snor
+const RETRY_DELAY_MS = 500;
+
+// POST-kall som tåler å komme fram to ganger. Alle tre skriver med ON CONFLICT
+// på (bruker, dato), så et duplikat gir samme rad – se routes/firelist.js og
+// routes/andakt.js. Andre POST-kall (gjest, øving) står bevisst ikke her: der
+// ville et gjenforsøk kunne lage en ekstra registrering.
+const IDEMPOTENTE_POST = [
+  '/api/firelist/checkin',
+  '/api/firelist/away',
+  '/api/andakt/checkin',
+];
+
+function kanGjenforsøkes(method, path) {
+  if (method === 'GET') return true;
+  return method === 'POST' && IDEMPOTENTE_POST.includes(path.split('?')[0]);
+}
+
+// Hva telefonen selv mener om nettet sitt, i klartekst. Dette er hele grunnen
+// til at expo-network er med: uten det er «fikk ikke kontakt» like taust for
+// deg som for eleven.
+async function nettstatus() {
+  try {
+    const s = await Network.getNetworkStateAsync();
+    if (s.isConnected === false) return 'uten nett';
+    const type = { WIFI: 'wifi', CELLULAR: 'mobildata', NONE: 'uten nett' }[s.type]
+      || String(s.type || 'ukjent nett').toLowerCase();
+    return s.isInternetReachable === false ? `${type}, uten internett` : type;
+  } catch {
+    return 'ukjent nett';
+  }
+}
+
+// Ett forsøk, med frist. Kaster en feil merket .network når det er nettet som
+// svikter – til forskjell fra en HTTP-feilkode, som betyr at serveren svarte.
+async function fetchEnGang(url, options, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } catch (ex) {
+    const err = new Error(ex?.name === 'AbortError' ? 'tidsavbrudd' : (ex?.message || 'nettverksfeil'));
+    err.network = true;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function nettverksfeil(ex, forsøk, msBrukt) {
+  const nett = await nettstatus();
+  const err = new Error(`Fikk ikke kontakt med serveren (${nett}). Prøv igjen.`);
+  err.code = 'network';
+  err.network = { grunn: ex.message, nett, forsøk, msBrukt };
+  return err;
+}
+
+async function hent(url, options, { timeoutMs = REQUEST_TIMEOUT_MS, retry = false } = {}) {
+  const start = Date.now();
+  for (let forsøk = 1; ; forsøk++) {
+    try {
+      return await fetchEnGang(url, options, timeoutMs);
+    } catch (ex) {
+      if (!ex.network) throw ex;
+      // Ett stille forsøk til – de fleste blaffene varer kortere enn pausen.
+      if (!retry || forsøk >= 2) throw await nettverksfeil(ex, forsøk, Date.now() - start);
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+}
+
 // Last opp et bilde som base64. React Native har ingen pålitelig måte å sende
 // rå bytes på, så bildet går som base64-tekst med en egen Content-Type –
 // serveren dekoder. Den globale JSON-parseren (100 kB) rører den ikke.
+// Ikke gjenforsøkt: en opplasting som kom halvveis fram skal ikke sendes om
+// igjen på egen hånd.
 export async function uploadBase64(path, base64) {
-  const res = await fetch(BASE_URL + path, {
+  const res = await hent(BASE_URL + path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/base64',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: base64,
-  });
+  }, { timeoutMs: UPLOAD_TIMEOUT_MS });
   let data = null;
   try { data = await res.json(); } catch { /* tomt */ }
   if (!res.ok) throw new Error(data?.error || 'Kunne ikke laste opp bildet');
@@ -59,14 +147,14 @@ export async function uploadBase64(path, base64) {
 
 // ── Fetch-hjelper ────────────────────────────────────────────
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(BASE_URL + path, {
+  const res = await hent(BASE_URL + path, {
     method,
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  }, { retry: kanGjenforsøkes(method, path) });
   let data = null;
   try { data = await res.json(); } catch { /* tomt */ }
   if (!res.ok) {

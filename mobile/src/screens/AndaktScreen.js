@@ -202,13 +202,15 @@ function ResultView({ result, onAgain }) {
   const expired = result.code === 'expired';
   const closed = result.code === 'closed';
   const nogps = result.code === 'nogps';
+  const nett = result.code === 'network';
   return (
     <View style={styles.center}>
       <View style={[styles.ringBig, { backgroundColor: closed ? C.amberBg : C.redBg }]}>
-        <View style={[styles.ringInner, { backgroundColor: closed ? C.amber : C.red }]}><Text style={styles.tick}>{closed ? '🕘' : offsite || nogps ? '📍' : '✕'}</Text></View>
+        <View style={[styles.ringInner, { backgroundColor: closed ? C.amber : C.red }]}><Text style={styles.tick}>{closed ? '🕘' : nett ? '📶' : offsite || nogps ? '📍' : '✕'}</Text></View>
       </View>
       <Text style={styles.title}>
         {offsite ? 'Du er ikke på skolens område'
+          : nett ? 'Fikk ikke kontakt med serveren'
           : nogps ? 'Fikk ikke posisjonen din'
           : closed ? 'Registreringen er stengt'
           : expired ? 'QR-koden er ikke gyldig lenger'
@@ -216,7 +218,7 @@ function ResultView({ result, onAgain }) {
       </Text>
       <Text style={styles.sub}>{result.message}</Text>
       <View style={{ height: 24 }} />
-      <Button title={closed ? 'Tilbake' : offsite || nogps ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
+      <Button title={closed ? 'Tilbake' : offsite || nogps || nett ? 'Prøv igjen' : 'Skann på nytt'} onPress={onAgain} style={{ alignSelf: 'stretch' }} />
     </View>
   );
 }
