@@ -66,9 +66,16 @@ export default function BrannlisteScreen({ user }) {
         setMsg(closesAt ? `Meld deg til stede før kl. ${closesAt}.` : 'Gjelder natten som kommer.');
         return;
       }
-      // Utenfor området: et foreløpig svar er ikke nok til å låse skjermen –
-      // det kan rette seg når den ferske fiksen lander et øyeblikk etter.
+      // Et foreløpig svar kan rette seg når den ferske fiksen lander – vent.
       if (s.provisional) return;
+      // Et gammelt punkt vet vi ikke om stemmer. Å låse skjermen på det ville
+      // stengt ute en elev som faktisk står på skolen, så vi lar knappen være
+      // åpen: innsjekken henter fersk posisjon selv, og serveren avgjør.
+      if (s.stale) {
+        setState('ready');
+        setMsg('Fikk ikke ferskt GPS-signal. Prøv å melde deg til stede – posisjonen sjekkes når du trykker.');
+        return;
+      }
       setState('blocked');
       setMsg('Du må være innenfor skolens område for å melde deg til stede.');
     });

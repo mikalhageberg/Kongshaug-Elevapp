@@ -70,6 +70,16 @@ export function Banner({ text, tone = 'grey' }) {
 export function campusBanner(status) {
   if (!status) return { tone: 'grey', text: 'Sjekker posisjon…' };
   if (status.error) return { tone: 'red', text: '📍 ' + status.error };
+  // Gammelt punkt, brukt fordi telefonen ikke klarte å hente et ferskt. Vi
+  // viser hva det sier, men aldri som et bekreftet «GPS OK».
+  if (status.stale) {
+    return {
+      tone: 'grey',
+      text: status.ok
+        ? '📍 Ser ut til å være ved skolen · fikk ikke ferskt GPS-signal'
+        : `📍 Ser ut til å være ${status.distance} m unna skolen · fikk ikke ferskt GPS-signal`,
+    };
+  }
   if (status.provisional) {
     return {
       tone: 'grey',

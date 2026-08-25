@@ -194,6 +194,28 @@ const EDGE_MARGIN_M = 50;              // «nær grensen» – da trengs det pre
 const FIX_TIMEOUT_MS = 12 * 1000;      // heller en tydelig feil enn å henge
 const PRECISE_TIMEOUT_MS = 6 * 1000;   // ekstrarunden for presisjon får kortere snor
 
+// Hvor gammelt et punkt får være før telefonen må regne ut et nytt.
+//
+// Uten dette tvinger Android fram en helt fersk beregning hver gang: expo-
+// location setter maxUpdateAge til intervallet for nøyaktigheten – 3 sekunder
+// for Balanced, 2 for High (se LocationHelpers.kt). En stillestående telefon
+// innendørs klarer ofte ikke det, og kallet henger eller svarer «current
+// location is unavailable». Det var derfor posisjonen virket nøyaktig én gang
+// etter at tillatelsen ble gitt: akkurat da fantes det et punkt som var yngre
+// enn tre sekunder.
+//
+// timeInterval styrer den grensen. Med den satt svarer telefonen med punktet
+// den allerede har, og regner bare ut et nytt når det er for gammelt.
+// Grensene er satt slik at de er trygge, ikke slik at de er strengest mulig.
+// Et punkt fra det siste minuttet er «her, nå» – man rekker under hundre meter
+// til fots – og ligger uansett langt unna det gamle skolepunktet en elev
+// hjemme kunne hatt liggende fra i går. Strengere enn dette gjør bare at
+// registreringen feiler for en telefon som står stille innendørs.
+const VISNING_MAX_ALDER_MS = 60 * 1000;         // banneret
+const INNSJEKK_MAX_ALDER_MS = 60 * 1000;        // registrering
+const INNSJEKK_NØD_ALDER_MS = 2 * 60 * 1000;    // siste utvei ved registrering
+const NØD_MAX_ALDER_MS = 5 * 60 * 1000;         // siste utvei for visningen
+
 let cachedFix = null; // { coords, accuracy, at }
 
 function toFix(pos) {
@@ -246,16 +268,18 @@ async function quickFix() {
 // En fersk fix. Balanced (~100 m) holder til å avgjøre de aller fleste
 // tilfellene mot en radius på et par hundre meter, og virker langt bedre
 // innendørs enn ren GPS. Vi eskalerer til High kun når svaret står og vipper.
-async function freshFix() {
+async function freshFix(maxAlderMs) {
   const balanced = toFix(await withTimeout(
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }), FIX_TIMEOUT_MS));
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, timeInterval: maxAlderMs }),
+    FIX_TIMEOUT_MS));
   let fix = balanced;
   if (nearEdge(balanced)) {
     // Et forsøk, ikke et krav: kommer ikke det presise punktet raskt, er det
     // vi alt har bedre enn en mislykket registrering. QR-koden på andakt
     // utløper mens vi venter.
     fix = await withTimeout(
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }), PRECISE_TIMEOUT_MS)
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High, timeInterval: maxAlderMs }),
+      PRECISE_TIMEOUT_MS)
       .then(toFix)
       .catch(() => balanced);
   }
@@ -263,9 +287,22 @@ async function freshFix() {
   return fix;
 }
 
-function statusOf(fix, provisional) {
+// Feilene fra Android og iOS er engelske og tekniske («Current location is
+// unavailable...»). Eleven skal se noe forståelig, mens den rå teksten blir
+// med som detalj så du kan se hva som faktisk skjedde.
+function posisjonsfeil(ex) {
+  const rå = ex?.message || '';
+  // Vår egen tekst om manglende tillatelse skal stå som den er.
+  if (/tilgang/i.test(rå)) return ex;
+  const err = new Error('Fikk ikke posisjon fra telefonen. Sjekk at stedstjenester er på, og prøv igjen.');
+  err.code = 'nogps';
+  err.detail = rå;
+  return err;
+}
+
+function statusOf(fix, provisional, stale = false) {
   const { ok, distance } = isOnCampus(fix.coords.lat, fix.coords.lng);
-  return { coords: fix.coords, ok, distance, provisional };
+  return { coords: fix.coords, ok, distance, provisional, stale };
 }
 
 // Hent skolens område fra serveren og cache det lokalt. Kalles ved innlogging;
@@ -301,9 +338,14 @@ export function resolveCampusStatus(onUpdate) {
       await ensurePermission();
       const quick = await quickFix();
       if (quick) emit(statusOf(quick, true));
-      emit(statusOf(await freshFix(), false));
+      emit(statusOf(await freshFix(VISNING_MAX_ALDER_MS), false));
     } catch (ex) {
-      emit({ error: ex.message || 'Fikk ikke posisjon', provisional: false });
+      // Fikk vi ikke noe ferskt, er et gammelt punkt bedre enn en feilmelding
+      // i banneret – men det merkes som gammelt, og blir aldri et grønt «GPS
+      // OK». Har vi ingenting i det hele tatt, sier vi fra.
+      const nød = await Location.getLastKnownPositionAsync({ maxAge: NØD_MAX_ALDER_MS }).catch(() => null);
+      if (nød) emit(statusOf(toFix(nød), false, true));
+      else emit({ error: posisjonsfeil(ex).message, provisional: false });
     }
   })();
   return () => { cancelled = true; };
@@ -313,6 +355,19 @@ export function resolveCampusStatus(onUpdate) {
 export async function getFreshPosition() {
   await campusReady();
   await ensurePermission();
-  const fix = await freshFix();
-  return fix.coords;
+  try {
+    return (await freshFix(INNSJEKK_MAX_ALDER_MS)).coords;
+  } catch (ex) {
+    // Siste utvei: et punkt fra de siste par minuttene. En telefon som står
+    // stille innendørs klarer ikke alltid å regne ut noe nytt i det hele tatt,
+    // og da er alternativet at eleven ikke får registrert seg. To minutter er
+    // kort nok til at det fortsatt er der eleven står – og altfor kort til at
+    // gårsdagens skolepunkt kan snike seg inn. Finnes ikke engang det, skal
+    // registreringen feile.
+    const nød = await Location.getLastKnownPositionAsync({ maxAge: INNSJEKK_NØD_ALDER_MS }).catch(() => null);
+    if (!nød) throw posisjonsfeil(ex);
+    const fix = toFix(nød);
+    cachedFix = fix;
+    return fix.coords;
+  }
 }
