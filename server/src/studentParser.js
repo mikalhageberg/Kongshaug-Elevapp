@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { config } from './config.js';
+import { cellText, isBlankRow, normName, q, readTemplateHeader, throwRowErrors } from './sheetTemplate.js';
 
 // Tolker et opplastet regneark med elevlista.
 //
@@ -35,15 +36,6 @@ const SYSTEM_PROMPT = [
   'Svar KUN med kolonnenumre og radnummer – ikke gjengi innholdet i cellene.',
   'Hvis arket ikke har en kolonne for klasse, internat, rom eller hovedinstrument, sett feltet til null.',
 ].join(' ');
-
-// Navnenormalisering: samme idé som slugName, men behold ordmellomrom.
-function normName(s) {
-  return String(s || '').toLowerCase()
-    .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
 
 // Klasse: «1A», «vg1a» og «VG 1A» skal alle treffe «VG1A».
 const classKey = (s) => normName(s).replace(/\s+/g, '').replace(/^vg/, '');
@@ -138,6 +130,74 @@ export async function parseStudentsXlsx(rows, { classes = [], dorms = [], instru
     });
   }
 
+  if (!students.length && !existing.length) throw new Error('Fant ingen elever i arket.');
+  return { students, existing };
+}
+
+// ── Malen: tolkning helt uten OpenAI ─────────────────────────
+//
+// Når arket følger den faste malen trengs ingen modell – da vet vi hvilken
+// kolonne som er hva, og hele lista tolkes lokalt. Ingenting forlater skolen.
+//
+// Malen: rad 1 er overskriftsrad med kolonnenavnene under, én elev per rad
+// videre nedover. Rekkefølgen på kolonnene spiller ingen rolle, men navnene må
+// stemme – derfor sier vi tydelig ifra i stedet for å gjette (sheetTemplate.js).
+const TEMPLATE_HEADERS = {
+  fullName: 'Navn',
+  className: 'Klasse',
+  dorm: 'Internat',
+  room: 'Rom',
+  instrument: 'Hovedinstrument',
+};
+
+// Tolker et ark som følger malen. Kaster med en presis feilmelding hvis noe
+// ikke stemmer – da er det arket som skal rettes, ikke gjetningen som skal
+// bli bedre. (Uten mal: bruk parseStudentsXlsx, som spør OpenAI om oppsettet.)
+export function parseStudentsTemplate(rows, { classes = [], dorms = [], instruments = [], existingNames = [] } = {}) {
+  const grid = rows || [];
+  const { headerRow, cols } = readTemplateHeader(grid, TEMPLATE_HEADERS, ['fullName']);
+
+  const existingSet = new Set(existingNames.map(normName));
+  const seen = new Set();
+  const students = [], existing = [], feil = [];
+
+  // Sjekker en celle mot en fast liste. Tom celle er greit (admin fyller inn i
+  // forhåndsvisningen); en verdi som ikke finnes i lista er en skrivefeil.
+  const krev = (verdi, treff, rad, hva) => {
+    if (!verdi) return null;
+    if (treff) return treff;
+    feil.push(`rad ${rad}: ${q(verdi)} er ikke ${hva}`);
+    return null;
+  };
+
+  for (let i = headerRow + 1; i < grid.length; i++) {
+    const row = grid[i];
+    const radnr = i + 1;                       // radnummeret slik det står i Excel
+    const fullName = cellText(row, cols.fullName).replace(/\s+/g, ' ');
+    if (!fullName) {
+      // Tom navnecelle er greit hvis hele raden er tom, ellers er noe glemt.
+      if (!isBlankRow(row)) feil.push(`rad ${radnr}: mangler navn`);
+      continue;
+    }
+    const key = normName(fullName);
+    if (seen.has(key)) { feil.push(`rad ${radnr}: ${q(fullName)} står flere ganger i arket`); continue; }
+    seen.add(key);
+
+    const className = cellText(row, cols.className);
+    const dorm = cellText(row, cols.dorm);
+    const instrument = cellText(row, cols.instrument);
+    const student = {
+      fullName,
+      className: krev(className, matchClass(className, classes), radnr, 'en gyldig klasse'),
+      dorm: krev(dorm, matchDorm(dorm, dorms), radnr, 'et gyldig internat'),
+      room: cellText(row, cols.room) || null,
+      instrument: krev(instrument, matchInstrument(instrument, instruments), radnr, 'et gyldig hovedinstrument'),
+    };
+    if (existingSet.has(key)) existing.push(fullName);
+    else students.push(student);
+  }
+
+  throwRowErrors(feil);
   if (!students.length && !existing.length) throw new Error('Fant ingen elever i arket.');
   return { students, existing };
 }

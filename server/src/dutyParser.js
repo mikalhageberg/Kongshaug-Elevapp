@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { config } from './config.js';
 import { todayDate } from './andaktToken.js';
 import { isDateString, weekStartOf, mondayOfIsoWeek, isoWeekNumber } from './isoWeek.js';
+import { cellText, isBlankRow, normName, q, readTemplateHeader, throwRowErrors } from './sheetTemplate.js';
 
 // Tolker et opplastet regneark med tjeneste-turnus til strukturert data via
 // OpenAI, og løser opp ukenummer → mandagsdato og navn → elev-id lokalt.
@@ -44,14 +45,7 @@ const systemPrompt = (ledetekst) => [
   'Ikke dikt opp navn eller uker som ikke står i arket.',
 ].join(' ');
 
-// ── Navnenormalisering (samme idé som slugName, men behold ordmellomrom) ──
-function normName(s) {
-  return String(s || '').toLowerCase()
-    .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
+// ── Navnenormalisering (normName er delt, se sheetTemplate.js) ──
 function firstLastKey(norm) {
   const t = norm.split(' ').filter(Boolean);
   if (t.length < 2) return null;
@@ -148,4 +142,126 @@ export async function parseDutyXlsx(rows, students, ledetekst = 'kjøkkentjenest
   }
   if (!weeks.length) throw new Error('Fant ingen gyldige uker i arket.');
   return { year: parsed?.year ?? null, weeks };
+}
+
+// ── Malen: tolkning helt uten OpenAI ─────────────────────────
+//
+// Følger arket skolens mal, trengs ingen modell – da tolkes hele turnusen
+// lokalt på skolens server, og ingenting sendes ut.
+//
+// Malen: overskriftsrad øverst, én elev per rad under. Samme mal for
+// kjøkkentjeneste og internatvask.
+//
+//   | Uke | Navn          | Startdato  |
+//   | 34  | Ingrid Sæther | 2026-08-17 |
+//   |     | Ola Nordmann  |            |   ← tom «Uke» = samme uke som raden over
+//
+// «Startdato» er valgfri, og pinner uken til en konkret dato (nyttig ved
+// årsskifter). Uten den regnes mandagsdatoen ut fra ukenummeret, akkurat som
+// når OpenAI tolker arket.
+const DUTY_TEMPLATE_HEADERS = {
+  week: 'Uke',
+  name: 'Navn',
+  startDate: 'Startdato',
+};
+
+// «34» og «Uke 34» er begge greit. Alt annet er null (og blir en feilmelding).
+function parseWeekNumber(text) {
+  const m = /^(?:uke\s*)?(\d{1,2})$/i.exec(String(text).trim());
+  if (!m) return null;
+  const n = Number(m[1]);
+  return n >= 1 && n <= 53 ? n : null;
+}
+
+// En datocelle kan komme som tekst («2026-08-17», «17.08.2026») eller – hvis
+// den er formatert som dato i Excel – som et serienummer. Serienummeret telles
+// fra 1899-12-30 (Excels 1900-system, inkludert skuddårsfeilen fra 1900).
+function parseSheetDate(text) {
+  const t = String(text).trim();
+  if (!t) return null;
+  if (isDateString(t)) return t;
+  const norsk = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/.exec(t);
+  if (norsk) return `${norsk[3]}-${norsk[2].padStart(2, '0')}-${norsk[1].padStart(2, '0')}`;
+  if (/^\d+(\.\d+)?$/.test(t)) {
+    const serial = Math.floor(Number(t));
+    if (serial >= 61 && serial <= 100000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }
+  }
+  return null;
+}
+
+// Tolker et turnusark som følger malen. Samme returformat som parseDutyXlsx,
+// så forhåndsvisningen i admin er den samme uansett hvilken vei arket kom inn.
+export function parseDutyTemplate(rows, students) {
+  const grid = rows || [];
+  const { headerRow, cols } = readTemplateHeader(grid, DUTY_TEMPLATE_HEADERS, ['week', 'name']);
+
+  const today = todayDate();
+  const index = buildIndex(students);
+  const feil = [];
+  const uker = new Map();     // ukenummer -> { week, startDate, matched, unmatched, seen }
+  let forrigeUke = null;      // tom «Uke»-celle betyr «samme uke som raden over»
+
+  for (let i = headerRow + 1; i < grid.length; i++) {
+    const row = grid[i];
+    const radnr = i + 1;                       // radnummeret slik det står i Excel
+    // Tom rad skiller blokker: da arves ikke ukenummeret videre, slik at en
+    // glemt uke etter mellomrommet blir en tydelig feil i stedet for en gjetning.
+    if (isBlankRow(row)) { forrigeUke = null; continue; }
+    const ukeTekst = cellText(row, cols.week);
+    const navn = cellText(row, cols.name).replace(/\s+/g, ' ');
+    const datoTekst = cellText(row, cols.startDate);
+
+    let week = forrigeUke;
+    if (ukeTekst) {
+      week = parseWeekNumber(ukeTekst);
+      if (week == null) { feil.push(`rad ${radnr}: ${q(ukeTekst)} er ikke et gyldig ukenummer (1–53)`); continue; }
+    } else if (week == null) {
+      feil.push(`rad ${radnr}: mangler ukenummer`); continue;
+    }
+    forrigeUke = week;
+
+    if (!navn) { feil.push(`rad ${radnr}: mangler navn`); continue; }
+
+    const uke = uker.get(week)
+      || uker.set(week, { week, startDate: null, matched: [], unmatched: [], seen: new Set() }).get(week);
+
+    if (datoTekst) {
+      const iso = parseSheetDate(datoTekst);
+      if (!iso) { feil.push(`rad ${radnr}: ${q(datoTekst)} er ikke en gyldig dato (bruk 17.08.2026 eller 2026-08-17)`); continue; }
+      const mandag = weekStartOf(iso);
+      // Datoen og ukenummeret må peke på samme uke – ellers er ett av dem feil.
+      if (isoWeekNumber(iso).isoWeek !== week) {
+        feil.push(`rad ${radnr}: ${q(datoTekst)} er i uke ${isoWeekNumber(iso).isoWeek}, ikke uke ${week}`); continue;
+      }
+      if (uke.startDate && uke.startDate !== mandag) {
+        feil.push(`rad ${radnr}: uke ${week} har to ulike startdatoer (${uke.startDate} og ${mandag})`); continue;
+      }
+      uke.startDate = mandag;
+    }
+
+    // Navnene kobles mot elevlista lokalt. Ingen treff (eller flertydig) vises
+    // som «ikke funnet» i forhåndsvisningen, akkurat som i OpenAI-veien –
+    // det er en jobb for admin, ikke en feil i selve malen.
+    const stud = resolveStudent(navn, index);
+    if (!stud) { uke.unmatched.push(navn); continue; }
+    if (!uke.seen.has(stud.id)) {
+      uke.seen.add(stud.id);
+      uke.matched.push({ id: stud.id, fullName: stud.full_name });
+    }
+  }
+
+  throwRowErrors(feil);
+  const weeks = [...uker.values()]
+    .map(({ week, startDate, matched, unmatched }) => ({
+      week,
+      weekStart: resolveWeekStart(week, startDate, null, today),
+      matched,
+      unmatched,
+    }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  if (!weeks.length) throw new Error('Fant ingen uker i arket.');
+  return { year: null, weeks };
 }

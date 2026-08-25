@@ -617,10 +617,40 @@ function bulkAddModal(cfg, onSaved) {
         ${isStudent ? `
         <div style="background:#eef4fb;border:1px solid #d7e4f4;border-radius:10px;padding:12px 14px;margin-bottom:18px">
           <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">Importer fra Excel</div>
-          <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:10px">Last opp elevlista – OpenAI henter ut navn, klasse, internat og rom. Du kan rette radene før du oppretter.</div>
+          <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:10px">Last opp elevlista, så fylles radene under ut. Du kan rette dem før du oppretter.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;cursor:pointer">
+              <input type="radio" name="bxmode" value="mal" checked style="margin-top:2px" />
+              <span><b>Arket følger malen</b> – leses på skolens egen server. Ingenting sendes til OpenAI.</span>
+            </label>
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;cursor:pointer">
+              <input type="radio" name="bxmode" value="ai" style="margin-top:2px" />
+              <span><b>Tolk arket med OpenAI</b> – for ark som ikke følger malen. Bare de første radene sendes til OpenAI, som svarer med hvilken kolonne som er hva. Elevopplysningene i resten av arket sendes ikke ut.</span>
+            </label>
+          </div>
+          <details style="font-size:12.5px;line-height:1.55;background:#fff;border:1px solid #d7e4f4;border-radius:8px;padding:8px 12px;margin-bottom:10px">
+            <summary style="cursor:pointer;font-weight:800">Slik skal Excel-malen se ut</summary>
+            <ol style="margin:8px 0 0;padding-left:18px">
+              <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
+                  <b>Navn</b>, <b>Klasse</b>, <b>Internat</b>, <b>Rom</b>, <b>Hovedinstrument</b>.</li>
+              <li><b>Én elev per rad</b> nedover fra rad 2. Ingen tittel- eller tomme rader over overskriftene.</li>
+              <li><b>Navn</b> må være med, og skal være hele navnet i én celle («Ingrid Sæther»).
+                  Rekkefølgen på kolonnene spiller ingen rolle.</li>
+              <li>Kolonner skolen ikke bruker kan sløyfes helt – men en kolonne som er med må hete akkurat som over.
+                  Enkeltceller kan stå tomme; da fyller du dem inn selv i radene under.</li>
+              <li><b>Klasse</b>, <b>Internat</b> og <b>Hovedinstrument</b> må skrives som i listene her – <b>Rom</b> er fri tekst.</li>
+              <li>Bare <b>den første fanen</b> i arket leses.</li>
+            </ol>
+            <div style="margin-top:8px"><b>Klasse:</b> ${CLASSES.join(', ')}</div>
+            <div><b>Internat:</b> ${DORMS.join(', ')}</div>
+            <div><b>Hovedinstrument:</b> ${INSTRUMENTS.join(', ')}</div>
+            <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i arket, sier importen ifra med radnummer
+              i stedet for å gjette. Last ned malen under, så er overskriftene riktige fra start.</p>
+          </details>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <input type="file" id="bxlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:13px" />
             <button type="button" class="btn btn-ghost" id="bxlsxRead" style="height:38px;padding:0 16px;font-size:13.5px">Les inn fra Excel</button>
+            <button type="button" class="btn btn-ghost" id="bxlsxMal" style="height:38px;padding:0 16px;font-size:13.5px">Last ned mal</button>
           </div>
           <div id="bximport" style="font-size:12.5px;margin-top:9px;display:none"></div>
         </div>` : ''}
@@ -665,19 +695,28 @@ function bulkAddModal(cfg, onSaved) {
   for (let i = 0; i < 6; i++) addRow(false);
   bg.querySelector('#addrow').addEventListener('click', () => addRow(true));
 
-  // Excel-import: tolk arket med OpenAI og fyll radene, slik at admin kan
-  // rette før opprettelsen. Elever som allerede finnes hoppes over.
+  // Excel-import: les arket (malen lokalt, eller OpenAI for ark uten mal) og
+  // fyll radene, slik at admin kan rette før opprettelsen. Elever som allerede
+  // finnes hoppes over.
   if (isStudent) {
     const note = bg.querySelector('#bximport');
     const showNote = (html, color) => { note.innerHTML = html; note.style.color = color || 'var(--muted-2)'; note.style.display = 'block'; };
+
+    // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
+    bg.querySelector('#bxlsxMal').addEventListener('click', () => {
+      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument'].map((v) => ({ v, s: 1 }));
+      downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20] }));
+    });
+
     bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
       const input = bg.querySelector('#bxlsx');
       const file = input.files[0];
       if (!file) { showNote('Velg en Excel-fil (.xlsx).', 'var(--red-ink)'); return; }
+      const mode = bg.querySelector('input[name="bxmode"]:checked').value;
       const btn = bg.querySelector('#bxlsxRead'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
-      showNote('Leser arket med OpenAI…');
+      showNote(mode === 'ai' ? 'Leser arket med OpenAI…' : 'Leser arket…');
       try {
-        const qs = `classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`
+        const qs = `mode=${mode}&classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`
           + `&instruments=${encodeURIComponent(INSTRUMENTS.join(','))}`;
         const res = await fetch(`/api/users/parse-xlsx?${qs}`, {
           method: 'POST',
@@ -996,14 +1035,16 @@ const DUTY_KINDS = {
     navn: 'Kjøkkentjeneste',
     base: '/api/dinner/kitchen-duty',
     hjelp: 'Legg til elevene som har tjeneste, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen tjenesteuke på hjemskjermen i appen.',
-    importHjelp: 'Last opp en Excel-liste med kjøkkentjeneste – OpenAI leser ut hvem som har tjeneste hvilke uker, og du bekrefter før det legges inn.',
+    importHjelp: 'Last opp en Excel-liste med kjøkkentjeneste – hvem som har tjeneste hvilke uker leses ut, og du bekrefter før det legges inn.',
+    importOrd: 'tjeneste',
     lasteFeil: 'Kunne ikke laste kjøkkentjenesten.',
   },
   dorm: {
     navn: 'Internatvask',
     base: '/api/dorm-duty',
     hjelp: 'Legg til elevene som har vask, én uke av gangen. Bla framover for å planlegge kommende uker. Elevene ser sin egen vaskeuke på hjemskjermen i appen.',
-    importHjelp: 'Last opp en Excel-liste med internatvask – OpenAI leser ut hvem som har vask hvilke uker, og du bekrefter før det legges inn.',
+    importHjelp: 'Last opp en Excel-liste med internatvask – hvem som har vask hvilke uker leses ut, og du bekrefter før det legges inn.',
+    importOrd: 'vask',
     lasteFeil: 'Kunne ikke laste internatvasken.',
   },
 };
@@ -1032,9 +1073,39 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
       <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
         <div style="font-size:14px;font-weight:800;margin-bottom:4px">Importer fra Excel</div>
         <div style="font-size:12.5px;color:var(--muted-2);margin-bottom:12px">${cfg.importHjelp}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;cursor:pointer">
+            <input type="radio" name="dutyMode-${kind}" value="mal" checked style="margin-top:2px" />
+            <span><b>Arket følger malen</b> – leses på skolens egen server. Ingenting sendes til OpenAI.</span>
+          </label>
+          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;cursor:pointer">
+            <input type="radio" name="dutyMode-${kind}" value="ai" style="margin-top:2px" />
+            <span><b>Tolk arket med OpenAI</b> – for ark som ikke følger malen. Da sendes innholdet i arket, altså navnene på elevene som står oppført. Skolens elevliste sendes ikke.</span>
+          </label>
+        </div>
+        <details style="font-size:12.5px;line-height:1.55;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px">
+          <summary style="cursor:pointer;font-weight:800">Slik skal Excel-malen se ut</summary>
+          <ol style="margin:8px 0 0;padding-left:18px">
+            <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
+                <b>Uke</b>, <b>Navn</b>, <b>Startdato</b>.</li>
+            <li><b>Én elev per rad</b> nedover fra rad 2. Har flere elever ${cfg.importOrd} samme uke, får de hver sin rad –
+                da kan <b>Uke</b> stå tom på radene under, og uken over gjelder videre.</li>
+            <li><b>Uke</b> er ISO-ukenummer (1–53), skrevet som <b>34</b> eller <b>Uke 34</b>.
+                <b>Navn</b> er hele navnet i én celle («Ingrid Sæther»).</li>
+            <li><b>Startdato</b> er valgfri, og kan sløyfes helt. Tar du den med, skal det være <b>mandagen</b> i uken
+                (<b>17.08.2026</b> eller <b>2026-08-17</b>) – nyttig over et årsskifte. Uten dato velges den nærmeste
+                kommende uken med det nummeret.</li>
+            <li>Rekkefølgen på kolonnene spiller ingen rolle, men en kolonne som er med må hete akkurat som over.
+                Bare <b>den første fanen</b> i arket leses.</li>
+          </ol>
+          <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i uke eller dato, sier importen ifra med
+            radnummer i stedet for å gjette. Navn som ikke finnes blant elevene stopper ikke importen – de vises som
+            «ikke funnet» i forhåndsvisningen under.</p>
+        </details>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input type="file" id="dutyXlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:14px" />
           <button class="btn btn-primary" id="dutyXlsxUpload" style="height:44px;padding:0 18px">Les inn Excel</button>
+          <button class="btn btn-ghost" id="dutyXlsxMal" style="height:44px;padding:0 18px">Last ned mal</button>
         </div>
         <div id="dutyImportPreview" style="margin-top:14px"></div>
       </div>
@@ -1182,14 +1253,22 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     });
   }
 
+  // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
+  card.querySelector('#dutyXlsxMal').addEventListener('click', () => {
+    const header = ['Uke', 'Navn', 'Startdato'].map((v) => ({ v, s: 1 }));
+    downloadBlob(`${kind === 'kitchen' ? 'kjokkentjeneste' : 'internatvask'}-mal.xlsx`,
+      buildXlsx({ rows: [header], sheetName: cfg.navn, cols: [8, 26, 14] }));
+  });
+
   card.querySelector('#dutyXlsxUpload').addEventListener('click', async () => {
     const input = card.querySelector('#dutyXlsx');
     const file = input.files[0];
     if (!file) { toast('Velg en Excel-fil (.xlsx).'); return; }
+    const mode = card.querySelector(`input[name="dutyMode-${kind}"]:checked`).value;
     const btn = card.querySelector('#dutyXlsxUpload'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
-    previewEl.innerHTML = '<div style="color:var(--muted-2);font-size:13.5px">Leser arket med OpenAI…</div>';
+    previewEl.innerHTML = `<div style="color:var(--muted-2);font-size:13.5px">${mode === 'ai' ? 'Leser arket med OpenAI…' : 'Leser arket…'}</div>`;
     try {
-      const res = await fetch(`${cfg.base}/parse`, {
+      const res = await fetch(`${cfg.base}/parse?mode=${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
         body: file, credentials: 'same-origin',

@@ -4,7 +4,7 @@ import db from '../db.js';
 import { config } from '../config.js';
 import { hashPassword, requireAuth, requireAdmin, normalizeUsername } from '../auth.js';
 import { readXlsxGrid } from '../xlsxReader.js';
-import { parseStudentsXlsx } from '../studentParser.js';
+import { parseStudentsXlsx, parseStudentsTemplate } from '../studentParser.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -105,19 +105,29 @@ router.post('/', async (req, res) => {
   });
 });
 
-// POST /api/users/parse-xlsx – les en opplastet elevliste (.xlsx/.csv), tolk den
-// med OpenAI og returner en FORHÅNDSVISNING. Skriver ikke til databasen; admin
-// bekrefter (og kan rette) før opprettelsen skjer via /bulk under.
+// POST /api/users/parse-xlsx – les en opplastet elevliste (.xlsx/.csv) og
+// returner en FORHÅNDSVISNING. Skriver ikke til databasen; admin bekrefter
+// (og kan rette) før opprettelsen skjer via /bulk under.
+//
+// To måter å tolke arket på, styrt av ?mode:
+//   mal (standard) – arket følger skolens faste mal (overskriftsrad med
+//        Navn/Klasse/Internat/Rom/Hovedinstrument). Tolkes lokalt, ingen
+//        OpenAI, ingenting sendes ut av skolen.
+//   ai            – vilkårlig ark: OpenAI får bare de første radene og svarer
+//        med hvilke kolonner som er hva. Se studentParser.js.
+//
 // Tillatte klasser/internat sendes som query-parametre fra frontend, slik at
 // CLASSES/DORMS i admin.js forblir eneste fasit.
 router.post('/parse-xlsx', express.raw({ type: () => true, limit: '5mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Tom fil.' });
-  if (!config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY).' });
+  const useAi = req.query.mode === 'ai';
+  if (useAi && !config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY). Bruk malen i stedet.' });
   const split = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
   try {
     const { rows } = readXlsxGrid(req.body);
     const existingNames = db.prepare("SELECT full_name FROM users WHERE role = 'student'").all().map((r) => r.full_name);
-    const preview = await parseStudentsXlsx(rows, {
+    const tolk = useAi ? parseStudentsXlsx : parseStudentsTemplate;
+    const preview = await tolk(rows, {
       classes: split(req.query.classes),
       dorms: split(req.query.dorms),
       instruments: split(req.query.instruments),

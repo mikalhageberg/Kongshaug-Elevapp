@@ -12,7 +12,7 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import { currentWeekStart, isDateString, shiftWeek, weekInfo, weekStartOf } from '../isoWeek.js';
 import { dutyWeek, dutyWeeks, hasDuty, kindOf } from '../duty.js';
 import { readXlsxGrid } from '../xlsxReader.js';
-import { parseDutyXlsx } from '../dutyParser.js';
+import { parseDutyXlsx, parseDutyTemplate } from '../dutyParser.js';
 
 export function createDutyRouter(kind) {
   const { navn, ledetekst } = kindOf(kind);
@@ -61,16 +61,23 @@ export function createDutyRouter(kind) {
     res.status(201).json({ week: dutyWeek(kind, week) });
   });
 
-  // ADMIN: last opp et Excel-ark med turnus, tolk det med OpenAI og returner en
-  // FORHÅNDSVISNING (uke → treff/ikke-funnet). Skriver ikke til databasen.
+  // ADMIN: last opp et Excel-ark med turnus og returner en FORHÅNDSVISNING
+  // (uke → treff/ikke-funnet). Skriver ikke til databasen.
+  //
+  // To måter å tolke arket på, styrt av ?mode (samme valg som elevlista):
+  //   mal (standard) – arket følger skolens faste mal (Uke/Navn/Startdato).
+  //        Tolkes lokalt, ingen OpenAI, ingenting sendes ut av skolen.
+  //   ai            – vilkårlig ark: OpenAI leser ut uker og navn. Elevlista
+  //        sendes ikke; navnene kobles mot elevene lokalt. Se dutyParser.js.
   router.post('/parse', requireAdmin, express.raw({ type: () => true, limit: '5mb' }), async (req, res) => {
     const buf = req.body;
     if (!Buffer.isBuffer(buf) || buf.length === 0) return res.status(400).json({ error: 'Tom fil.' });
-    if (!config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY).' });
+    const useAi = req.query.mode === 'ai';
+    if (useAi && !config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY). Bruk malen i stedet.' });
     try {
       const { rows } = readXlsxGrid(buf);
       const students = db.prepare("SELECT id, full_name FROM users WHERE role = 'student' AND active = 1").all();
-      res.json(await parseDutyXlsx(rows, students, ledetekst));
+      res.json(useAi ? await parseDutyXlsx(rows, students, ledetekst) : parseDutyTemplate(rows, students));
     } catch (ex) {
       res.status(400).json({ error: ex.message || 'Kunne ikke lese filen.' });
     }

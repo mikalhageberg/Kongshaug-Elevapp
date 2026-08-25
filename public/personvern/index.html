@@ -116,8 +116,8 @@
       <li><b>OpenAI</b> – tolker filer som administrasjonen selv laster opp, slik at innholdet slipper å skrives inn manuelt. Dette skjer aldri automatisk, og aldri med oppmøte-, posisjons- eller middagsdata. Følgende sendes:
         <ul>
           <li><b>Ukeoppslag (PDF)</b>: middagsmeny og internatvakt leses ut. Oppslaget inneholder navn på ansatte som har internatvakt.</li>
-          <li><b>Kjøkkentjeneste og internatvask (Excel)</b>: innholdet i det opplastede arket, som inneholder navnene på elevene som har tjeneste eller vask. Skolens elevliste sendes ikke.</li>
-          <li><b>Elevliste (Excel)</b>: kun de første radene i arket, slik at tjenesten kan kjenne igjen hvilke kolonner arket har. Resten av arket – og dermed de aller fleste elevene – tolkes på skolens egen server og sendes aldri ut.</li>
+          <li><b>Kjøkkentjeneste og internatvask (Excel)</b>: innholdet i det opplastede arket, som inneholder navnene på elevene som har tjeneste eller vask. Skolens elevliste sendes ikke. Bruker administrasjonen skolens egen Excel-mal, tolkes arket på skolens server, og ingenting sendes til OpenAI.</li>
+          <li><b>Elevliste (Excel)</b>: kun de første radene i arket, slik at tjenesten kan kjenne igjen hvilke kolonner arket har. Resten av arket – og dermed de aller fleste elevene – tolkes på skolens egen server og sendes aldri ut. Bruker administrasjonen skolens egen Excel-mal, tolkes <i>hele</i> arket på skolens server, og ingenting sendes til OpenAI.</li>
         </ul>
         Opplysningene overføres til OpenAI i USA. OpenAI oppgir at data som sendes inn via deres programmeringsgrensesnitt ikke brukes til å trene modellene deres.</li>
       <li><b>Brevo</b> – sender automatiske e-postoversikter til ansatte (brannliste/kjøkken), hvis skolen har aktivert dette</li>

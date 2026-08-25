@@ -139,6 +139,41 @@ instrumentet eller notestativet, ikke av seg selv.
 Hovedinstrument settes på eleven i admin (`INSTRUMENTS` i `admin.js` er fasit)
 og leses også ut av en opplastet elevliste.
 
+### Importere elever fra Excel
+
+Under **Brukere → Legg til flere elever** kan hele elevlista lastes opp. Arket
+kan leses på to måter, og du velger selv:
+
+- **Arket følger malen** (standard) – tolkes lokalt på skolens server.
+  Ingenting sendes til OpenAI. Krever at arket er satt opp slik:
+
+  | Navn | Klasse | Internat | Rom | Hovedinstrument |
+  | ---- | ------ | -------- | --- | --------------- |
+  | Ingrid Sæther | VG1A | Treet 1 | 12 | Fiolin |
+  | Ola Nordmann | VG2B | Svingen nede | 3B | Trommer/slagverk |
+
+  - **Rad 1 er overskriftsraden** og skal inneholde postene, skrevet nøyaktig
+    som over. Én elev per rad nedover fra rad 2, uten tittelrader eller tomme
+    rader over overskriftene.
+  - `Navn` må være med (hele navnet i én celle). Rekkefølgen på kolonnene
+    spiller ingen rolle, og kolonner skolen ikke bruker kan sløyfes helt – men
+    en kolonne som er med må hete akkurat som i tabellen.
+  - `Klasse`, `Internat` og `Hovedinstrument` må være verdier fra `CLASSES`,
+    `DORMS` og `INSTRUMENTS` i `admin.js`. `Rom` er fri tekst, og enkeltceller
+    kan stå tomme (fylles inn i forhåndsvisningen). Bare første fane leses.
+  - Er det en skrivefeil, avvises arket med **radnummer og hvilken celle** som
+    er feil, i stedet for at importen gjetter. Knappen **Last ned mal** gir en
+    tom .xlsx med overskriftene ferdig utfylt.
+
+- **Tolk arket med OpenAI** – for ark som ikke følger malen. Bare de første
+  radene sendes til OpenAI, som svarer med hvilken kolonne som er hva; resten
+  av arket tolkes lokalt. Krever `OPENAI_API_KEY`.
+
+Begge veier ender i en forhåndsvisning som admin kan rette før elevene faktisk
+opprettes. Elever som allerede finnes hoppes over. Serveren styres av
+`?mode=mal|ai` på `POST /api/users/parse-xlsx`; koden ligger i
+`server/src/studentParser.js`.
+
 ### Ukestjenester: kjøkkentjeneste og internatvask
 
 Begge går på rundgang, én uke av gangen, og er bygget på samme kode i alle lag –
@@ -147,7 +182,7 @@ admin og `DutyPlan` i mobilappen. Bare tekstene, ikonet og tabellen skiller dem,
 så en endring i den ene gjelder automatisk for den andre.
 
 - **Admin**: «Kjøkken» og «Internat» har hver sin side med ukeblaing, søk etter
-  elev og Excel-import (OpenAI leser arket, du bekrefter før det lagres).
+  elev og Excel-import (se under; du bekrefter før det lagres).
 - **Elevappen**: et tydelig kort på hjemskjermen i tjenesteuken, og et diskret
   varsel uken før. Hele rundgangen ligger under «Middag» og «Internat».
 - **Push**: slås på under admin → **Varsler → Varsel om ukestjeneste**. Sendes
@@ -157,6 +192,40 @@ så en endring i den ene gjelder automatisk for den andre.
 API-et ligger på `/api/dorm-duty` for internatvask. Kjøkkentjenesten beholder
 `/api/dinner/kitchen-duty`: den stien ligger i utrullede app-versjoner, og en
 flytting ville brutt dem.
+
+#### Importere turnus fra Excel
+
+Samme valg som for elevlista, og samme mal for begge tjenestene:
+
+- **Arket følger malen** (standard) – tolkes lokalt, ingen OpenAI:
+
+  | Uke | Navn | Startdato |
+  | --- | ---- | --------- |
+  | 34 | Ingrid Sæther | 17.08.2026 |
+  |  | Ola Nordmann |  |
+  | 35 | Kari Ås |  |
+
+  - **Rad 1 er overskriftsraden** med postene skrevet nøyaktig som over, og én
+    elev per rad nedover fra rad 2. Har flere elever tjeneste samme uke, får de
+    hver sin rad – da kan `Uke` stå tom, og uken over gjelder videre (en helt
+    tom rad avslutter blokken).
+  - `Uke` er ISO-ukenummer 1–53, som `34` eller `Uke 34`. `Navn` er hele navnet
+    i én celle.
+  - `Startdato` er valgfri og kan sløyfes helt. Er den med, skal det være
+    **mandagen** i uken (`17.08.2026`, `2026-08-17`, eller en datoformatert
+    celle) – nyttig over et årsskifte. Uten dato velges nærmeste kommende uke
+    med det nummeret, som i OpenAI-veien.
+  - Skrivefeil i uke eller dato avvises med radnummer, og en dato som havner i
+    en annen uke enn ukenummeret sier ifra. **Navn** som ikke finnes blant
+    elevene stopper *ikke* importen – de vises som «ikke funnet» i
+    forhåndsvisningen, slik admin kan rette opp der.
+
+- **Tolk arket med OpenAI** – for ark som ikke følger malen. Da sendes
+  innholdet i arket (navnene som står oppført); skolens elevliste sendes ikke.
+
+Styres av `?mode=mal|ai` på `POST {base}/parse`; koden ligger i
+`server/src/dutyParser.js`. Malen deler kode med elevlista
+(`server/src/sheetTemplate.js`), så feilmeldingene er de samme begge steder.
 
 ### Juksesikring (GPS)
 
