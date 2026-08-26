@@ -30,6 +30,14 @@ Apple/Google.
    Sett verdiene tilbake (10 minutter, 50 %) når appen er godkjent, og bruk
    **Nullstill konkurransen** nederst på siden for å slette reviewerens
    testøkter og bilder.
+5. **Gi testkontoen en internatvask-oppgave å signere.** Samme grunn som over:
+   uten dette ser reviewer bare en tom vaskeplan, og kommer aldri fram til
+   signeringen med Face ID. Under admin → **Internat**:
+   - gi testkontoen et **internat** (Elever → rediger kontoen),
+   - opprett minst én **oppgave** på det internatet, med en beskrivelse,
+   - sett testkontoen opp på oppgaven i **inneværende uke**.
+
+   Fjern oppsettet igjen når appen er godkjent.
 
 ## Til App Review – engelsk (dette limes inn)
 
@@ -37,9 +45,10 @@ App Review-køen er internasjonal, og notatet er det eneste stedet du får
 forklart hvorfor appen krever GPS og hvorfor den ber om bilder. Det må derfor
 kunne leses av en reviewer som ikke kan norsk.
 
-Feltet i App Store Connect tar **4000 tegn**, og de to versjonene under er på
-rundt 3100 hver – de får ikke plass sammen. Lim inn **den engelske**. Den norske
-under er kilden, for skolens egen del.
+Feltet i App Store Connect tar **4000 tegn**, og den engelske under ligger nå på
+rundt 3800 – den fyller feltet nesten helt, og de to versjonene får ikke
+plass sammen. Lim inn **den engelske**. Den norske under er kilden, for skolens
+egen del. Legger du til mer, må noe annet kortes ned.
 
 ```
 This is a closed app for a single school (Kongshaug Musikkgymnas, Norway).
@@ -61,56 +70,59 @@ continuously.
 
 The test account above is exempt from this requirement (this one account
 only), so you can test the full flow without being on site. A normal student
-account would see "You are not on school grounds" anywhere else. That is
-expected and correct behaviour, not a bug.
+account would see "You are not on school grounds" anywhere else - expected
+behaviour, not a bug.
 
 About the QR code in "Andakt" (morning assembly):
 Attendance is normally registered by scanning a rotating QR code shown on a
-screen at the school. The test account is exempt from this for the same
-reason.
+screen at the school. The test account is exempt for the same reason.
 
 About "Øvekonkurranse" (practice competition, with documentation photo):
-The school is a music programme. It periodically runs a competition where
+The school is a music programme, and periodically runs a competition where
 students practise as much as possible on their main instrument. The student
 starts a stopwatch in the app, completes a mandatory warm-up, and registers
 the session when finished. The screen stays awake while the timer runs, so the
 phone can rest on a music stand without locking.
 
 Roughly half of all sessions (the share is set by the school) must be
-documented with a photo before they can be registered. This is a simple check
+documented with a photo before they can be registered. This is a check
 against someone just letting the clock run.
 
 IMPORTANT ABOUT THIS PHOTO - PRIVACY:
 The app explicitly asks the student NOT to photograph themselves or anyone
-else. The text shown on the camera screen reads, in Norwegian: "Ta gjerne
-bilde av instrumentet, notestativet eller rommet – helst ikke av deg selv
-eller andre." ("Please photograph the instrument, the music stand or the room
-- preferably not yourself or others.") The same instruction is repeated before
-the photo is taken and in the privacy policy. The purpose is to document that
-practice took place, not who practised - the student is already identified by
-their own login, so a photo of the person would add nothing.
+else. The camera screen says, in Norwegian: "Please photograph the
+instrument, the music stand or the room - preferably not yourself or others."
+The same instruction is repeated before the photo is taken and in the privacy
+policy. The purpose is to document that
+practice took place, not who practised - the student is already identified
+by their login, so a photo of the person would add nothing.
 
-The photo is stored on the school's own server together with the session, is
-visible only to the student and the school administration, and is deleted
-automatically along with the rest of the practice history. It is never shared
-with third parties.
+The photo is stored on the school's own server with the session, is visible
+only to the student and the administration, is deleted automatically with the
+rest of the practice history, and is never shared with third parties.
 
-The camera is therefore used for two things in this app: scanning the QR code
-for morning assembly, and taking these documentation photos. Both are covered
-by the camera usage description.
+The camera is used for two things only: scanning the assembly QR code, and
+taking these documentation photos. Both are covered by the camera usage
+description.
 
 About "Internat" and "Middag" (weekly duties):
-Students take turns with dormitory cleaning and kitchen duty, one week at a
-time. These tabs show who has which duty in which week. The school can enable
+Students take turns with dormitory cleaning and kitchen duty, one week each.
+These tabs show who has which duty in which week. The school can enable
 a push notification reminding students of their duty week on Sunday evening.
-No data is collected here - it only displays a schedule entered by the
-administration.
+
+Dormitory cleaning is divided into tasks, each with a written description the
+student opens in the app. When the job is done, the student signs for it with
+Face ID or fingerprint - see below.
 
 About Face ID / device passcode:
 The app locks behind the device's own Face ID / fingerprint / passcode on each
-launch (expo-local-authentication; the app stores no PIN of its own). If the
-device has no biometrics or passcode configured, the user passes through
-without a check.
+launch, and the same check is used when a student signs off a dormitory task
+(expo-local-authentication; the app stores no PIN of its own). Only the time,
+who signed, and that the device confirmed a biometric unlock are stored - no
+biometric data is read or stored by the app, and the check happens entirely on
+the device, through iOS. If the device has no biometrics or passcode set up,
+the user passes through without a check, and signing is done in the browser
+version with the student's password instead.
 
 Privacy policy: https://elevapp.online/personvern/
 ```
@@ -173,14 +185,21 @@ kameratilgang.
 Om "Internat" og "Middag" (ukestjenester):
 Elevene har internatvask og kjøkkentjeneste på rundgang, én uke av gangen.
 Fanene viser hvem som har tjeneste hvilken uke. Skolen kan slå på et
-push-varsel som minner elevene på tjenesteuken sin søndag kveld. Ingen
-registrering eller innsamling skjer her - det er ren visning av en plan
-administrasjonen legger inn.
+push-varsel som minner elevene på tjenesteuken sin søndag kveld.
+
+Internatvasken er delt i oppgaver - trappegangen, fellesskjøkkenet og så
+videre - hver med en skriftlig beskrivelse eleven åpner i appen. Når jobben er
+gjort, signerer eleven for den med Face ID eller fingeravtrykk - se under.
 
 Om Face ID / telefonkode:
-Appen låses bak enhetens egen Face ID/fingeravtrykk/kode ved hver åpning
-(expo-local-authentication, ingen egen PIN lagres av appen). Har enheten ingen
-biometri/kode registrert, slippes man gjennom uten sjekk.
+Appen låses bak enhetens egen Face ID/fingeravtrykk/kode ved hver åpning, og
+den samme sjekken brukes når eleven signerer for en vaskeoppgave
+(expo-local-authentication, ingen egen PIN lagres av appen). Det eneste som
+lagres er tidspunktet, hvem som signerte, og at enheten bekreftet en
+biometrisk opplåsing - ingen biometriske data leses eller lagres av appen, og
+kontrollen skjer i sin helhet på enheten, gjennom iOS. Har enheten ingen
+biometri/kode registrert, slippes man gjennom uten sjekk, og signeringen
+gjøres i stedet i nettleserversjonen med elevens eget passord.
 
 Personvernerklæring: https://elevapp.online/personvern/
 ```
@@ -192,6 +211,11 @@ Personvernerklæring: https://elevapp.online/personvern/
   oppmøtehistorikk og **dokumentasjonsbilder fra øvekonkurransen**. Ingen
   helseopplysninger. Se `public/personvern/index.html` for full oversikt over
   hva som faktisk lagres.
+
+  Signaturene på internatvask er kontoknyttet bruksdata (tidspunkt, hvem,
+  og hvordan det ble signert) under *App Functionality*. **Biometri skal ikke
+  krysses av** i noen av skjemaene: Face ID-kontrollen skjer på enheten, og
+  hverken ansikts- eller fingeravtrykksdata når appen.
 
   Bildene må legges inn i begge skjemaene før neste innsending:
   - **App Store Connect → App Privacy:** `User Content → Photos or Videos`,
