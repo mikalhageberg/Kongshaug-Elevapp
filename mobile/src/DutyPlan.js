@@ -66,15 +66,21 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
           const min = s.id === user?.id;
           const rad = (
             <View key={s.dutyId || s.id} style={[styles.dutyRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}>
-              <View style={{ flex: 1 }}>
+              {/* Navnet får alltid minst dutyMain.minWidth. Blir det for trangt –
+                  lange navn, eller stor skrift i systeminnstillingene – brekker
+                  merkelappene ned på en egen linje i stedet for å presse navnet
+                  ned til én bokstav per linje. */}
+              <View style={styles.dutyMain}>
                 <Text style={styles.dutyName}>{s.fullName}</Text>
                 {cfg.hasTasks && s.task ? (
                   <Text style={styles.dutyTask}>{s.task.code} · {s.task.title}</Text>
                 ) : null}
               </View>
-              {cfg.hasTasks && s.done ? <Pill tone="green" text="Signert" /> : null}
-              {min ? <Pill tone="amber" text="Deg" /> : null}
-              <Text style={styles.dutyClass}>{s.className || ''}</Text>
+              <View style={styles.dutyMeta}>
+                {cfg.hasTasks && s.done ? <Pill tone="green" text="Signert" /> : null}
+                {min ? <Pill tone="amber" text="Deg" /> : null}
+                <Text style={styles.dutyClass}>{s.className || ''}</Text>
+              </View>
             </View>
           );
           // Egne oppgaver kan åpnes: der ligger hele beskrivelsen og signeringen.
@@ -161,8 +167,10 @@ const styles = StyleSheet.create({
   h1: { fontSize: 19, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
   date: { fontSize: 13, fontWeight: '700', color: C.muted2, marginTop: 2 },
   tom: { fontSize: 14, color: C.muted, lineHeight: 20, paddingHorizontal: 18, paddingVertical: 10 },
-  dutyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 11 },
-  dutyName: { flex: 1, fontSize: 15, fontWeight: '700', color: C.ink },
+  dutyRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 10, rowGap: 6, paddingHorizontal: 18, paddingVertical: 11 },
+  dutyMain: { flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 150 },
+  dutyMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, marginLeft: 'auto' },
+  dutyName: { fontSize: 15, fontWeight: '700', color: C.ink },
   dutyClass: { fontSize: 13, fontWeight: '600', color: C.muted2 },
   dutyTask: { fontSize: 12.5, fontWeight: '700', color: C.muted2, marginTop: 2 },
   mineTittel: { fontSize: 14, fontWeight: '800', color: C.ink, marginBottom: 6 },
