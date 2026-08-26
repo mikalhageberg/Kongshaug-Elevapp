@@ -50,7 +50,8 @@ const publicDuty = (r) => ({
   className: r.class_name,
   dorm: r.dorm,
   task: r.task_id
-    ? { id: r.task_id, code: r.task_code, title: r.task_title, description: r.task_description }
+    // dorm er med fordi admin-oversikten grupperer radene på internat.
+    ? { id: r.task_id, dorm: r.task_dorm, code: r.task_code, title: r.task_title, description: r.task_description }
     : null,
   done: r.done_at
     ? { at: r.done_at, method: r.done_method, by: r.done_by_name || null }
@@ -79,7 +80,7 @@ export function dutyStudents(kind, weekStart) {
     .prepare(
       `SELECT d.id AS duty_id, u.id, u.full_name, u.class_name, u.dorm,
               d.done_at, d.done_method, s.full_name AS done_by_name,
-              t.id AS task_id, t.code AS task_code, t.title AS task_title,
+              t.id AS task_id, t.dorm AS task_dorm, t.code AS task_code, t.title AS task_title,
               t.description AS task_description, t.sort_order AS task_sort
          FROM ${table} d
          JOIN users u ON u.id = d.user_id
