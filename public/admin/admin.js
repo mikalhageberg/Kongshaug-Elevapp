@@ -1159,9 +1159,6 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
       <div style="margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
           <div style="font-size:14px;font-weight:800;flex:1">Oppgaver</div>
-          <select id="taskDorm" class="field" style="height:38px;width:auto;font-size:13.5px;padding:0 10px">
-            ${DORMS.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
-          </select>
           <button class="btn btn-primary" id="taskNew" style="height:38px;padding:0 16px;font-size:13.5px">Ny oppgave</button>
         </div>
         <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:12px">
@@ -1170,9 +1167,14 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         </div>
         <div id="taskList"></div>
       </div>` : ''}
-      <div style="font-size:15px;font-weight:800;margin:22px 0 10px">${cfg.hasTasks ? 'Oversikt uke for uke' : 'Kommende uker'}</div>
-      ${cfg.hasTasks ? `<div style="font-size:12.5px;color:var(--muted-2);margin:-6px 0 10px">Hvem som har hvilken oppgave, og om den er signert. Klikk en uke for å redigere den.</div>` : ''}
-      <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:${cfg.hasTasks ? 'auto' : 'hidden'}"></div>
+      <div id="dutyOversikt">
+        <div style="display:flex;align-items:center;gap:12px;margin:22px 0 10px">
+          <div style="font-size:15px;font-weight:800;flex:1">${cfg.hasTasks ? 'Oversikt uke for uke' : 'Kommende uker'}</div>
+          ${cfg.hasTasks ? `<button class="btn btn-ghost" id="dutyUtvid" style="height:36px;padding:0 14px;font-size:13.5px">Utvid</button>` : ''}
+        </div>
+        ${cfg.hasTasks ? `<div style="font-size:12.5px;color:var(--muted-2);margin:-6px 0 10px">Alle internat, hele rundgangen. Klikk en celle for å redigere den uken.</div>` : ''}
+        <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:${cfg.hasTasks ? 'auto' : 'hidden'}"></div>
+      </div>
     </div>`);
   container.appendChild(card);
 
@@ -1271,8 +1273,11 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   // regnearket. Oppgaver som har vært i bruk deaktiveres framfor å slettes, så
   // historikken beholder hva som faktisk ble gjort.
   let tasks = [];
+  // Internatet «Ny oppgave» foreslår. Følger det du sist opprettet en oppgave
+  // på, siden man som regel legger inn flere på rad for samme hus.
+  let sisteInternat = DORMS[0];
+  let utvidet = false;                      // oversikten i full skjerm
   const taskListEl = card.querySelector('#taskList');
-  const taskDormEl = card.querySelector('#taskDorm');
 
   async function loadTasks() {
     if (!cfg.hasTasks) return;
@@ -1282,10 +1287,16 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     renderTaskPicker();
   }
 
+  // Alle internat under hverandre, med internatnavnet som mellomoverskrift.
+  // Rekkefølgen er DORMS, så lista står i samme rekkefølge overalt ellers i
+  // admin; internat som ikke har oppgaver ennå tar ikke plass.
   function renderTasks() {
-    const dorm = taskDormEl.value;
-    const mine = tasks.filter((t) => t.dorm === dorm);
-    taskListEl.innerHTML = mine.length ? mine.map((t) => `
+    const grupper = DORMS
+      .map((dorm) => ({ dorm, mine: tasks.filter((t) => t.dorm === dorm) }))
+      .filter((g) => g.mine.length);
+    taskListEl.innerHTML = grupper.length ? grupper.map((g) => `
+      <div style="font-size:12.5px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em;padding:14px 0 2px">${esc(g.dorm)}</div>
+      ${g.mine.map((t) => `
       <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid #f2f4f6">
         <div style="flex:1;min-width:0;${t.active ? '' : 'opacity:.55'}">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1299,7 +1310,8 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           <button class="btn btn-ghost" data-toggle="${t.id}" style="height:34px;padding:0 12px;font-size:13px">${t.active ? 'Deaktiver' : 'Aktiver'}</button>
           <button class="btn btn-ghost" data-slett="${t.id}" style="height:34px;padding:0 12px;font-size:13px;color:var(--red-ink)">Slett</button>
         </div>
-      </div>`).join('') : '<div style="padding:14px 0;color:var(--muted-2);font-size:13.5px;border-top:1px solid #f2f4f6">Ingen oppgaver på dette internatet ennå.</div>';
+      </div>`).join('')}
+    `).join('') : '<div style="padding:14px 0;color:var(--muted-2);font-size:13.5px;border-top:1px solid #f2f4f6">Ingen oppgaver opprettet ennå. Trykk «Ny oppgave» for å legge inn den første.</div>';
 
     taskListEl.querySelectorAll('[data-edit]').forEach((b) =>
       b.addEventListener('click', () => taskModal(tasks.find((t) => t.id === Number(b.dataset.edit)))));
@@ -1342,7 +1354,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         <div style="padding:22px 26px">
           <label class="field-label">Internat</label>
           <select id="tDorm" class="field" ${ny ? '' : 'disabled'} style="height:44px">
-            ${DORMS.map((d) => `<option value="${esc(d)}" ${(task ? task.dorm : taskDormEl.value) === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+            ${DORMS.map((d) => `<option value="${esc(d)}" ${(task ? task.dorm : sisteInternat) === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
           </select>
           <label class="field-label" style="margin-top:14px">Navn på oppgaven</label>
           <input id="tTitle" class="field" style="height:44px" placeholder="80-gongen" value="${task ? esc(task.title) : ''}" />
@@ -1379,7 +1391,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         if (ny) await api('/api/dorm-tasks', { method: 'POST', body });
         else await api(`/api/dorm-tasks/${task.id}`, { method: 'PATCH', body });
         close();
-        taskDormEl.value = body.dorm;
+        sisteInternat = body.dorm;
         await loadTasks();
         loadUpcoming();
         toast(ny ? 'Oppgaven er opprettet' : 'Oppgaven er lagret');
@@ -1389,16 +1401,35 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
 
   if (cfg.hasTasks) {
     card.querySelector('#taskNew').addEventListener('click', () => taskModal(null));
-    taskDormEl.addEventListener('change', () => { renderTasks(); loadUpcoming(); });
     // Bytter man oppgave, endrer det hvem som allerede er satt opp på den.
     card.querySelector('#dutyTaskPick').addEventListener('change', renderResults);
+
+    // Utvid: oversikten legger seg over hele skjermen, og viser dobbelt så
+    // mange uker – det er bredden en ukesmatrise trenger.
+    const oversiktEl = card.querySelector('#dutyOversikt');
+    const utvidKnapp = card.querySelector('#dutyUtvid');
+    const settUtvidet = (på) => {
+      utvidet = på;
+      oversiktEl.style.cssText = på
+        ? 'position:fixed;inset:0;z-index:60;background:var(--bg,#f4f5f7);padding:18px 22px;overflow:auto'
+        : '';
+      utvidKnapp.textContent = på ? 'Lukk' : 'Utvid';
+      document.body.style.overflow = på ? 'hidden' : '';
+      loadUpcoming();
+    };
+    utvidKnapp.addEventListener('click', () => settUtvidet(!utvidet));
+    // Escape lukker. Sjekken mot isConnected er fordi lytteren ligger på
+    // document og overlever at man bytter side i admin.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && utvidet && card.isConnected) settUtvidet(false);
+    });
   }
 
   // Oversikt over rundgangen framover, så admin ser hull før de oppstår.
   // For internatvasken er dette en matrise: oppgavene nedover, ukene bortover –
   // samme oppslag som henger på veggen, men med signaturene fylt inn.
   async function loadUpcoming() {
-    const d = await api(`${cfg.base}?weeks=8`).catch(() => null);
+    const d = await api(`${cfg.base}?weeks=${utvidet ? 20 : 8}`).catch(() => null);
     if (!d) { upcomingEl.innerHTML = ''; return; }
     if (cfg.hasTasks) return renderMatrise(d.weeks);
     upcomingEl.innerHTML = d.weeks.map((w) => `
@@ -1411,36 +1442,44 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     upcomingEl.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => loadWeek(b.dataset.week)));
   }
 
-  // Matrisen: én rad per oppgave på det valgte internatet, én kolonne per uke.
-  // Cellen viser hvem som har oppgaven og om den er signert – grønn for gjort,
-  // gul for uker som har vært eller pågår uten signatur, grå for det som ligger
-  // fram i tid. Rader satt opp uten oppgave samles nederst, så de ikke blir borte.
+  // Matrisen: alle internat under hverandre, én rad per oppgave og én kolonne
+  // per uke. Cellen viser hvem som har oppgaven og om den er signert – grønn
+  // for gjort, gul for uker som har vært eller pågår uten signatur, grå for det
+  // som ligger fram i tid. Rader satt opp uten oppgave havner nederst i sitt
+  // eget internat, så ingen blir borte fra oversikten.
   function renderMatrise(weeks) {
-    const dorm = taskDormEl.value;
-    const raderMedOppgave = tasks.filter((t) => t.dorm === dorm);
-
-    // Oppslag: oppgave-id (0 = uten oppgave) → uke → radene som står der.
+    // Oppslag: «internat|oppgave-id» → uke → radene som står der. 0 = ingen
+    // oppgave; da hører raden til internatet eleven bor på.
     const celler = new Map();
-    let harUtenOppgave = false;
+    const utenOppgave = new Set();     // internat som har slike rader
+    const ekstraInternat = new Set();  // internat med oppsatte rader, men uten oppgaveliste
     for (const w of weeks) {
       for (const s of w.students) {
-        // Uten oppgave hører raden til internatet eleven bor på.
-        const tilhorer = s.task ? s.task.dorm === dorm : s.dorm === dorm;
-        if (!tilhorer) continue;
-        const key = s.task?.id || 0;
-        if (!key) harUtenOppgave = true;
+        const dorm = s.task ? s.task.dorm : s.dorm;
+        const key = `${dorm || ''}|${s.task?.id || 0}`;
+        if (!s.task) utenOppgave.add(dorm || '');
+        if (dorm && !DORMS.includes(dorm)) ekstraInternat.add(dorm);
         if (!celler.has(key)) celler.set(key, new Map());
         const perUke = celler.get(key);
         if (!perUke.has(w.weekStart)) perUke.set(w.weekStart, []);
         perUke.get(w.weekStart).push(s);
       }
     }
-    // «Uten oppgave»-raden vises bare når den faktisk har noe i seg.
-    const rader = [...raderMedOppgave.map((t) => ({ id: t.id, code: t.code, title: t.title, active: t.active }))];
-    if (harUtenOppgave) rader.push({ id: 0, code: '–', title: 'Uten oppgave', active: true });
 
-    if (!rader.length) {
-      upcomingEl.innerHTML = `<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen oppgaver på ${esc(dorm)} ennå. Opprett dem over, så vises rundgangen her.</div>`;
+    // Internat i fast rekkefølge, pluss eventuelle navn som bare finnes i
+    // dataene (f.eks. et internat som er fjernet fra DORMS), og til slutt
+    // elever uten internat – de skal ikke forsvinne i stillhet.
+    const alleInternat = [...DORMS, ...[...ekstraInternat].filter((d) => !DORMS.includes(d))];
+    const grupper = alleInternat.map((dorm) => {
+      const rader = tasks.filter((t) => t.dorm === dorm)
+        .map((t) => ({ key: `${dorm}|${t.id}`, code: t.code, title: t.title, active: t.active }));
+      if (utenOppgave.has(dorm)) rader.push({ key: `${dorm}|0`, code: '–', title: 'Uten oppgave', active: true });
+      return { dorm, rader };
+    }).filter((g) => g.rader.length);
+    if (utenOppgave.has('')) grupper.push({ dorm: 'Uten internat', rader: [{ key: '|0', code: '–', title: 'Uten oppgave', active: true }] });
+
+    if (!grupper.length) {
+      upcomingEl.innerHTML = '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen oppgaver opprettet ennå. Legg dem inn over, så vises rundgangen her.</div>';
       return;
     }
 
@@ -1449,7 +1488,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     // cellen man peker på når man vil rette noe.
     const cellStil = (ekstra) => `padding:7px 8px;border-left:1px solid #f2f4f6;cursor:pointer;${ekstra}`;
     const celle = (rad, w) => {
-      const liste = celler.get(rad.id)?.get(w.weekStart) || [];
+      const liste = celler.get(rad.key)?.get(w.weekStart) || [];
       const åpne = `data-week="${w.weekStart}" title="Åpne uke ${w.isoWeek}"`;
       if (!liste.length) return `<td ${åpne} style="${cellStil('color:#c9cfd8;text-align:center')}">–</td>`;
       const passert = w.weekStart <= iDag;
@@ -1463,13 +1502,14 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
       return `<td ${åpne} style="${cellStil(`background:${bakgrunn};font-size:12.5px`)}">${innhold}</td>`;
     };
 
+    const kolonner = weeks.length + 1;
     upcomingEl.innerHTML = `
-      <table style="border-collapse:collapse;width:100%;min-width:${140 + weeks.length * 110}px">
+      <table style="border-collapse:collapse;width:100%;min-width:${170 + weeks.length * 110}px">
         <thead>
           <tr style="background:#f7f8fa">
-            <th style="text-align:left;padding:10px 12px;font-size:12.5px;font-weight:800;position:sticky;left:0;background:#f7f8fa;min-width:150px">Oppgave</th>
+            <th style="text-align:left;padding:10px 12px;font-size:12.5px;font-weight:800;position:sticky;left:0;top:0;z-index:3;background:#f7f8fa;min-width:170px">Oppgave</th>
             ${weeks.map((w) => `
-              <th data-ukekol="${w.weekStart}" style="padding:10px 8px;font-size:12.5px;font-weight:800;border-left:1px solid #eef0f3;white-space:nowrap;background:#f7f8fa">
+              <th data-ukekol="${w.weekStart}" style="padding:10px 8px;font-size:12.5px;font-weight:800;border-left:1px solid #eef0f3;white-space:nowrap;background:#f7f8fa;position:sticky;top:0;z-index:2">
                 <button type="button" data-week="${w.weekStart}" title="Åpne uke ${w.isoWeek}" style="background:none;border:none;cursor:pointer;font:inherit;color:${w.isCurrent ? 'var(--green)' : 'inherit'}">
                   Uke ${w.isoWeek}${w.isCurrent ? ' ·' : ''}
                 </button>
@@ -1477,14 +1517,18 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           </tr>
         </thead>
         <tbody>
-          ${rader.map((rad) => `
-            <tr style="border-top:1px solid #f2f4f6;${rad.active ? '' : 'opacity:.6'}">
-              <td style="padding:8px 12px;position:sticky;left:0;background:#fff">
-                <div style="font-size:12.5px;font-weight:800">${esc(rad.code)}</div>
-                <div style="font-size:12px;color:var(--muted-2);font-weight:600">${esc(rad.title)}</div>
-              </td>
-              ${weeks.map((w) => celle(rad, w)).join('')}
-            </tr>`).join('')}
+          ${grupper.map((g) => `
+            <tr>
+              <td colspan="${kolonner}" style="padding:10px 12px 6px;position:sticky;left:0;background:#fbfcfd;border-top:1px solid var(--line);font-size:12px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em">${esc(g.dorm)}</td>
+            </tr>
+            ${g.rader.map((rad) => `
+              <tr style="border-top:1px solid #f2f4f6;${rad.active ? '' : 'opacity:.6'}">
+                <td style="padding:8px 12px;position:sticky;left:0;background:#fff">
+                  <div style="font-size:12.5px;font-weight:800">${esc(rad.code)}</div>
+                  <div style="font-size:12px;color:var(--muted-2);font-weight:600">${esc(rad.title)}</div>
+                </td>
+                ${weeks.map((w) => celle(rad, w)).join('')}
+              </tr>`).join('')}`).join('')}
         </tbody>
       </table>
       <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid #f2f4f6;font-size:12px;color:var(--muted-2);font-weight:600">
@@ -1502,6 +1546,9 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   // ser det ut som ingenting skjedde – matrisen ligger nederst.
   async function åpneUke(ws) {
     await loadWeek(ws);
+    // I utvidet visning ligger kortet bak overlegget – da lukker vi det, slik
+    // at man faktisk ser uken man valgte.
+    if (utvidet) card.querySelector('#dutyUtvid').click();
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
