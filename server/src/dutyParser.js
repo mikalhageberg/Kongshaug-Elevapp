@@ -156,6 +156,10 @@ export async function parseDutyXlsx(rows, students, ledetekst = 'kjøkkentjenest
 //   | 34  | Ingrid Sæther | 2026-08-17 |
 //   |     | Ola Nordmann  |            |   ← tom «Uke» = samme uke som raden over
 //
+// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (ØVEST1,
+// se dormTasks.js). Hver rad har sin egen kode – den arves ikke nedover, for en
+// tom celle betyr «vaskeuke uten bestemt oppgave».
+//
 // «Startdato» er valgfri, og pinner uken til en konkret dato (nyttig ved
 // årsskifter). Uten den regnes mandagsdatoen ut fra ukenummeret, akkurat som
 // når OpenAI tolker arket.
@@ -164,6 +168,9 @@ const DUTY_TEMPLATE_HEADERS = {
   name: 'Navn',
   startDate: 'Startdato',
 };
+// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (ØVEST1).
+// Kjøkkentjenesten har ingen oppgaver, og da er kolonnen en ukjent overskrift.
+const DUTY_TEMPLATE_HEADERS_TASKS = { ...DUTY_TEMPLATE_HEADERS, task: 'Oppgave' };
 
 // «34» og «Uke 34» er begge greit. Alt annet er null (og blir en feilmelding).
 function parseWeekNumber(text) {
@@ -194,9 +201,12 @@ function parseSheetDate(text) {
 
 // Tolker et turnusark som følger malen. Samme returformat som parseDutyXlsx,
 // så forhåndsvisningen i admin er den samme uansett hvilken vei arket kom inn.
-export function parseDutyTemplate(rows, students) {
+export function parseDutyTemplate(rows, students, { tasks = null } = {}) {
   const grid = rows || [];
-  const { headerRow, cols } = readTemplateHeader(grid, DUTY_TEMPLATE_HEADERS, ['week', 'name']);
+  const headers = tasks ? DUTY_TEMPLATE_HEADERS_TASKS : DUTY_TEMPLATE_HEADERS;
+  const { headerRow, cols } = readTemplateHeader(grid, headers, ['week', 'name']);
+  // Oppgavekoder slås opp normalisert, så «øvest1» og «ØVEST1» er samme kode.
+  const koder = new Map((tasks || []).map((t) => [normName(t.code), t]));
 
   const today = todayDate();
   const index = buildIndex(students);
@@ -225,6 +235,21 @@ export function parseDutyTemplate(rows, students) {
 
     if (!navn) { feil.push(`rad ${radnr}: mangler navn`); continue; }
 
+    // Oppgavekoden må finnes fra før – en ukjent kode er en skrivefeil, ikke en
+    // ny oppgave. Tom celle er greit: da er det en vaskeuke uten oppgave.
+    let task = null;
+    const kodeTekst = cellText(row, cols.task);
+    if (kodeTekst) {
+      task = koder.get(normName(kodeTekst)) || null;
+      if (!task) { feil.push(`rad ${radnr}: ${q(kodeTekst)} er ingen kjent oppgavekode`); continue; }
+      // En deaktivert oppgave finnes, men skal ikke settes opp på nytt. Da er
+      // «ukjent kode» feil svar – admin må aktivere den eller velge en annen.
+      if (task.active === false) {
+        feil.push(`rad ${radnr}: oppgaven ${q(task.code)} er deaktivert – aktiver den igjen, eller bruk en annen kode`);
+        continue;
+      }
+    }
+
     const uke = uker.get(week)
       || uker.set(week, { week, startDate: null, matched: [], unmatched: [], seen: new Set() }).get(week);
 
@@ -247,9 +272,27 @@ export function parseDutyTemplate(rows, students) {
     // det er en jobb for admin, ikke en feil i selve malen.
     const stud = resolveStudent(navn, index);
     if (!stud) { uke.unmatched.push(navn); continue; }
-    if (!uke.seen.has(stud.id)) {
-      uke.seen.add(stud.id);
-      uke.matched.push({ id: stud.id, fullName: stud.full_name });
+
+    // Oppgaven hører til ett internat. Står en elev fra et annet internat på
+    // den, er koden nesten alltid en skrivefeil – da sier vi ifra i stedet for
+    // å sette opp vask på feil hus. (Unntak legges inn manuelt i admin.)
+    if (task && stud.dorm && task.dorm && normName(stud.dorm) !== normName(task.dorm)) {
+      feil.push(`rad ${radnr}: ${q(stud.full_name)} bor på ${stud.dorm}, men ${q(task.code)} hører til ${task.dorm}`);
+      continue;
+    }
+
+    // Nøkkelen er elev + oppgave: samme elev kan ha to ulike oppgaver samme uke,
+    // men ikke den samme to ganger.
+    const nokkel = `${stud.id}:${task?.id || 0}`;
+    if (!uke.seen.has(nokkel)) {
+      uke.seen.add(nokkel);
+      uke.matched.push({
+        id: stud.id,
+        fullName: stud.full_name,
+        taskId: task?.id || null,
+        taskCode: task?.code || null,
+        taskTitle: task?.title || null,
+      });
     }
   }
 

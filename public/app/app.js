@@ -240,7 +240,7 @@ async function renderDashboard() {
                 <div style="width:50px;height:50px;border-radius:15px;background:var(--amber-ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${cfg.ic}</div>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:17px;font-weight:800;color:var(--amber-ink)">Du har ${cfg.liten} denne uken</div>
-                  <div style="font-size:13.5px;font-weight:600;color:var(--amber-ink);opacity:.85;margin-top:2px">Uke ${d.thisWeek.isoWeek} · ${formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}${dutyPartners(d.thisWeek)}</div>
+                  <div style="font-size:13.5px;font-weight:600;color:var(--amber-ink);opacity:.85;margin-top:2px">Uke ${d.thisWeek.isoWeek} · ${formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}${dutyPartners(d.thisWeek)}${dutyTaskSummary(d.thisWeek)}</div>
                 </div>
               </div>
             </div>`);
@@ -314,15 +314,46 @@ const DUTY_KINDS = {
     href: '/internat',
     neste: 'Din neste vaskeuke',
     get ic() { return icon.broom; },
+    // Internatvasken har oppgaver med beskrivelse og signering. I nettleseren
+    // finnes ikke Face ID, så her signeres det med elevens eget passord –
+    // serveren kontrollerer det mot passord-hashen (se routes/duty.js).
+    hasTasks: true,
   },
 };
 
-// «sammen med X og Y» – hvem eleven deler tjenesteuken med.
+// Hvordan oppgaven ble kvittert ut. Face ID skjer på elevens egen telefon, så
+// teksten sier hva som faktisk skjedde – ikke mer enn signaturen holder.
+const SIGN_METHOD = {
+  biometri: 'Face ID / fingeravtrykk',
+  passord: 'passord',
+  admin: 'lagt inn av administrasjonen',
+};
+
+// «25.08 kl. 18:04» fra et UTC-tidsstempel i basen.
+function signaturStempel(iso) {
+  if (!iso) return '';
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)} kl. ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// «sammen med X og Y» – hvem eleven deler tjenesteuken med. Samme elev kan stå
+// på flere oppgaver samme uke, så navnene må være unike.
 function dutyPartners(week, meId = user.id) {
-  const others = week.students.filter((s) => s.id !== meId).map((s) => s.fullName);
+  const others = [...new Set(week.students.filter((s) => s.id !== meId).map((s) => s.fullName))];
   if (!others.length) return '';
   const list = others.length === 1 ? others[0] : `${others.slice(0, -1).join(', ')} og ${others[others.length - 1]}`;
   return ` · sammen med ${esc(list)}`;
+}
+
+// «80-gongen, KJØKKEN · 1 av 2 signert» – elevens egne oppgaver i vaskeuken.
+// Tom streng for tjenester uten oppgaver (kjøkkentjeneste).
+function dutyTaskSummary(week, meId = user.id) {
+  const mine = week.students.filter((s) => s.id === meId && s.task);
+  if (!mine.length) return '';
+  const signert = mine.filter((s) => s.done).length;
+  const status = signert === mine.length ? 'alt signert ✓' : `${signert} av ${mine.length} signert`;
+  return `<br>${esc(mine.map((s) => s.task.title).join(', '))} · ${status}`;
 }
 
 async function updateGeoBanner(node) {
@@ -598,6 +629,7 @@ async function renderDutyPlan(node, kind) {
 
   // Når er eleven selv nestemann?
   const mine = upcoming.find((w) => w.students.some((s) => s.id === user.id));
+  const minesNå = now.students.filter((s) => s.id === user.id);
 
   node.innerHTML = `
     <div class="h1" style="font-size:19px">${cfg.navn}</div>
@@ -605,15 +637,67 @@ async function renderDutyPlan(node, kind) {
     <div class="card" style="border-radius:18px;margin-top:10px;padding:6px 0">
       ${now.students.length ? now.students.map((s, i) => `
         <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;${i ? 'border-top:1px solid var(--line)' : ''}">
-          <span style="flex:1;font-size:15px;font-weight:700">${esc(s.fullName)}${s.id === user.id ? ' <span class="pill pill-amber" style="margin-left:6px">Deg</span>' : ''}</span>
+          <span style="flex:1;font-size:15px;font-weight:700">${esc(s.fullName)}${s.id === user.id ? ' <span class="pill pill-amber" style="margin-left:6px">Deg</span>' : ''}
+            ${cfg.hasTasks && s.task ? `<span style="display:block;font-size:12.5px;font-weight:700;color:var(--muted-2);margin-top:2px">${esc(s.task.code)} · ${esc(s.task.title)}</span>` : ''}</span>
+          ${cfg.hasTasks && s.done ? '<span class="pill pill-green">Signert</span>' : ''}
           <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
         </div>`).join('')
       : '<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">Ingen satt opp denne uken.</div>'}
     </div>
+    ${cfg.hasTasks && minesNå.length ? `
+      <div class="h1" style="font-size:16px;margin-top:20px">Dine oppgaver denne uken</div>
+      <div id="mineOppgaver"></div>` : ''}
     ${mine ? `<div class="banner pill-grey" style="margin-top:10px;background:#e7edf5;color:var(--navy)">${icon.clock} ${cfg.neste}: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}</div>` : ''}
     ${upcoming.length ? `
       <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">Vis hele planen</button>
       <div id="planList" style="display:none;margin-top:10px"></div>` : ''}`;
+
+  // Oppgavekortene: hele beskrivelsen, og signering med passord. Face ID finnes
+  // bare i mobilappen, så her skriver eleven under med sitt eget passord.
+  if (cfg.hasTasks && minesNå.length) {
+    const boks = node.querySelector('#mineOppgaver');
+    const tegn = () => {
+      boks.innerHTML = minesNå.map((s) => `
+        <div class="card" style="border-radius:16px;padding:14px 16px;margin-top:8px;${s.done ? 'background:var(--green-bg);border-color:var(--green-bg)' : 'background:var(--amber-bg);border-color:var(--amber)'}">
+          <div style="font-size:15px;font-weight:800;color:${s.done ? 'var(--green-ink,#0f6b43)' : 'var(--amber-ink)'}">
+            ${s.task ? esc(s.task.title) : 'Internatvask uten oppgave'}
+            ${s.task ? `<span style="font-weight:700;opacity:.8"> · ${esc(s.task.code)}</span>` : ''}
+          </div>
+          ${s.task?.description ? `<div style="font-size:14px;line-height:1.55;margin-top:8px;white-space:pre-wrap;color:var(--ink,#1a2230)">${esc(s.task.description)}</div>` : ''}
+          ${s.done ? `
+            <div style="font-size:13px;font-weight:700;color:var(--green-ink,#0f6b43);margin-top:10px">
+              ✓ Signert ${esc(signaturStempel(s.done.at))} · ${esc(SIGN_METHOD[s.done.method] || s.done.method)}${s.done.method === 'admin' && s.done.by ? ` (${esc(s.done.by)})` : ''}
+            </div>` : `
+            <div style="margin-top:12px">
+              <div style="font-size:12.5px;color:var(--amber-ink);line-height:1.5;margin-bottom:8px">
+                Når jobben er gjort, signerer du med passordet ditt. Signaturen står med navnet ditt og klokkeslettet i internatets oversikt.
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input type="password" class="field" data-pw="${s.dutyId}" placeholder="Passordet ditt" autocomplete="current-password" style="flex:1;min-width:160px;height:44px" />
+                <button class="btn btn-primary" data-sign="${s.dutyId}" style="height:44px;padding:0 18px">Signer</button>
+              </div>
+              <div data-feil="${s.dutyId}" style="font-size:13px;font-weight:600;color:var(--red-ink);margin-top:8px;display:none"></div>
+            </div>`}
+        </div>`).join('');
+
+      boks.querySelectorAll('[data-sign]').forEach((b) => b.addEventListener('click', async () => {
+        const id = b.dataset.sign;
+        const pw = boks.querySelector(`[data-pw="${id}"]`);
+        const feil = boks.querySelector(`[data-feil="${id}"]`);
+        feil.style.display = 'none';
+        if (!pw.value) { feil.textContent = 'Skriv passordet ditt.'; feil.style.display = 'block'; return; }
+        b.disabled = true; const gammelTekst = b.textContent; b.textContent = 'Signerer…';
+        try {
+          await api(`${cfg.base}/duties/${id}/sign`, { method: 'POST', body: { method: 'passord', password: pw.value } });
+          renderDutyPlan(node, kind);          // hent uken på nytt, med signaturen
+        } catch (ex) {
+          feil.textContent = ex.message; feil.style.display = 'block';
+          b.disabled = false; b.textContent = gammelTekst;
+        }
+      }));
+    };
+    tegn();
+  }
 
   if (!upcoming.length) return;
 

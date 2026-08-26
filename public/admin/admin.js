@@ -1046,8 +1046,43 @@ const DUTY_KINDS = {
     importHjelp: 'Last opp en Excel-liste med internatvask – hvem som har vask hvilke uker leses ut, og du bekrefter før det legges inn.',
     importOrd: 'vask',
     lasteFeil: 'Kunne ikke laste internatvasken.',
+    // Bare internatvasken har oppgaver med kode og signatur (se dormTasks.js
+    // på serveren). Flagget styrer oppgavekolonnen i malen, signaturfeltene i
+    // ukelista og hele oppgaveoversikten.
+    hasTasks: true,
   },
 };
+
+// Hvordan en oppgave ble kvittert ut. Face ID skjer på elevens egen telefon, så
+// den er en kvittering – ikke et bevis. Teksten skal derfor si hva som faktisk
+// skjedde, ikke love mer enn signaturen holder.
+const SIGN_METHOD = {
+  biometri: 'Face ID / fingeravtrykk',
+  passord: 'passord',
+  admin: 'lagt inn av admin',
+};
+
+// «25.08 kl. 18:04» fra et UTC-tidsstempel i basen.
+function signedStamp(iso) {
+  if (!iso) return '';
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)} kl. ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function signaturTekst(done) {
+  if (!done) return '';
+  const hvordan = SIGN_METHOD[done.method] || done.method || '';
+  const hvem = done.method === 'admin' && done.by ? ` av ${done.by}` : '';
+  return `Signert${hvem} ${signedStamp(done.at)} · ${hvordan}`;
+}
+
+// Oppgavebrikken i lister: koden er det admin skriver i regnearket, så den skal
+// være det man ser først.
+function taskChip(task) {
+  if (!task) return '<span style="display:inline-block;background:#eef0f3;color:var(--muted-2);font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px">Uten oppgave</span>';
+  return `<span title="${esc(task.description || '')}" style="display:inline-block;background:#eef4fb;color:var(--navy);border:1px solid #d7e4f4;font-size:12px;font-weight:800;padding:2px 8px;border-radius:20px">${esc(task.code)}<span style="font-weight:600;opacity:.85"> · ${esc(task.title)}</span></span>`;
+}
 
 function mountDutyModule(container, kind, { standalone = false } = {}) {
   const cfg = DUTY_KINDS[kind];
@@ -1066,6 +1101,11 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         </div>
         <div id="dutyList"></div>
         <div style="padding:14px 18px;border-top:1px solid var(--line);position:relative">
+          ${cfg.hasTasks ? `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <label class="field-label" style="margin:0;white-space:nowrap">Legg til på oppgave</label>
+            <select id="dutyTaskPick" class="field" style="height:38px;font-size:13.5px;padding:0 10px"></select>
+          </div>` : ''}
           <input type="text" id="dutySearch" class="field" placeholder="Søk opp elev å legge til…" autocomplete="off" style="height:44px" />
           <div id="dutyResults" style="display:none;position:absolute;left:18px;right:18px;bottom:62px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.14);z-index:20"></div>
         </div>
@@ -1087,7 +1127,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           <summary style="cursor:pointer;font-weight:800">Slik skal Excel-malen se ut</summary>
           <ol style="margin:8px 0 0;padding-left:18px">
             <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
-                <b>Uke</b>, <b>Navn</b>, <b>Startdato</b>.</li>
+                <b>Uke</b>, ${cfg.hasTasks ? '<b>Oppgave</b>, ' : ''}<b>Navn</b>, <b>Startdato</b>.</li>
             <li><b>Én elev per rad</b> nedover fra rad 2. Har flere elever ${cfg.importOrd} samme uke, får de hver sin rad –
                 da kan <b>Uke</b> stå tom på radene under, og uken over gjelder videre.</li>
             <li><b>Uke</b> er ISO-ukenummer (1–53), skrevet som <b>34</b> eller <b>Uke 34</b>.
@@ -1095,12 +1135,18 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
             <li><b>Startdato</b> er valgfri, og kan sløyfes helt. Tar du den med, skal det være <b>mandagen</b> i uken
                 (<b>17.08.2026</b> eller <b>2026-08-17</b>) – nyttig over et årsskifte. Uten dato velges den nærmeste
                 kommende uken med det nummeret.</li>
+            ${cfg.hasTasks ? `
+            <li><b>Oppgave</b> er koden til oppgaven (<b>ØVEST1</b>), slik den står i oppgavelista lenger ned på siden.
+                Hver rad har sin egen kode – den arves ikke nedover slik <b>Uke</b> gjør. Lar du cellen stå tom, blir det
+                en vaskeuke uten bestemt oppgave, som før.</li>
+            <li>Koden må høre til <b>elevens eget internat</b>. En kode fra et annet internat er nesten alltid en
+                skrivefeil, og avvises med radnummer.</li>` : ''}
             <li>Rekkefølgen på kolonnene spiller ingen rolle, men en kolonne som er med må hete akkurat som over.
                 Bare <b>den første fanen</b> i arket leses.</li>
           </ol>
-          <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i uke eller dato, sier importen ifra med
+          <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i uke${cfg.hasTasks ? ', oppgavekode' : ''} eller dato, sier importen ifra med
             radnummer i stedet for å gjette. Navn som ikke finnes blant elevene stopper ikke importen – de vises som
-            «ikke funnet» i forhåndsvisningen under.</p>
+            «ikke funnet» i forhåndsvisningen under.${cfg.hasTasks ? ' <b>OpenAI-veien leser ikke oppgavekoder</b> – de radene blir vaskeuker uten oppgave.' : ''}</p>
         </details>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input type="file" id="dutyXlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:14px" />
@@ -1109,8 +1155,24 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         </div>
         <div id="dutyImportPreview" style="margin-top:14px"></div>
       </div>
-      <div style="font-size:15px;font-weight:800;margin:22px 0 10px">Kommende uker</div>
-      <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden"></div>
+      ${cfg.hasTasks ? `
+      <div style="margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <div style="font-size:14px;font-weight:800;flex:1">Oppgaver</div>
+          <select id="taskDorm" class="field" style="height:38px;width:auto;font-size:13.5px;padding:0 10px">
+            ${DORMS.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary" id="taskNew" style="height:38px;padding:0 16px;font-size:13.5px">Ny oppgave</button>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:12px">
+          Beskriv oppgaven slik den står på vaskelista. Eleven får hele teksten opp i appen, og signerer med
+          Face ID når jobben er gjort. <b>Koden</b> er den du skriver i «Oppgave»-kolonnen i Excel-turnusen.
+        </div>
+        <div id="taskList"></div>
+      </div>` : ''}
+      <div style="font-size:15px;font-weight:800;margin:22px 0 10px">${cfg.hasTasks ? 'Oversikt uke for uke' : 'Kommende uker'}</div>
+      ${cfg.hasTasks ? `<div style="font-size:12.5px;color:var(--muted-2);margin:-6px 0 10px">Hvem som har hvilken oppgave, og om den er signert. Klikk en uke for å redigere den.</div>` : ''}
+      <div id="dutyUpcoming" style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:${cfg.hasTasks ? 'auto' : 'hidden'}"></div>
     </div>`);
   container.appendChild(card);
 
@@ -1147,24 +1209,36 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     card.querySelector('#weekTitle').textContent = `Uke ${w.isoWeek}${w.isCurrent ? ' · denne uken' : ''}`;
     card.querySelector('#weekRange').textContent = formatWeekRange(w.weekStart, w.weekEnd);
     listEl.innerHTML = w.students.length ? w.students.map((s) => `
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #f2f4f6">
-        <span style="flex:1;font-size:14.5px;font-weight:700">${esc(s.fullName)}</span>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid #f2f4f6">
+        ${cfg.hasTasks ? taskChip(s.task) : ''}
+        <span style="flex:1;min-width:120px;font-size:14.5px;font-weight:700">${esc(s.fullName)}</span>
         <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
-        <button class="btn btn-ghost" data-remove="${s.id}" title="Fjern fra uken" style="height:34px;padding:0 12px;font-size:13px">Fjern</button>
+        ${cfg.hasTasks ? (s.done
+          ? `<span class="pill pill-green" title="${esc(signaturTekst(s.done))}">✓ ${esc(signaturTekst(s.done))}</span>
+             <button class="btn btn-ghost" data-unsign="${s.dutyId}" title="Fjern signaturen" style="height:34px;padding:0 12px;font-size:13px">Angre</button>`
+          : `<span class="pill pill-grey" style="background:#eef0f3;color:var(--muted-2)">Ikke signert</span>
+             <button class="btn btn-ghost" data-sign="${s.dutyId}" title="Signer på vegne av eleven" style="height:34px;padding:0 12px;font-size:13px">Signer</button>`) : ''}
+        <button class="btn btn-ghost" data-del="${s.dutyId}" title="Fjern fra uken" style="height:34px;padding:0 12px;font-size:13px">Fjern</button>
       </div>`).join('') : '<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen elever satt opp denne uken ennå.</div>';
 
-    listEl.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+    // Én knapp-håndterer for alle tre handlingene: de gjør samme runde – kall
+    // serveren, tegn uken på nytt, oppdater oversiktene under.
+    const handling = (attr, kall) => listEl.querySelectorAll(`[${attr}]`).forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true;
       try {
-        const r = await api(`${cfg.base}/${weekStart}/${b.dataset.remove}`, { method: 'DELETE' });
+        const r = await kall(b.getAttribute(attr));
         renderWeek(r.week); loadUpcoming();
       } catch (ex) { toast(ex.message); b.disabled = false; }
     }));
+    handling('data-del', (id) => api(`${cfg.base}/duties/${id}`, { method: 'DELETE' }));
+    handling('data-sign', (id) => api(`${cfg.base}/duties/${id}/sign`, { method: 'POST', body: {} }));
+    handling('data-unsign', (id) => api(`${cfg.base}/duties/${id}/sign`, { method: 'DELETE' }));
   }
 
   async function addStudent(id) {
     try {
-      const r = await api(cfg.base, { method: 'POST', body: { weekStart, userIds: [id] } });
+      const taskId = cfg.hasTasks ? Number(card.querySelector('#dutyTaskPick')?.value) || null : null;
+      const r = await api(cfg.base, { method: 'POST', body: { weekStart, userIds: [id], taskId } });
       searchEl.value = ''; resultsEl.style.display = 'none';
       renderWeek(r.week); loadUpcoming();
     } catch (ex) { toast(ex.message); }
@@ -1173,7 +1247,12 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   function renderResults() {
     const q = searchEl.value.trim().toLowerCase();
     if (!q) { resultsEl.style.display = 'none'; return; }
-    const taken = new Set(assigned.map((s) => s.id));
+    // Uten oppgaver kan en elev bare stå én gang i uken. Med oppgaver kan hun ha
+    // flere, så det er elev + valgt oppgave som eventuelt er opptatt.
+    const valgtTask = cfg.hasTasks ? Number(card.querySelector('#dutyTaskPick')?.value) || null : null;
+    const taken = new Set(assigned
+      .filter((s) => !cfg.hasTasks || (s.task?.id || null) === valgtTask)
+      .map((s) => s.id));
     const hits = students
       .filter((u) => !taken.has(u.id) && (u.fullName.toLowerCase().includes(q) || (u.className || '').toLowerCase().includes(q)))
       .slice(0, 8);
@@ -1186,10 +1265,141 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     resultsEl.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => addStudent(Number(b.dataset.add))));
   }
 
+  // ── Oppgaver (bare internatvask) ────────────────────────────
+  // Lista er fasit for hva som skal gjøres, og kodene er det admin skriver i
+  // regnearket. Oppgaver som har vært i bruk deaktiveres framfor å slettes, så
+  // historikken beholder hva som faktisk ble gjort.
+  let tasks = [];
+  const taskListEl = card.querySelector('#taskList');
+  const taskDormEl = card.querySelector('#taskDorm');
+
+  async function loadTasks() {
+    if (!cfg.hasTasks) return;
+    const d = await api('/api/dorm-tasks').catch(() => null);
+    tasks = d?.tasks || [];
+    renderTasks();
+    renderTaskPicker();
+  }
+
+  function renderTasks() {
+    const dorm = taskDormEl.value;
+    const mine = tasks.filter((t) => t.dorm === dorm);
+    taskListEl.innerHTML = mine.length ? mine.map((t) => `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid #f2f4f6">
+        <div style="flex:1;min-width:0;${t.active ? '' : 'opacity:.55'}">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${taskChip({ code: t.code, title: t.title })}
+            ${t.active ? '' : '<span class="pill pill-grey" style="background:#eef0f3;color:var(--muted-2)">Deaktivert</span>'}
+          </div>
+          ${t.description ? `<div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-top:6px;white-space:pre-wrap">${esc(t.description)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex:0 0 auto">
+          <button class="btn btn-ghost" data-edit="${t.id}" style="height:34px;padding:0 12px;font-size:13px">Rediger</button>
+          <button class="btn btn-ghost" data-toggle="${t.id}" style="height:34px;padding:0 12px;font-size:13px">${t.active ? 'Deaktiver' : 'Aktiver'}</button>
+          <button class="btn btn-ghost" data-slett="${t.id}" style="height:34px;padding:0 12px;font-size:13px;color:var(--red-ink)">Slett</button>
+        </div>
+      </div>`).join('') : '<div style="padding:14px 0;color:var(--muted-2);font-size:13.5px;border-top:1px solid #f2f4f6">Ingen oppgaver på dette internatet ennå.</div>';
+
+    taskListEl.querySelectorAll('[data-edit]').forEach((b) =>
+      b.addEventListener('click', () => taskModal(tasks.find((t) => t.id === Number(b.dataset.edit)))));
+    taskListEl.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', async () => {
+      const t = tasks.find((x) => x.id === Number(b.dataset.toggle));
+      b.disabled = true;
+      try { await api(`/api/dorm-tasks/${t.id}`, { method: 'PATCH', body: { active: !t.active } }); await loadTasks(); }
+      catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+    taskListEl.querySelectorAll('[data-slett]').forEach((b) => b.addEventListener('click', async () => {
+      const t = tasks.find((x) => x.id === Number(b.dataset.slett));
+      if (!confirm(`Slette oppgaven «${t.title}» (${t.code})?`)) return;
+      b.disabled = true;
+      try { await api(`/api/dorm-tasks/${t.id}`, { method: 'DELETE' }); await loadTasks(); toast('Oppgaven er slettet'); }
+      catch (ex) { toast(ex.message); b.disabled = false; }
+    }));
+  }
+
+  // Oppgavene man kan sette en elev på manuelt. Deaktiverte er ikke med – de
+  // skal ikke settes opp på nytt, bare bli stående i historikken.
+  function renderTaskPicker() {
+    const pick = card.querySelector('#dutyTaskPick');
+    if (!pick) return;
+    const forrige = pick.value;
+    pick.innerHTML = '<option value="">Uten oppgave</option>'
+      + tasks.filter((t) => t.active).map((t) =>
+        `<option value="${t.id}">${esc(t.code)} · ${esc(t.title)} (${esc(t.dorm)})</option>`).join('');
+    if (forrige && pick.querySelector(`option[value="${forrige}"]`)) pick.value = forrige;
+  }
+
+  function taskModal(task) {
+    const ny = !task;
+    const bg = el(`
+      <div class="modal-bg"><div class="modal" style="width:620px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+          <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${ny ? 'Ny oppgave' : 'Rediger oppgave'}</div>
+            <div style="font-size:13px;color:var(--muted-2);font-weight:600">Eleven ser hele beskrivelsen i appen.</div></div>
+          <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+        </div>
+        <div style="padding:22px 26px">
+          <label class="field-label">Internat</label>
+          <select id="tDorm" class="field" ${ny ? '' : 'disabled'} style="height:44px">
+            ${DORMS.map((d) => `<option value="${esc(d)}" ${(task ? task.dorm : taskDormEl.value) === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+          </select>
+          <label class="field-label" style="margin-top:14px">Navn på oppgaven</label>
+          <input id="tTitle" class="field" style="height:44px" placeholder="80-gongen" value="${task ? esc(task.title) : ''}" />
+          <label class="field-label" style="margin-top:14px">Beskrivelse</label>
+          <textarea id="tDesc" class="field" rows="6" style="height:auto;padding:12px;line-height:1.5;font-family:inherit" placeholder="80-gongen med bøttekott, fellesareal toalett og bad. Vaske golv, tømme søppel …">${task ? esc(task.description) : ''}</textarea>
+          <label class="field-label" style="margin-top:14px">Kode</label>
+          <input id="tCode" class="field" style="height:44px;text-transform:uppercase" placeholder="${ny ? 'Lages automatisk' : ''}" value="${task ? esc(task.code) : ''}" />
+          <div style="font-size:12.5px;color:var(--muted-2);margin-top:6px">Dette er koden du skriver i «Oppgave»-kolonnen i Excel-turnusen. ${ny ? 'La feltet stå tomt, så lages den av internatnavnet (ØVEST1, ØVEST2 …).' : 'Endrer du den, må regnearkene bruke den nye koden.'}</div>
+          <p id="tErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+          <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+          <button id="save" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">${ny ? 'Opprett oppgave' : 'Lagre'}</button>
+        </div>
+      </div></div>`);
+    document.body.appendChild(bg);
+    const close = () => bg.remove();
+    bg.querySelector('#close').addEventListener('click', close);
+    bg.querySelector('#cancel').addEventListener('click', close);
+    bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+
+    bg.querySelector('#save').addEventListener('click', async () => {
+      const err = bg.querySelector('#tErr'); err.style.display = 'none';
+      const body = {
+        dorm: bg.querySelector('#tDorm').value,
+        title: bg.querySelector('#tTitle').value.trim(),
+        description: bg.querySelector('#tDesc').value.trim(),
+      };
+      const kode = bg.querySelector('#tCode').value.trim();
+      if (kode || !ny) body.code = kode;
+      if (!body.title) { err.textContent = 'Gi oppgaven et navn.'; err.style.display = 'block'; return; }
+      const btn = bg.querySelector('#save'); btn.disabled = true; const gammelTekst = btn.textContent; btn.textContent = 'Lagrer…';
+      try {
+        if (ny) await api('/api/dorm-tasks', { method: 'POST', body });
+        else await api(`/api/dorm-tasks/${task.id}`, { method: 'PATCH', body });
+        close();
+        taskDormEl.value = body.dorm;
+        await loadTasks();
+        loadUpcoming();
+        toast(ny ? 'Oppgaven er opprettet' : 'Oppgaven er lagret');
+      } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = gammelTekst; }
+    });
+  }
+
+  if (cfg.hasTasks) {
+    card.querySelector('#taskNew').addEventListener('click', () => taskModal(null));
+    taskDormEl.addEventListener('change', () => { renderTasks(); loadUpcoming(); });
+    // Bytter man oppgave, endrer det hvem som allerede er satt opp på den.
+    card.querySelector('#dutyTaskPick').addEventListener('change', renderResults);
+  }
+
   // Oversikt over rundgangen framover, så admin ser hull før de oppstår.
+  // For internatvasken er dette en matrise: oppgavene nedover, ukene bortover –
+  // samme oppslag som henger på veggen, men med signaturene fylt inn.
   async function loadUpcoming() {
     const d = await api(`${cfg.base}?weeks=8`).catch(() => null);
     if (!d) { upcomingEl.innerHTML = ''; return; }
+    if (cfg.hasTasks) return renderMatrise(d.weeks);
     upcomingEl.innerHTML = d.weeks.map((w) => `
       <button type="button" data-week="${w.weekStart}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f2f4f6;padding:12px 18px;cursor:pointer">
         <span style="flex:0 0 76px;font-size:14px;font-weight:800">Uke ${w.isoWeek}</span>
@@ -1198,6 +1408,94 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         ${w.isCurrent ? '<span class="pill pill-green">Nå</span>' : ''}
       </button>`).join('');
     upcomingEl.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => loadWeek(b.dataset.week)));
+  }
+
+  // Matrisen: én rad per oppgave på det valgte internatet, én kolonne per uke.
+  // Cellen viser hvem som har oppgaven og om den er signert – grønn for gjort,
+  // gul for uker som har vært eller pågår uten signatur, grå for det som ligger
+  // fram i tid. Rader satt opp uten oppgave samles nederst, så de ikke blir borte.
+  function renderMatrise(weeks) {
+    const dorm = taskDormEl.value;
+    const raderMedOppgave = tasks.filter((t) => t.dorm === dorm);
+
+    // Oppslag: oppgave-id (0 = uten oppgave) → uke → radene som står der.
+    const celler = new Map();
+    let harUtenOppgave = false;
+    for (const w of weeks) {
+      for (const s of w.students) {
+        // Uten oppgave hører raden til internatet eleven bor på.
+        const tilhorer = s.task ? s.task.dorm === dorm : s.dorm === dorm;
+        if (!tilhorer) continue;
+        const key = s.task?.id || 0;
+        if (!key) harUtenOppgave = true;
+        if (!celler.has(key)) celler.set(key, new Map());
+        const perUke = celler.get(key);
+        if (!perUke.has(w.weekStart)) perUke.set(w.weekStart, []);
+        perUke.get(w.weekStart).push(s);
+      }
+    }
+    // «Uten oppgave»-raden vises bare når den faktisk har noe i seg.
+    const rader = [...raderMedOppgave.map((t) => ({ id: t.id, code: t.code, title: t.title, active: t.active }))];
+    if (harUtenOppgave) rader.push({ id: 0, code: '–', title: 'Uten oppgave', active: true });
+
+    if (!rader.length) {
+      upcomingEl.innerHTML = `<div style="padding:22px;color:var(--muted-2);font-size:14px">Ingen oppgaver på ${esc(dorm)} ennå. Opprett dem over, så vises rundgangen her.</div>`;
+      return;
+    }
+
+    const iDag = weeks.find((w) => w.isCurrent)?.weekStart || weeks[0].weekStart;
+    const celle = (rad, w) => {
+      const liste = celler.get(rad.id)?.get(w.weekStart) || [];
+      if (!liste.length) return '<td style="padding:7px 8px;border-left:1px solid #f2f4f6;color:#c9cfd8;text-align:center">–</td>';
+      const passert = w.weekStart <= iDag;
+      const innhold = liste.map((s) => {
+        const merke = s.done ? '✓' : (passert ? '○' : '·');
+        const farge = s.done ? 'var(--green)' : (passert ? 'var(--amber-ink)' : 'var(--muted-2)');
+        const tittel = s.done ? signaturTekst(s.done) : (passert ? 'Ikke signert' : 'Ikke signert ennå');
+        return `<div title="${esc(s.fullName)} · ${esc(tittel)}" style="white-space:nowrap;color:${farge};font-weight:700">${merke} ${esc(kortNavn(s.fullName))}</div>`;
+      }).join('');
+      const bakgrunn = liste.every((s) => s.done) ? 'var(--green-bg)' : (passert ? 'var(--amber-bg)' : '#fff');
+      return `<td style="padding:7px 8px;border-left:1px solid #f2f4f6;background:${bakgrunn};font-size:12.5px">${innhold}</td>`;
+    };
+
+    upcomingEl.innerHTML = `
+      <table style="border-collapse:collapse;width:100%;min-width:${140 + weeks.length * 110}px">
+        <thead>
+          <tr style="background:#f7f8fa">
+            <th style="text-align:left;padding:10px 12px;font-size:12.5px;font-weight:800;position:sticky;left:0;background:#f7f8fa;min-width:150px">Oppgave</th>
+            ${weeks.map((w) => `
+              <th style="padding:10px 8px;font-size:12.5px;font-weight:800;border-left:1px solid #eef0f3;white-space:nowrap">
+                <button type="button" data-week="${w.weekStart}" style="background:none;border:none;cursor:pointer;font:inherit;color:${w.isCurrent ? 'var(--green)' : 'inherit'}">
+                  Uke ${w.isoWeek}${w.isCurrent ? ' ·' : ''}
+                </button>
+              </th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${rader.map((rad) => `
+            <tr style="border-top:1px solid #f2f4f6;${rad.active ? '' : 'opacity:.6'}">
+              <td style="padding:8px 12px;position:sticky;left:0;background:#fff">
+                <div style="font-size:12.5px;font-weight:800">${esc(rad.code)}</div>
+                <div style="font-size:12px;color:var(--muted-2);font-weight:600">${esc(rad.title)}</div>
+              </td>
+              ${weeks.map((w) => celle(rad, w)).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid #f2f4f6;font-size:12px;color:var(--muted-2);font-weight:600">
+        <span style="color:var(--green)">✓ signert</span>
+        <span style="color:var(--amber-ink)">○ ikke signert</span>
+        <span>· satt opp, uken har ikke vært</span>
+        <span>– ingen satt opp</span>
+      </div>`;
+    upcomingEl.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => loadWeek(b.dataset.week)));
+  }
+
+  // «Ingeborg Kvamme» → «Ingeborg K.» – matrisen har smale kolonner, og
+  // fornavnet er det de på internatet kjenner hverandre med.
+  function kortNavn(navn) {
+    const deler = String(navn || '').trim().split(/\s+/);
+    return deler.length < 2 ? deler[0] || '' : `${deler[0]} ${deler[deler.length - 1][0]}.`;
   }
 
   card.querySelector('#prevWeek').addEventListener('click', () => loadWeek(shiftWeek(weekStart, -1)));
@@ -1219,7 +1517,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     previewEl.innerHTML = `
       <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
         ${weeks.map((w, i) => {
-          const chips = w.matched.map((m) => `<span style="display:inline-block;background:var(--green-bg);color:var(--green-ink,#166534);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px">${esc(m.fullName)}</span>`).join(' ');
+          const chips = w.matched.map((m) => `<span style="display:inline-block;background:var(--green-bg);color:var(--green-ink,#166534);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px">${esc(m.fullName)}${m.taskCode ? `<span style="opacity:.75"> · ${esc(m.taskCode)}</span>` : ''}</span>`).join(' ');
           const miss = w.unmatched.map((n) => `<span style="display:inline-block;background:var(--amber-bg);color:var(--amber-ink);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px" title="Ikke funnet blant elevene">${esc(n)} · ikke funnet</span>`).join(' ');
           return `
           <div style="display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid #f2f4f6">
@@ -1238,9 +1536,13 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
 
     previewEl.querySelector('#dutyImportCancel').addEventListener('click', () => { previewEl.innerHTML = ''; });
     previewEl.querySelector('#dutyImportApply').addEventListener('click', async () => {
+      // `items` bærer oppgaven per elev; kjøkkentjenesten har ingen og sender
+      // bare id-ene, slik den alltid har gjort.
       const chosen = weeks.filter((_, i) => previewEl.querySelector(`[data-wk="${i}"]`)?.checked)
-        .map((w) => ({ weekStart: w.weekStart, userIds: w.matched.map((m) => m.id) }))
-        .filter((w) => w.userIds.length);
+        .map((w) => (cfg.hasTasks
+          ? { weekStart: w.weekStart, items: w.matched.map((m) => ({ userId: m.id, taskId: m.taskId || null })) }
+          : { weekStart: w.weekStart, userIds: w.matched.map((m) => m.id) }))
+        .filter((w) => (w.items || w.userIds).length);
       if (!chosen.length) { toast('Ingen uker valgt'); return; }
       const btn = previewEl.querySelector('#dutyImportApply'); btn.disabled = true; btn.textContent = 'Legger til…';
       try {
@@ -1255,9 +1557,13 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
 
   // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
   card.querySelector('#dutyXlsxMal').addEventListener('click', () => {
-    const header = ['Uke', 'Navn', 'Startdato'].map((v) => ({ v, s: 1 }));
+    const poster = cfg.hasTasks ? ['Uke', 'Oppgave', 'Navn', 'Startdato'] : ['Uke', 'Navn', 'Startdato'];
     downloadBlob(`${kind === 'kitchen' ? 'kjokkentjeneste' : 'internatvask'}-mal.xlsx`,
-      buildXlsx({ rows: [header], sheetName: cfg.navn, cols: [8, 26, 14] }));
+      buildXlsx({
+        rows: [poster.map((v) => ({ v, s: 1 }))],
+        sheetName: cfg.navn,
+        cols: cfg.hasTasks ? [8, 12, 26, 14] : [8, 26, 14],
+      }));
   });
 
   card.querySelector('#dutyXlsxUpload').addEventListener('click', async () => {
@@ -1282,7 +1588,8 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   });
 
   loadWeek();
-  loadUpcoming();
+  // Matrisen trenger oppgavelista for å ha rader å tegne, så den venter på den.
+  if (cfg.hasTasks) loadTasks().then(loadUpcoming); else loadUpcoming();
 }
 
 // ── Ukemeny (PDF): opplasting, OpenAI-tolkning, forhåndsvis + rediger ──

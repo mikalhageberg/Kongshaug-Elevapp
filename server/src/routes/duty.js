@@ -8,14 +8,15 @@
 import express, { Router } from 'express';
 import db from '../db.js';
 import { config } from '../config.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, verifyPassword } from '../auth.js';
 import { currentWeekStart, isDateString, shiftWeek, weekInfo, weekStartOf } from '../isoWeek.js';
-import { dutyWeek, dutyWeeks, hasDuty, kindOf } from '../duty.js';
+import { dutyById, dutyWeek, dutyWeeks, hasDuty, kindOf, signDuty, unsignDuty } from '../duty.js';
+import { listTasks, taskById } from '../dormTasks.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import { parseDutyXlsx, parseDutyTemplate } from '../dutyParser.js';
 
 export function createDutyRouter(kind) {
-  const { navn, ledetekst } = kindOf(kind);
+  const { navn, ledetekst, hasTasks } = kindOf(kind);
   const router = Router();
   router.use(requireAuth);
 
@@ -43,6 +44,10 @@ export function createDutyRouter(kind) {
     const { weekStart, userIds } = req.body || {};
     if (!isDateString(weekStart)) return res.status(400).json({ error: 'Ugyldig uke' });
     const week = weekStartOf(weekStart);
+    // Internatvask kan settes opp med en bestemt oppgave; uten den blir raden
+    // stående som en vaskeuke uten oppgave, slik alle rader var før.
+    const taskId = hasTasks && req.body?.taskId ? Number(req.body.taskId) : null;
+    if (taskId && !taskById(taskId)) return res.status(400).json({ error: 'Fant ikke oppgaven' });
 
     const ids = [...new Set((Array.isArray(userIds) ? userIds : []).map(Number))]
       .filter((n) => Number.isInteger(n) && n > 0);
@@ -55,8 +60,12 @@ export function createDutyRouter(kind) {
       .map((r) => r.id);
     if (!valid.length) return res.status(400).json({ error: 'Fant ingen aktive elever å legge til' });
 
-    const insert = db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start) VALUES (?, ?)`);
-    db.transaction(() => { for (const id of valid) insert.run(id, week); })();
+    const insert = hasTasks
+      ? db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start, task_id) VALUES (?, ?, ?)`)
+      : db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start) VALUES (?, ?)`);
+    db.transaction(() => {
+      for (const id of valid) hasTasks ? insert.run(id, week, taskId) : insert.run(id, week);
+    })();
 
     res.status(201).json({ week: dutyWeek(kind, week) });
   });
@@ -76,8 +85,16 @@ export function createDutyRouter(kind) {
     if (useAi && !config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY). Bruk malen i stedet.' });
     try {
       const { rows } = readXlsxGrid(buf);
-      const students = db.prepare("SELECT id, full_name FROM users WHERE role = 'student' AND active = 1").all();
-      res.json(useAi ? await parseDutyXlsx(rows, students, ledetekst) : parseDutyTemplate(rows, students));
+      // dorm er med fordi malen sjekker at oppgavekoden hører til elevens eget internat.
+      const students = db.prepare("SELECT id, full_name, dorm FROM users WHERE role = 'student' AND active = 1").all();
+      // Oppgavekoder leses bare fra malen: OpenAI-veien tolker vilkårlige ark,
+      // og der finnes kodene sjelden. De radene blir vaskeuker uten oppgave.
+      // Også deaktiverte oppgaver sendes med, så en kode som finnes kan få en
+      // presis feilmelding i stedet for «ukjent kode».
+      const tasks = hasTasks ? listTasks() : null;
+      res.json(useAi
+        ? await parseDutyXlsx(rows, students, ledetekst)
+        : parseDutyTemplate(rows, students, { tasks }));
     } catch (ex) {
       res.status(400).json({ error: ex.message || 'Kunne ikke lese filen.' });
     }
@@ -89,27 +106,99 @@ export function createDutyRouter(kind) {
   router.post('/bulk', requireAdmin, (req, res) => {
     const weeks = Array.isArray(req.body?.weeks) ? req.body.weeks : [];
     if (!weeks.length) return res.status(400).json({ error: 'Ingen uker å legge til' });
-    const insert = db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start) VALUES (?, ?)`);
+    const insert = hasTasks
+      ? db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start, task_id) VALUES (?, ?, ?)`)
+      : db.prepare(`INSERT OR IGNORE INTO ${kindOf(kind).table} (user_id, week_start) VALUES (?, ?)`);
+    // Gyldige oppgave-id-er slås opp én gang, så en id fra klienten aldri
+    // havner i basen uten å finnes.
+    const gyldigeOppgaver = new Set(hasTasks ? listTasks().map((t) => t.id) : []);
     const affected = new Set();
     db.transaction(() => {
       for (const w of weeks) {
         if (!isDateString(w?.weekStart)) continue;
         const week = weekStartOf(w.weekStart);
-        const ids = [...new Set((Array.isArray(w.userIds) ? w.userIds : []).map(Number))]
-          .filter((n) => Number.isInteger(n) && n > 0);
+        // To former: `items` med oppgave per elev (fra malen), eller `userIds`
+        // uten oppgave (kjøkkentjeneste, og internatvask lest med OpenAI).
+        const rader = Array.isArray(w.items)
+          ? w.items.map((it) => ({ userId: Number(it?.userId), taskId: Number(it?.taskId) || null }))
+          : (Array.isArray(w.userIds) ? w.userIds : []).map((id) => ({ userId: Number(id), taskId: null }));
+        const ids = [...new Set(rader.map((r) => r.userId))].filter((n) => Number.isInteger(n) && n > 0);
         if (!ids.length) continue;
         const ph = ids.map(() => '?').join(',');
-        const valid = db
+        const valid = new Set(db
           .prepare(`SELECT id FROM users WHERE id IN (${ph}) AND role = 'student' AND active = 1`)
-          .all(...ids).map((r) => r.id);
-        for (const id of valid) insert.run(id, week);
-        if (valid.length) affected.add(week);
+          .all(...ids).map((r) => r.id));
+        let lagt = 0;
+        for (const rad of rader) {
+          if (!valid.has(rad.userId)) continue;
+          const taskId = hasTasks && rad.taskId && gyldigeOppgaver.has(rad.taskId) ? rad.taskId : null;
+          hasTasks ? insert.run(rad.userId, week, taskId) : insert.run(rad.userId, week);
+          lagt++;
+        }
+        if (lagt) affected.add(week);
       }
     })();
     res.status(201).json({ weeks: [...affected].sort().map((w) => dutyWeek(kind, w)) });
   });
 
-  // ADMIN: fjern én elev fra en uke.
+  // ── Signering (bare internatvask) ──────────────────────────
+  //
+  // Eleven kvitterer for at oppgaven er gjort. Tre måter, og alle tre lagres
+  // slik at oversikten viser hvordan det ble signert:
+  //
+  //   biometri – Face ID/fingeravtrykk i mobilappen. Låsingen skjer på elevens
+  //              egen telefon, så serveren kan ikke etterprøve den; den lagrer
+  //              at appen bekreftet en biometrisk låsing. Det er en kvittering,
+  //              ikke et bevis – hensikten er forpliktelsen, ikke sikring.
+  //   passord  – nettleseren, der Face ID ikke finnes. Passordet kontrolleres
+  //              mot elevens egen hash, så denne veien er faktisk verifisert.
+  //   admin    – en administrator signerte på vegne av eleven (elev uten
+  //              telefon, glemt signering). Hvem det var, lagres.
+  if (hasTasks) {
+    router.post('/duties/:id/sign', async (req, res) => {
+      const duty = dutyById(kind, Number(req.params.id));
+      if (!duty) return res.status(404).json({ error: 'Fant ikke oppgaven.' });
+      if (duty.doneAt) return res.status(409).json({ error: 'Oppgaven er allerede signert.' });
+
+      const erAdmin = req.auth.role === 'admin';
+      const erMin = duty.userId === req.auth.sub;
+      if (!erAdmin && !erMin) return res.status(403).json({ error: 'Du kan bare signere dine egne oppgaver.' });
+      // Ingen kan signere for en uke som ikke har begynt.
+      if (!erAdmin && duty.weekStart > currentWeekStart()) {
+        return res.status(400).json({ error: 'Uken har ikke begynt ennå.' });
+      }
+
+      let method = 'admin';
+      if (!erAdmin) {
+        method = req.body?.method === 'biometri' ? 'biometri' : 'passord';
+        if (method === 'passord') {
+          const bruker = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.auth.sub);
+          const ok = bruker && await verifyPassword(String(req.body?.password || ''), bruker.password_hash);
+          if (!ok) return res.status(401).json({ error: 'Feil passord.' });
+        }
+      }
+      signDuty(kind, duty.id, { method, byUserId: req.auth.sub });
+      res.json({ week: dutyWeek(kind, duty.weekStart) });
+    });
+
+    // ADMIN: angre en signatur (feiltrykk, eller jobben var ikke gjort likevel).
+    router.delete('/duties/:id/sign', requireAdmin, (req, res) => {
+      const duty = dutyById(kind, Number(req.params.id));
+      if (!duty) return res.status(404).json({ error: 'Fant ikke oppgaven.' });
+      unsignDuty(kind, duty.id);
+      res.json({ week: dutyWeek(kind, duty.weekStart) });
+    });
+  }
+
+  // ADMIN: fjern én oppsatt rad (én elev på én oppgave i én uke).
+  router.delete('/duties/:id', requireAdmin, (req, res) => {
+    const duty = dutyById(kind, Number(req.params.id));
+    if (!duty) return res.status(404).json({ error: 'Fant ikke raden.' });
+    db.prepare(`DELETE FROM ${kindOf(kind).table} WHERE id = ?`).run(duty.id);
+    res.json({ week: dutyWeek(kind, duty.weekStart) });
+  });
+
+  // ADMIN: fjern én elev fra en uke (alle oppgavene hennes den uken).
   router.delete('/:weekStart/:userId', requireAdmin, (req, res) => {
     const { weekStart, userId } = req.params;
     if (!isDateString(weekStart)) return res.status(400).json({ error: 'Ugyldig uke' });

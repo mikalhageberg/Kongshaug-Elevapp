@@ -193,17 +193,53 @@ API-et ligger på `/api/dorm-duty` for internatvask. Kjøkkentjenesten beholder
 `/api/dinner/kitchen-duty`: den stien ligger i utrullede app-versjoner, og en
 flytting ville brutt dem.
 
+#### Oppgaver i internatvasken
+
+Internatvasken er ikke bare «hvem har vask denne uken», men **hvilke oppgaver**
+som skal gjøres – 80-gongen, trappegangen, kjøkkenet – og hvem som tok hver av
+dem. Oppgavene ligger i `dorm_tasks` (se `server/src/dormTasks.js`).
+
+- **Admin oppretter oppgavene** per internat, under **Internat → Oppgaver**, med
+  hele beskrivelsen slik den står på vaskelista. Eleven leser den i appen.
+- Hver oppgave får en **kode**: `ØVEST1` = Øvre Vestheim, oppgave 1. Koden lages
+  av internatnavnet (første bokstav + fire av siste ord), teller oppover, og er
+  unik på tvers av internatene. Admin kan overstyre den. Internat med tall i
+  navnet får bindestrek, så `TREET1-2` ikke leses som «uke 12».
+- Koden er det man skriver i **«Oppgave»-kolonnen** i Excel-turnusen (se under).
+- Oppgaver som har vært satt opp kan ikke slettes, bare **deaktiveres** – ellers
+  ville historikken mistet hva som faktisk ble gjort.
+
+**Signering.** Eleven kvitterer for at jobben er gjort. Det lagres på raden i
+`dorm_duties` (`done_at`, `done_method`, `done_by_user_id`), og skjer på tre måter:
+
+| Metode | Hvor | Hva den er verdt |
+| ------ | ---- | ---------------- |
+| `biometri` | Mobilappen | Face ID / fingeravtrykk via telefonens egen låsing. **En kvittering, ikke et bevis** – låsingen skjer på elevens enhet, og serveren kan ikke etterprøve den. Poenget er forpliktelsen i å skrive under selv. |
+| `passord` | Nettleseren (PWA) | Face ID finnes ikke i nettleseren, så der signeres det med elevens eget passord. Dette kontrolleres mot passord-hashen på serveren, og er altså faktisk verifisert. |
+| `admin` | Admin | En administrator signerte på vegne av eleven (elev uten telefon, glemt signering). Hvem det var, lagres og vises i oversikten. |
+
+Ingen kan signere en uke som ikke har begynt, eleven kan bare signere sine egne
+oppgaver, og en signatur kan bare angres av admin.
+
+**Oversikten.** Under **Internat** ligger en matrise med oppgavene nedover og
+ukene bortover – samme oppslag som henger på veggen, men med signaturene fylt
+inn: grønn hake for signert, gul ring for uker som har vært uten signatur, prikk
+for det som ligger fram i tid. Klikk en ukekolonne for å redigere den uken.
+
 #### Importere turnus fra Excel
 
-Samme valg som for elevlista, og samme mal for begge tjenestene:
+Samme valg som for elevlista, og samme mal for begge tjenestene – men
+internatvasken har i tillegg en **Oppgave**-kolonne:
 
 - **Arket følger malen** (standard) – tolkes lokalt, ingen OpenAI:
 
-  | Uke | Navn | Startdato |
-  | --- | ---- | --------- |
-  | 34 | Ingrid Sæther | 17.08.2026 |
-  |  | Ola Nordmann |  |
-  | 35 | Kari Ås |  |
+  | Uke | Oppgave | Navn | Startdato |
+  | --- | ------- | ---- | --------- |
+  | 34 | ØVEST1 | Ingrid Sæther | 17.08.2026 |
+  |  | ØVEST2 | Ola Nordmann |  |
+  | 35 | ØVEST1 | Kari Ås |  |
+
+  (Kjøkkentjenesten har ingen oppgaver, og der er kolonnen ikke med.)
 
   - **Rad 1 er overskriftsraden** med postene skrevet nøyaktig som over, og én
     elev per rad nedover fra rad 2. Har flere elever tjeneste samme uke, får de
@@ -215,16 +251,24 @@ Samme valg som for elevlista, og samme mal for begge tjenestene:
     **mandagen** i uken (`17.08.2026`, `2026-08-17`, eller en datoformatert
     celle) – nyttig over et årsskifte. Uten dato velges nærmeste kommende uke
     med det nummeret, som i OpenAI-veien.
-  - Skrivefeil i uke eller dato avvises med radnummer, og en dato som havner i
-    en annen uke enn ukenummeret sier ifra. **Navn** som ikke finnes blant
-    elevene stopper *ikke* importen – de vises som «ikke funnet» i
+  - `Oppgave` (bare internatvask) er oppgavekoden. Hver rad har sin egen kode –
+    den arves *ikke* nedover slik `Uke` gjør, for en tom celle betyr «vaskeuke
+    uten bestemt oppgave». Koden må høre til elevens eget internat; en kode fra
+    et annet internat er nesten alltid en skrivefeil og avvises.
+  - Skrivefeil i uke, oppgavekode eller dato avvises med radnummer, og en dato
+    som havner i en annen uke enn ukenummeret sier ifra. **Navn** som ikke
+    finnes blant elevene stopper *ikke* importen – de vises som «ikke funnet» i
     forhåndsvisningen, slik admin kan rette opp der.
 
 - **Tolk arket med OpenAI** – for ark som ikke følger malen. Da sendes
   innholdet i arket (navnene som står oppført); skolens elevliste sendes ikke.
+  **OpenAI-veien leser ikke oppgavekoder** – de radene blir vaskeuker uten
+  oppgave, som før. Skal turnusen ha oppgaver, må arket følge malen.
 
 Styres av `?mode=mal|ai` på `POST {base}/parse`; koden ligger i
-`server/src/dutyParser.js`. Malen deler kode med elevlista
+`server/src/dutyParser.js`. Oppgavene har egne endepunkter på `/api/dorm-tasks`,
+og signeringen ligger på `POST {base}/duties/:id/sign` (admin angrer med
+`DELETE` på samme sti). Malen deler kode med elevlista
 (`server/src/sheetTemplate.js`), så feilmeldingene er de samme begge steder.
 
 ### Juksesikring (GPS)

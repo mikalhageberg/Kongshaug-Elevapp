@@ -136,18 +136,53 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_kitchen_duty_week ON kitchen_duties(week_start);
 
+  -- Internatvaskens oppgaver: hvert internat har sine faste oppgaver («80-gongen
+  -- med bøttekott», «KJØKKEN, vaske opp …»), med hele beskrivelsen elevene
+  -- ellers ville lest av arket på veggen. Koden (f.eks. ØVEST1) er det admin
+  -- skriver i Excel-turnusen, og er unik på tvers av internatene.
+  --
+  -- Oppgaver deaktiveres framfor å slettes når de har vært i bruk – ellers
+  -- ville historikken mistet hva som faktisk ble gjort.
+  CREATE TABLE IF NOT EXISTS dorm_tasks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    dorm        TEXT    NOT NULL,              -- internatnavn, som users.dorm
+    code        TEXT    NOT NULL UNIQUE,       -- 'ØVEST1' – brukes i Excel-turnusen
+    title       TEXT    NOT NULL,              -- kort navn: «80-gongen»
+    description TEXT    NOT NULL DEFAULT '',   -- hele oppgaveteksten, vist i appen
+    active      INTEGER NOT NULL DEFAULT 1,
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_dorm_task_dorm ON dorm_tasks(dorm);
+
   -- Internatvask: elevene som har vask en gitt uke (rundgang), på samme form
   -- som kitchen_duties over. Egen tabell framfor en type-kolonne i én felles
   -- tabell: kitchen_duties har data fra før, og en migrering ville kostet mer
   -- enn de fire linjene her sparer. Se duty.js, som deler koden mellom dem.
+  --
+  -- Én rad = én elev + én uke + én oppgave. task_id er NULL for rader satt opp
+  -- uten oppgave (slik hele tabellen var før oppgavene fantes). Derfor to
+  -- delvise unike indekser i stedet for én UNIQUE: SQLite regner NULL-er som
+  -- ulike, så en vanlig UNIQUE(user_id, week_start, task_id) ville sluppet
+  -- gjennom duplikater av nettopp de radene.
+  --
+  -- Signaturen ligger her: done_at + hvordan det ble signert. Face ID/fingeravtrykk
+  -- skjer på elevens egen telefon, så serveren kan ikke etterprøve den – den
+  -- lagrer at appen bekreftet en biometrisk låsing. Passord-signaturen i
+  -- nettleseren kontrolleres derimot mot elevens egen passord-hash.
   CREATE TABLE IF NOT EXISTS dorm_duties (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    week_start TEXT    NOT NULL,   -- 'YYYY-MM-DD' mandagen i uken
-    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (user_id, week_start)
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    week_start      TEXT    NOT NULL,   -- 'YYYY-MM-DD' mandagen i uken
+    task_id         INTEGER REFERENCES dorm_tasks(id) ON DELETE SET NULL,
+    done_at         TEXT,               -- NULL = ikke signert
+    done_method     TEXT,               -- 'biometri' | 'passord' | 'admin'
+    done_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_dorm_duty_week ON dorm_duties(week_start);
+  -- De to delvise unike indeksene lages nedenfor, etter migreringen: på en
+  -- gammel database finnes ikke task_id ennå når denne blokken kjører.
 
   -- Øvekonkurranse: én rad per øveøkt en elev registrerer. Økten opprettes når
   -- eleven starter (ended_at = NULL), og fullføres når hun trykker «registrer».
@@ -196,6 +231,52 @@ function dropColumn(table, column) {
     db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
   }
 }
+// Internatvask fikk oppgaver: én rad per elev + uke + oppgave, med signaturen
+// på raden. Den gamle tabellen hadde UNIQUE(user_id, week_start), som ville
+// sperret for at samme elev har to oppgaver samme uke. En UNIQUE-betingelse kan
+// ikke endres med ALTER TABLE, så tabellen bygges om denne ene gangen. Radene
+// som fantes beholdes uendret, som oppgaveløse vaskeuker.
+function migrateDormDuties() {
+  const cols = db.prepare('PRAGMA table_info(dorm_duties)').all();
+  if (!cols.length || cols.some((c) => c.name === 'task_id')) return;  // allerede ny nok
+  console.log('[db] migrerer dorm_duties: legger til oppgave og signatur');
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE dorm_duties_ny (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          week_start      TEXT    NOT NULL,
+          task_id         INTEGER REFERENCES dorm_tasks(id) ON DELETE SET NULL,
+          done_at         TEXT,
+          done_method     TEXT,
+          done_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO dorm_duties_ny (id, user_id, week_start, created_at)
+          SELECT id, user_id, week_start, created_at FROM dorm_duties;
+        DROP TABLE dorm_duties;
+        ALTER TABLE dorm_duties_ny RENAME TO dorm_duties;
+        CREATE INDEX IF NOT EXISTS idx_dorm_duty_week ON dorm_duties(week_start);
+      `);
+    })();
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
+}
+migrateDormDuties();
+
+// Unikhet på tvers av oppgaver. To delvise indekser framfor én UNIQUE fordi
+// SQLite regner NULL-er som ulike: uten den andre indeksen ville de oppgaveløse
+// radene (task_id IS NULL) kunne dubleres av samme import kjørt to ganger.
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_dorm_duty_unik
+    ON dorm_duties(user_id, week_start, task_id) WHERE task_id IS NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_dorm_duty_unik_uten
+    ON dorm_duties(user_id, week_start) WHERE task_id IS NULL;
+`);
+
 ensureColumn('fire_checkins', 'status', "TEXT NOT NULL DEFAULT 'present'");
 // Allergi-funksjonen er fjernet: kjøkkenet kjenner elevene ved navn, og lagring
 // av helseopplysninger (særlig kategori, GDPR art. 9) var unødvendig risiko.

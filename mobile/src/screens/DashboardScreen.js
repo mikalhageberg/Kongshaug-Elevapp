@@ -16,12 +16,25 @@ function practiceTotal(sek) {
   return m ? `${t} t ${m} min` : `${t} t`;
 }
 
-// «sammen med X og Y» – hvem eleven deler tjenesteuken med.
+// «sammen med X og Y» – hvem eleven deler tjenesteuken med. Samme elev kan stå
+// på flere oppgaver samme uke, så navnene må være unike.
 function dutyPartners(week, meId) {
-  const others = week.students.filter((s) => s.id !== meId).map((s) => s.fullName);
+  const others = [...new Set(week.students.filter((s) => s.id !== meId).map((s) => s.fullName))];
   if (!others.length) return '';
   const list = others.length === 1 ? others[0] : `${others.slice(0, -1).join(', ')} og ${others[others.length - 1]}`;
   return ` · sammen med ${list}`;
+}
+
+// «80-gongen, KJØKKEN · 1 av 2 signert» – elevens egne oppgaver i vaskeuken.
+// Tom streng når tjenesten ikke har oppgaver (kjøkkentjeneste).
+function dutyTaskSummary(week, meId) {
+  const mine = week.students.filter((s) => s.id === meId && s.task);
+  if (!mine.length) return '';
+  const signert = mine.filter((s) => s.done).length;
+  const status = signert === mine.length
+    ? ' · alt signert ✓'
+    : ` · ${signert} av ${mine.length} signert`;
+  return `\n${mine.map((s) => s.task.title).join(', ')}${status}`;
 }
 
 export default function DashboardScreen({ user, onLogout, goTo }) {
@@ -132,6 +145,7 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
                   <Text style={styles.dutySub}>
                     Uke {d.thisWeek.isoWeek} · {formatWeekRange(d.thisWeek.weekStart, d.thisWeek.weekEnd)}
                     {dutyPartners(d.thisWeek, user.id)}
+                    {dutyTaskSummary(d.thisWeek, user.id)}
                   </Text>
                 </View>
               </View>
