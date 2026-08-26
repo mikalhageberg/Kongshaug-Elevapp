@@ -52,7 +52,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Appen bruker Face ID for å låse opp når du åpner den."
+          "faceIDPermission": "Appen bruker Face ID til å låse opp appen, og til å signere at du har gjort internatvasken din."
         }
       ],
       [
