@@ -1207,6 +1207,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     weekStart = w.weekStart;
     assigned = w.students;
     card.querySelector('#weekTitle').textContent = `Uke ${w.isoWeek}${w.isCurrent ? ' · denne uken' : ''}`;
+    if (cfg.hasTasks) markerValgtUke();
     card.querySelector('#weekRange').textContent = formatWeekRange(w.weekStart, w.weekEnd);
     listEl.innerHTML = w.students.length ? w.students.map((s) => `
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid #f2f4f6">
@@ -1444,9 +1445,13 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     }
 
     const iDag = weeks.find((w) => w.isCurrent)?.weekStart || weeks[0].weekStart;
+    // Hele cellen åpner uken – ikke bare ukenummeret i toppraden. Det er
+    // cellen man peker på når man vil rette noe.
+    const cellStil = (ekstra) => `padding:7px 8px;border-left:1px solid #f2f4f6;cursor:pointer;${ekstra}`;
     const celle = (rad, w) => {
       const liste = celler.get(rad.id)?.get(w.weekStart) || [];
-      if (!liste.length) return '<td style="padding:7px 8px;border-left:1px solid #f2f4f6;color:#c9cfd8;text-align:center">–</td>';
+      const åpne = `data-week="${w.weekStart}" title="Åpne uke ${w.isoWeek}"`;
+      if (!liste.length) return `<td ${åpne} style="${cellStil('color:#c9cfd8;text-align:center')}">–</td>`;
       const passert = w.weekStart <= iDag;
       const innhold = liste.map((s) => {
         const merke = s.done ? '✓' : (passert ? '○' : '·');
@@ -1455,7 +1460,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         return `<div title="${esc(s.fullName)} · ${esc(tittel)}" style="white-space:nowrap;color:${farge};font-weight:700">${merke} ${esc(kortNavn(s.fullName))}</div>`;
       }).join('');
       const bakgrunn = liste.every((s) => s.done) ? 'var(--green-bg)' : (passert ? 'var(--amber-bg)' : '#fff');
-      return `<td style="padding:7px 8px;border-left:1px solid #f2f4f6;background:${bakgrunn};font-size:12.5px">${innhold}</td>`;
+      return `<td ${åpne} style="${cellStil(`background:${bakgrunn};font-size:12.5px`)}">${innhold}</td>`;
     };
 
     upcomingEl.innerHTML = `
@@ -1464,8 +1469,8 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           <tr style="background:#f7f8fa">
             <th style="text-align:left;padding:10px 12px;font-size:12.5px;font-weight:800;position:sticky;left:0;background:#f7f8fa;min-width:150px">Oppgave</th>
             ${weeks.map((w) => `
-              <th style="padding:10px 8px;font-size:12.5px;font-weight:800;border-left:1px solid #eef0f3;white-space:nowrap">
-                <button type="button" data-week="${w.weekStart}" style="background:none;border:none;cursor:pointer;font:inherit;color:${w.isCurrent ? 'var(--green)' : 'inherit'}">
+              <th data-ukekol="${w.weekStart}" style="padding:10px 8px;font-size:12.5px;font-weight:800;border-left:1px solid #eef0f3;white-space:nowrap;background:#f7f8fa">
+                <button type="button" data-week="${w.weekStart}" title="Åpne uke ${w.isoWeek}" style="background:none;border:none;cursor:pointer;font:inherit;color:${w.isCurrent ? 'var(--green)' : 'inherit'}">
                   Uke ${w.isoWeek}${w.isCurrent ? ' ·' : ''}
                 </button>
               </th>`).join('')}
@@ -1488,7 +1493,23 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         <span>· satt opp, uken har ikke vært</span>
         <span>– ingen satt opp</span>
       </div>`;
-    upcomingEl.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => loadWeek(b.dataset.week)));
+    upcomingEl.querySelectorAll('[data-week]').forEach((b) =>
+      b.addEventListener('click', () => åpneUke(b.dataset.week)));
+    markerValgtUke();
+  }
+
+  // Å åpne en uke fra matrisen endrer kortet øverst på siden. Uten å rulle dit
+  // ser det ut som ingenting skjedde – matrisen ligger nederst.
+  async function åpneUke(ws) {
+    await loadWeek(ws);
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Hvilken kolonne i matrisen som er uken kortet øverst viser.
+  function markerValgtUke() {
+    upcomingEl.querySelectorAll('[data-ukekol]').forEach((th) => {
+      th.style.background = th.dataset.ukekol === weekStart ? '#e2e9f3' : '#f7f8fa';
+    });
   }
 
   // «Ingeborg Kvamme» → «Ingeborg K.» – matrisen har smale kolonner, og
