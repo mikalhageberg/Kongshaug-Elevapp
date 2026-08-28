@@ -70,6 +70,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_fire_night   ON fire_checkins(night_date);
   CREATE INDEX IF NOT EXISTS idx_andakt_date  ON andakt_checkins(session_date);
 
+  -- Arkivet over ukesrapporter for andaktsfraværet. Én rad per ferdig uke,
+  -- identifisert av mandagsdatoen som ellers i systemet. report_json er en
+  -- FROSSET kopi av rapporten: fraværet regnes ut fra elevene som er aktive nå,
+  -- så en rapport som ble regnet på nytt senere ville vist andre navn og andre
+  -- tall enn uken faktisk hadde. Se andaktArchive.js.
+  CREATE TABLE IF NOT EXISTS andakt_week_reports (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    week_start   TEXT    NOT NULL UNIQUE,   -- 'YYYY-MM-DD' mandagen i uken
+    week_end     TEXT    NOT NULL,          -- 'YYYY-MM-DD' søndagen i uken
+    iso_year     INTEGER NOT NULL,
+    iso_week     INTEGER NOT NULL,
+    absent_count INTEGER NOT NULL DEFAULT 0,
+    late_count   INTEGER NOT NULL DEFAULT 0,
+    report_json  TEXT    NOT NULL,          -- hele rapporten, slik uken så ut
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+
   -- Enkel nøkkel/verdi-tabell for innstillinger som admin kan endre i appen
   -- (uten omstart av serveren).
   CREATE TABLE IF NOT EXISTS settings (

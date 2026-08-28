@@ -17,6 +17,7 @@ export const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
 const DEFAULTS = {
   andaktDeadline: minutesToHHMM(config.andakt.deadlineMinutes), // f.eks. "08:10"
   andaktWeekdaysOnly: true,        // andakt kun mandag–fredag
+  andaktArchiveWeeks: 12,          // hvor mange ukesrapporter arkivet tar vare på
   // Brannliste: tidsvindu om kvelden man kan melde seg til stede. Egne tider for
   // hverdag (søn–tor), fredag og lørdag. Lukketid kan være ≤ åpningstid i helgen
   // (krysser midnatt), se fireWindow.js. Lukketidene arver de gamle «frist»-
@@ -57,6 +58,11 @@ export const RETENTION_DAYS_MIN = 30;
 export const RETENTION_DAYS_MAX = 3650;
 export const GPS_HOURS_MIN = 1;
 export const GPS_HOURS_MAX = 168;   // en uke
+// Andaktsarkivet: hvor mange ukesrapporter som beholdes. Minst én uke – null
+// ville gjort arkivet tomt i det du åpnet det. Taket ligger på fem skoleår, og
+// den generelle lagringstiden over gjelder uansett som ytre grense.
+export const ARCHIVE_WEEKS_MIN = 1;
+export const ARCHIVE_WEEKS_MAX = 260;
 // Oppvarmingen. Null ville gjort den obligatoriske oppvarmingen valgfri i
 // praksis; taket hindrer at et feiltrykk låser elevene ute av å øve.
 export const WARMUP_MIN = 1;
@@ -79,6 +85,7 @@ export function getSettings() {
   return {
     andaktDeadline: s.andaktDeadline ?? DEFAULTS.andaktDeadline,
     andaktWeekdaysOnly: s.andaktWeekdaysOnly != null ? s.andaktWeekdaysOnly === 'true' : DEFAULTS.andaktWeekdaysOnly,
+    andaktArchiveWeeks: intOr(s.andaktArchiveWeeks, DEFAULTS.andaktArchiveWeeks),
     // Lukketider arver de gamle fristene (fireDeadline*) for eksisterende
     // installasjoner, så ingen mister sin innstilte kveldsfrist ved oppgradering.
     fireOpenWeekday: s.fireOpenWeekday ?? DEFAULTS.fireOpenWeekday,

@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { hashPassword, requireAuth, requireAdmin, normalizeUsername } from '../auth.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import { parseStudentsXlsx, parseStudentsTemplate } from '../studentParser.js';
+import { removeUsersFromArchive } from '../andaktArchive.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -233,6 +234,9 @@ router.delete('/:id', (req, res) => {
   }
 
   db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  // Registreringene forsvinner med kontoen (ON DELETE CASCADE), men de
+  // arkiverte ukesrapportene er frosne JSON-kopier og må ryddes for seg.
+  removeUsersFromArchive([id]);
   res.json({ ok: true });
 });
 
@@ -255,6 +259,7 @@ router.post('/bulk-delete', (req, res) => {
   }
 
   const info = db.prepare(`DELETE FROM users WHERE id IN (${ph})`).run(...ids);
+  removeUsersFromArchive(ids);
   res.json({ deleted: info.changes });
 });
 

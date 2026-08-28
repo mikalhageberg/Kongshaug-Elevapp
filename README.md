@@ -91,6 +91,26 @@ Nullingen kjøres hver 15. minutt, slettingen én gang i døgnet. Knappen
 endelig – dataen kan ikke hentes tilbake. Husk å holde
 `public/personvern/index.html` i takt hvis periodene endres.
 
+### Andaktsarkiv
+
+Ukesrapportene over andaktsfraværet samles i **Andaktsarkiv** i admin
+(`server/src/andaktArchive.js`). Så snart en uke er over, fryses rapporten – hvem
+som var borte, og hvem som kom for sent – som en JSON-kopi i
+`andakt_week_reports`. Kopi, ikke oppslag: fraværet regnes ut fra elevene som er
+aktive *nå*, så en rapport som ble regnet på nytt senere ville vist andre navn og
+andre tall enn uken faktisk hadde.
+
+Skolen velger på arkivsiden hvor mange uker som skal bli liggende (standard 12).
+Eldre uker fjernes for godt. Uker uten en eneste registrering – ferier, og tiden
+før appen ble tatt i bruk – hoppes over: en «rapport» der alle står som
+fraværende sier ingenting. Uken som løper nå ligger ikke i arkivet ennå, og
+lastes ned fra Andakt-siden.
+
+To ting å vite hvis arkivet endres: den generelle lagringstiden over gjelder
+fortsatt som ytre grense, og siden rapportene er JSON nås de ikke av
+`ON DELETE CASCADE` – sletting av en konto rydder dem gjennom
+`removeUsersFromArchive()` i `routes/users.js`.
+
 ### Øvekonkurranse
 
 Elevene konkurrerer om å øve mest på hovedinstrumentet sitt i en avgrenset
@@ -299,6 +319,8 @@ Kongshaug/
 │  │  ├─ auth.js           # bcrypt + JWT-cookie
 │  │  ├─ geo.js            # GPS-avstand
 │  │  ├─ andaktToken.js    # roterende QR-token
+│  │  ├─ andaktReport.js   # fravær/for sent per dag og uke
+│  │  ├─ andaktArchive.js  # arkivet over ferdige ukesrapporter
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
 │  │  ├─ practice.js       # øvekonkurransen
 │  │  ├─ retention.js      # sletting/nulling av gamle data

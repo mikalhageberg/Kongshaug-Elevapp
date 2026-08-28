@@ -88,6 +88,7 @@ const nav = {
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
   broom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 3 12.75 11.25"/><path d="M10 8.5 15.5 14 9 20.5 3.5 15Z"/><path d="M6.75 11.75 12.25 17.25"/></svg>',
   timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="8"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="m18.5 6.5 1.5-1.5"/></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="5" rx="1.5"/><path d="M4.5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V8.5"/><path d="M10 12h4"/></svg>',
 };
 
 init();
@@ -107,6 +108,7 @@ function render() {
   if (route.startsWith('administratorer')) return page('administratorer', renderAdmins);
   if (route.startsWith('brannliste')) return page('brannliste', renderBrannliste);
   if (route.startsWith('gjester')) return page('gjester', renderGuests);
+  if (route.startsWith('andaktsarkiv')) return page('andaktsarkiv', renderAndaktArkiv);
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
   if (route.startsWith('internat')) return page('internat', renderInternat);
@@ -209,6 +211,7 @@ function page(active, renderMain) {
     ['brannliste', 'Brannliste', nav.flame, '/brannliste'],
     ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
+    ['andaktsarkiv', 'Andaktsarkiv', nav.archive, '/andaktsarkiv'],
     ['middag', 'Kjøkken', nav.food, '/middag'],
     ['internat', 'Internat', nav.broom, '/internat'],
     ['ovekonkurranse', 'Øvekonkurranse', nav.timer, '/ovekonkurranse'],
@@ -827,7 +830,8 @@ function printCredentialCards(students) {
 let andaktTimer = null;
 async function renderAndakt(main) {
   header(main, 'Andakt / QR-kode', formatDateLong(todayStr()),
-    `<button class="btn btn-ghost" id="exportAbsent" style="height:44px;padding:0 18px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter ukens fravær (Excel)</button>`);
+    `<button class="btn btn-ghost" id="openArkiv" style="height:44px;padding:0 18px;font-size:14px"><span style="width:16px;height:16px;display:inline-block">${nav.archive}</span>Arkivet</button>
+     <button class="btn btn-ghost" id="exportAbsent" style="height:44px;padding:0 18px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter ukens fravær (Excel)</button>`);
   const page = el(`
     <div class="page" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
       <div style="flex:0 0 380px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center">
@@ -853,6 +857,7 @@ async function renderAndakt(main) {
     </div>`);
   main.appendChild(page);
   page.querySelector('#screen').addEventListener('click', () => window.open('/admin/#/storskjerm', '_blank'));
+  main.querySelector('#openArkiv').addEventListener('click', () => go('/andaktsarkiv'));
   page.querySelector('#rotate').addEventListener('click', async () => { await api('/api/andakt/rotate', { method: 'POST' }); toast('Alle tidligere koder er nå ugyldige'); refreshQr(); });
 
   async function refreshQr() {
@@ -884,30 +889,13 @@ async function renderAndakt(main) {
   const tabPresent = page.querySelector('#tabPresent');
   const tabAbsent = page.querySelector('#tabAbsent');
 
-  // Eksporter fravær + for sent for HELE uken (mandag–søndag rundt i dag) til
-  // én samlet Excel-fil, siden admin uansett bare sjekker dette ukentlig.
+  // Uken vi står i nå er ikke arkivert ennå (arkivet tar bare ferdige uker),
+  // så den hentes ferskt og lastes ned med samme rapportbygger som arkivet.
   main.querySelector('#exportAbsent')?.addEventListener('click', async () => {
     const btn = main.querySelector('#exportAbsent'); btn.disabled = true;
     try {
       const week = await api('/api/andakt/week');
-      // s: 1=overskrift, 2=rød (fravær), 3=gul (for sent)
-      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Dato', 'Status', 'Hvor sent'].map((v) => ({ v, s: 1 }));
-      const rows = [header];
-      for (const day of week.days) {
-        const dato = formatDateNorsk(day.sessionDate);
-        for (const s of day.absentList || []) {
-          rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', dato, 'Fravær', ''].map((v) => ({ v, s: 2 })));
-        }
-        for (const c of (day.checkins || []).filter((x) => x.status === 'late')) {
-          const how = c.minutesLate != null
-            ? `${c.minutesLate} min for sent (kl. ${formatTime(c.checkedAt)})`
-            : `kl. ${formatTime(c.checkedAt)}`;
-          rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', dato, 'For sent', how].map((v) => ({ v, s: 3 })));
-        }
-      }
-      if (rows.length === 1) { toast('Ingen fravær eller for sent denne uken 🎉'); return; }
-      downloadBlob(`andakt-fravaer-${week.weekStart}-til-${week.weekEnd}.xlsx`,
-        buildXlsx({ rows, sheetName: 'Fravær og for sent', cols: [28, 11, 18, 8, 14, 12, 30] }));
+      if (!lastNedAndaktUke(week)) toast('Ingen fravær eller for sent denne uken 🎉');
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; }
   });
@@ -977,6 +965,166 @@ async function renderAndakt(main) {
   andaktTimer = setInterval(() => { refreshQr(); refreshList(); }, 5000);
 }
 window.addEventListener('hashchange', () => clearInterval(andaktTimer));
+
+// ── 2.4b Andaktsarkiv ────────────────────────────────────────
+// Ukesrapportene over fraværet, slik de så ut da uken var ferdig. Arkivet fylles
+// av serveren så snart en uke er over; her velger skolen bare hvor mange uker
+// som skal bli liggende. Uken vi står i nå ligger ikke her ennå – den lastes ned
+// fra Andakt-siden.
+
+// Radene i Excel-arket. Samme regnestykke uansett om uken kommer fra arkivet
+// eller regnes ut for uken som løper: begge har formen
+// { days: [{ sessionDate, absentList, lateList }] }.
+// s: 1=overskrift, 2=rød (fravær), 3=gul (for sent)
+function andaktWeekRows(week) {
+  const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Dato', 'Status', 'Hvor sent'].map((v) => ({ v, s: 1 }));
+  const rows = [header];
+  for (const day of week.days || []) {
+    const dato = formatDateNorsk(day.sessionDate);
+    for (const s of day.absentList || []) {
+      rows.push([s.fullName, s.className || '', s.dorm || '', s.room || '', dato, 'Fravær', ''].map((v) => ({ v, s: 2 })));
+    }
+    for (const c of day.lateList || []) {
+      const how = c.minutesLate != null
+        ? `${c.minutesLate} min for sent (kl. ${formatTime(c.checkedAt)})`
+        : `kl. ${formatTime(c.checkedAt)}`;
+      rows.push([c.fullName, c.className || '', c.dorm || '', c.room || '', dato, 'For sent', how].map((v) => ({ v, s: 3 })));
+    }
+  }
+  return rows;
+}
+
+// Last ned uken som Excel. false = uken er tom (ingen fravær, ingen for sent).
+function lastNedAndaktUke(week) {
+  const rows = andaktWeekRows(week);
+  if (rows.length === 1) return false;
+  downloadBlob(`andakt-fravaer-${week.weekStart}-til-${week.weekEnd}.xlsx`,
+    buildXlsx({ rows, sheetName: 'Fravær og for sent', cols: [28, 11, 18, 8, 14, 12, 30] }));
+  return true;
+}
+
+async function renderAndaktArkiv(main) {
+  header(main, 'Andaktsarkiv', 'Ukesrapporter over fravær og for sent på andakt');
+  const page = el(`<div class="page" style="max-width:900px">
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:22px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Hvor mye arkivet tar vare på</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Rapporten for en uke legges her automatisk når uken er over. Uker eldre enn perioden du velger, fjernes fra arkivet for godt – last dem ned først hvis skolen trenger dem lenger.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
+        <div><div style="font-size:15px;font-weight:700">Behold ukesrapporter</div>
+          <div style="font-size:13px;color:var(--muted-2);margin-top:2px">12 uker ≈ et halvt skoleår. Den generelle lagringstiden under Innstillinger gjelder uansett som ytre grense.</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <input type="number" id="weeks" min="1" max="260" step="1" class="field" style="width:100px;height:46px" />
+          <span style="color:var(--muted-2);font-weight:700;font-size:14px">uker</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-top:14px">
+        <span id="msg" style="color:var(--green-ink);font-weight:700;display:none">Lagret ✓</span>
+        <button class="btn btn-primary" id="save" style="height:44px;padding:0 22px;font-size:14px">Lagre</button>
+      </div>
+    </div>
+    <div id="liste"></div>
+  </div>`);
+  main.appendChild(page);
+
+  const rapporter = new Map();   // weekStart -> hele rapporten, hentet ved behov
+  const åpne = new Set();
+  let data = { weeks: 12, reports: [] };
+
+  const statLinje = (r) => [
+    r.absentCount ? `${r.absentCount} fravær` : '',
+    r.lateCount ? `${r.lateCount} for sent` : '',
+  ].filter(Boolean).join(' · ') || 'Ingen fravær eller for sent';
+
+  // Detaljene for én uke: én bolk per dag med noe å vise.
+  function detaljer(uke) {
+    if (!uke) return '<div style="padding:18px 20px;color:var(--muted-2);font-size:13.5px">Henter…</div>';
+    const dager = (uke.days || []).filter((d) => d.absentList.length || d.lateList.length);
+    if (!dager.length) return '<div style="padding:18px 20px;color:var(--green-ink);font-size:13.5px;font-weight:700">Ingen fravær og ingen for sent hele uken 🎉</div>';
+    const navn = (n, farge, detalj) => `<div style="display:flex;align-items:baseline;gap:8px;padding:6px 0">
+        <span style="width:7px;height:7px;border-radius:50%;background:${farge};flex:0 0 auto;transform:translateY(-1px)"></span>
+        <span style="font-size:14px;font-weight:700">${esc(n)}</span>
+        ${detalj ? `<span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${esc(detalj)}</span>` : ''}
+      </div>`;
+    return dager.map((d) => `
+      <div style="padding:14px 20px;border-top:1px solid #f2f4f6">
+        <div style="font-size:12.5px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${formatDateLong(d.sessionDate)}</div>
+        ${d.absentList.map((s) => navn(s.fullName, 'var(--red)', [s.className, s.dorm].filter(Boolean).join(' · '))).join('')}
+        ${d.lateList.map((c) => navn(c.fullName, 'var(--amber)', c.minutesLate != null ? `${c.minutesLate} min for sent · kl. ${formatTime(c.checkedAt)}` : `kl. ${formatTime(c.checkedAt)}`)).join('')}
+      </div>`).join('');
+  }
+
+  function draw() {
+    const liste = page.querySelector('#liste');
+    if (!data.reports.length) {
+      liste.innerHTML = `<div class="kpi" style="padding:34px 26px;text-align:center">
+        <div style="font-size:15.5px;font-weight:700;margin-bottom:6px">Arkivet er tomt ennå</div>
+        <div style="font-size:13.5px;color:var(--muted-2);line-height:1.55;max-width:520px;margin:0 auto">Rapporten for en uke legges her når uken er ferdig. Uker uten en eneste registrering – ferier, og tiden før appen ble tatt i bruk – hoppes over, siden en rapport der alle står som fraværende ikke sier noe.</div>
+      </div>`;
+      return;
+    }
+    liste.innerHTML = data.reports.map((r) => {
+      const åpen = åpne.has(r.weekStart);
+      return `<div class="kpi" style="padding:0;margin-bottom:12px;overflow:hidden">
+        <div data-uke="${r.weekStart}" class="arkivrad" style="display:flex;align-items:center;gap:16px;padding:16px 20px;cursor:pointer">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15.5px;font-weight:800">Uke ${r.isoWeek} <span style="font-weight:600;color:var(--muted-2)">· ${formatWeekRange(r.weekStart, r.weekEnd)} ${r.isoYear}</span></div>
+            <div style="font-size:13px;color:${r.absentCount || r.lateCount ? 'var(--muted)' : 'var(--green-ink)'};font-weight:700;margin-top:3px">${statLinje(r)}</div>
+          </div>
+          <button class="btn btn-ghost" data-last="${r.weekStart}" style="height:40px;padding:0 16px;font-size:13.5px;flex:0 0 auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Excel</button>
+          <span style="color:var(--muted-2);font-size:15px;flex:0 0 auto;transform:rotate(${åpen ? '180' : '0'}deg)">⌄</span>
+        </div>
+        ${åpen ? `<div style="background:#fbfcfd">${detaljer(rapporter.get(r.weekStart))}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    liste.querySelectorAll('[data-last]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      b.disabled = true;
+      try {
+        const uke = await hentUke(b.dataset.last);
+        if (!lastNedAndaktUke(uke)) toast('Ingen fravær eller for sent denne uken 🎉');
+      } catch (ex) { toast(ex.message); }
+      finally { b.disabled = false; }
+    }));
+    liste.querySelectorAll('.arkivrad').forEach((rad) => rad.addEventListener('click', async () => {
+      const ws = rad.dataset.uke;
+      if (åpne.has(ws)) { åpne.delete(ws); draw(); return; }
+      åpne.add(ws); draw();
+      try { await hentUke(ws); draw(); } catch (ex) { toast(ex.message); }
+    }));
+  }
+
+  async function hentUke(weekStart) {
+    if (!rapporter.has(weekStart)) rapporter.set(weekStart, await api(`/api/andakt/archive/${weekStart}`));
+    return rapporter.get(weekStart);
+  }
+
+  async function load() {
+    data = await api('/api/andakt/archive');
+    page.querySelector('#weeks').value = data.weeks;
+    draw();
+  }
+
+  page.querySelector('#save').addEventListener('click', async () => {
+    const felt = page.querySelector('#weeks');
+    const uker = Number(felt.value);
+    if (!Number.isInteger(uker) || uker < 1 || uker > 260) { toast('Antall uker må være et helt tall mellom 1 og 260.'); return; }
+    // Færre uker betyr at rapporter forsvinner med én gang – de eldste ryddes
+    // bort neste gang arkivet leses, altså rett etter at dette er lagret.
+    const mister = data.reports.filter((r) => r.weekStart < shiftDate(data.currentWeekStart, -7 * uker)).length;
+    if (mister && !confirm(`${mister} ${mister === 1 ? 'ukesrapport blir' : 'ukesrapporter blir'} fjernet fra arkivet for godt. Fortsette?`)) return;
+    const btn = page.querySelector('#save'); btn.disabled = true;
+    try {
+      await api('/api/settings', { method: 'PUT', body: { andaktArchiveWeeks: uker } });
+      const msg = page.querySelector('#msg'); msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 2500);
+      await load();
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; }
+  });
+
+  await load();
+}
 
 // ── Middag (kjøkken) ─────────────────────────────────────────
 async function renderKitchen(main) {

@@ -20,6 +20,7 @@ import practiceRoutes from './routes/practice.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 import { startRetentionScheduler } from './retention.js';
+import { startAndaktArchiveScheduler } from './andaktArchive.js';
 
 await ensureBootstrapAdmin();
 
@@ -97,4 +98,5 @@ app.listen(config.port, () => {
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);
   startEmailSchedulers();
   startRetentionScheduler();
+  startAndaktArchiveScheduler();
 });

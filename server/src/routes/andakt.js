@@ -14,6 +14,9 @@ import {
   getOrCreateSession,
   rotateSecret,
 } from '../andaktToken.js';
+import { daySummary, weekReport } from '../andaktReport.js';
+import { listArchive, getArchivedWeek, refreshArchive } from '../andaktArchive.js';
+import { weekStartOf, isDateString } from '../isoWeek.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -173,65 +176,6 @@ router.post('/admin-checkin', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true, status });
 });
 
-// Hvor mange minutter etter fristen ble et oppmøte registrert (Europe/Oslo)?
-function lateMinutesFor(checkedAt, deadlineMin) {
-  if (!checkedAt) return null;
-  const dt = new Date(String(checkedAt).replace(' ', 'T') + 'Z');
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(dt);
-  const h = Number(parts.find((p) => p.type === 'hour').value);
-  const m = Number(parts.find((p) => p.type === 'minute').value);
-  const diff = h * 60 + m - deadlineMin;
-  return diff > 0 ? diff : 0;
-}
-
-// Oppmøte + fravær for én gitt dato. Delt mellom dagens sanntidsliste og
-// ukeeksporten, slik at de to alltid regner likt.
-function daySummary(date) {
-  const rows = db
-    .prepare(
-      `SELECT u.id, u.full_name, u.class_name, u.dorm, u.room, a.status, a.checked_at
-       FROM andakt_checkins a
-       JOIN users u ON u.id = a.user_id
-       WHERE a.session_date = ?
-       ORDER BY a.checked_at DESC`
-    )
-    .all(date);
-  const deadlineMin = hhmmToMinutes(getSettings().andaktDeadline);
-
-  // Elever som IKKE har registrert oppmøte denne dagen = fravær på andakt.
-  // På dager uten andakt (f.eks. helg) er det ingen fravær.
-  const [y, m, d] = date.split('-').map(Number);
-  const andaktDay = isAndaktDay(new Date(y, m - 1, d, 12));
-  const absentRows = andaktDay
-    ? db
-        .prepare(
-          `SELECT u.id, u.full_name, u.class_name, u.dorm, u.room
-           FROM users u
-           WHERE u.role = 'student' AND u.active = 1
-             AND u.id NOT IN (SELECT user_id FROM andakt_checkins WHERE session_date = ?)
-           ORDER BY u.full_name COLLATE NOCASE`
-        )
-        .all(date)
-    : [];
-
-  return {
-    sessionDate: date,
-    andaktToday: andaktDay,
-    checkins: rows.map((r) => ({
-      id: r.id, fullName: r.full_name, className: r.class_name, dorm: r.dorm, room: r.room,
-      status: r.status, checkedAt: r.checked_at,
-      minutesLate: r.status === 'late' ? lateMinutesFor(r.checked_at, deadlineMin) : null,
-    })),
-    absentList: absentRows.map((r) => ({
-      id: r.id,
-      fullName: r.full_name,
-      className: r.class_name,
-      dorm: r.dorm,
-      room: r.room,
-    })),
-  };
-}
-
 // ── ADMIN: sanntidsliste over registrert oppmøte i dag ───────
 router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
   const summary = daySummary(todayDate());
@@ -246,30 +190,30 @@ router.get('/checkins', requireAuth, requireAdmin, (req, res) => {
   });
 });
 
-// ── ADMIN: hele uken (mandag–søndag) som daglige oppsummeringer ──
+// ── ADMIN: hele uken (mandag–søndag) som én rapport ──────────
 // Brukes til å eksportere én samlet fil for uken i stedet for én per dag.
 // ?date=YYYY-MM-DD velger hvilken uke (default: uken rundt i dag).
 router.get('/week', requireAuth, requireAdmin, (req, res) => {
-  const anchor = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date)) ? String(req.query.date) : todayDate();
-  const [y, m, d] = anchor.split('-').map(Number);
-  const anchorDate = new Date(y, m - 1, d, 12);
-  // Mandag = start på uken (getDay(): 0=søndag..6=lørdag).
-  const mondayOffset = (anchorDate.getDay() + 6) % 7;
-  const monday = new Date(anchorDate);
-  monday.setDate(anchorDate.getDate() - mondayOffset);
+  const anchor = isDateString(req.query.date) ? String(req.query.date) : todayDate();
+  res.json(weekReport(weekStartOf(anchor)));
+});
 
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const dt = new Date(monday);
-    dt.setDate(monday.getDate() + i);
-    days.push(daySummary(todayDate(dt)));
-  }
+// ── ADMIN: arkivet over ferdige ukesrapporter ────────────────
+// Listen fylles og ryddes før den leses, slik at den alltid stemmer med
+// innstillingen – også rett etter at antall uker er endret.
+router.get('/archive', requireAuth, requireAdmin, (req, res) => {
+  const weeks = getSettings().andaktArchiveWeeks;
+  refreshArchive(weeks);
+  res.json({ weeks, currentWeekStart: weekStartOf(todayDate()), reports: listArchive() });
+});
 
-  res.json({
-    weekStart: days[0].sessionDate,
-    weekEnd: days[6].sessionDate,
-    days,
-  });
+// Hele den arkiverte rapporten for én uke (mandagsdatoen er nøkkelen).
+router.get('/archive/:weekStart', requireAuth, requireAdmin, (req, res) => {
+  const ws = String(req.params.weekStart);
+  if (!isDateString(ws)) return res.status(400).json({ error: 'Ugyldig ukedato. Bruk ÅÅÅÅ-MM-DD.' });
+  const rapport = getArchivedWeek(weekStartOf(ws));
+  if (!rapport) return res.status(404).json({ error: 'Uken ligger ikke i arkivet.' });
+  res.json(rapport);
 });
 
 export default router;

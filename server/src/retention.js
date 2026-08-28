@@ -38,6 +38,10 @@ const EXPIRING = [
   ['dorm_duties', 'week_start', 'internatvask'],
   ['practice_sessions', 'session_date', 'øveøkter'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
+  // Arkiverte ukesrapporter har sin egen periode (antall uker, se
+  // andaktArchive.js). Den generelle lagringstiden gjelder likevel som ytre
+  // grense: settes arkivet lengre enn den, er det denne som vinner.
+  ['andakt_week_reports', 'week_start', 'arkiverte ukesrapporter'],
 ];
 
 function positiveInt(value, navn) {
