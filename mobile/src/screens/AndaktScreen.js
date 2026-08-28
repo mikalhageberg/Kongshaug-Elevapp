@@ -32,7 +32,7 @@ export default function AndaktScreen({ user }) {
         setStatus('result');
         return;
       }
-      // QR-en er bare tilgjengelig ±30 min rundt fristen. Reviewer-kontoen har
+      // QR-en er bare tilgjengelig i tidsvinduet rundt fristen. Reviewer-kontoen har
       // ingen storskjerm og får gå videre til kameraet uansett.
       if (s.qrOpen === false && !canSkipQr) { setWin(s); setStatus('closed'); return; }
       if (!permission?.granted) await requestPermission();

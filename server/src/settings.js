@@ -18,6 +18,9 @@ const DEFAULTS = {
   andaktDeadline: minutesToHHMM(config.andakt.deadlineMinutes), // f.eks. "08:10"
   andaktWeekdaysOnly: true,        // andakt kun mandag–fredag
   andaktArchiveWeeks: 12,          // hvor mange ukesrapporter arkivet tar vare på
+  // Tidsvinduet QR-koden er tilgjengelig i, regnet fra fristen (se andaktWindow.js).
+  andaktQrOpenBefore: 30,          // minutter FØR fristen koden dukker opp
+  andaktQrCloseAfter: 30,          // minutter ETTER fristen koden stenger
   // Brannliste: tidsvindu om kvelden man kan melde seg til stede. Egne tider for
   // hverdag (søn–tor), fredag og lørdag. Lukketid kan være ≤ åpningstid i helgen
   // (krysser midnatt), se fireWindow.js. Lukketidene arver de gamle «frist»-
@@ -63,6 +66,15 @@ export const GPS_HOURS_MAX = 168;   // en uke
 // den generelle lagringstiden over gjelder uansett som ytre grense.
 export const ARCHIVE_WEEKS_MIN = 1;
 export const ARCHIVE_WEEKS_MAX = 260;
+// Andakts-QR-ens tidsvindu. Taket på tre timer holder «hele dagen» utenfor
+// rekkevidde – et vindu som står åpent gjør registreringen verdiløs.
+// Åpningen må være minst ett minutt: dukket koden opp først i fristminuttet,
+// ville ingen rukket å bli registrert som til stede. Lukkingen kan derimot
+// være 0, som er måten å si «ingen slingringsmonn – etter fristen er det fravær».
+export const QR_BEFORE_MIN = 1;
+export const QR_BEFORE_MAX = 180;
+export const QR_AFTER_MIN = 0;
+export const QR_AFTER_MAX = 180;
 // Oppvarmingen. Null ville gjort den obligatoriske oppvarmingen valgfri i
 // praksis; taket hindrer at et feiltrykk låser elevene ute av å øve.
 export const WARMUP_MIN = 1;
@@ -79,6 +91,12 @@ function intOr(value, fallback) {
   return Number.isInteger(n) && n > 0 ? n : fallback;
 }
 
+// Som intOr, men 0 er en gyldig verdi og ikke «mangler».
+function intOrZero(value, fallback) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
+}
+
 export function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));
@@ -86,6 +104,8 @@ export function getSettings() {
     andaktDeadline: s.andaktDeadline ?? DEFAULTS.andaktDeadline,
     andaktWeekdaysOnly: s.andaktWeekdaysOnly != null ? s.andaktWeekdaysOnly === 'true' : DEFAULTS.andaktWeekdaysOnly,
     andaktArchiveWeeks: intOr(s.andaktArchiveWeeks, DEFAULTS.andaktArchiveWeeks),
+    andaktQrOpenBefore: intOr(s.andaktQrOpenBefore, DEFAULTS.andaktQrOpenBefore),
+    andaktQrCloseAfter: intOrZero(s.andaktQrCloseAfter, DEFAULTS.andaktQrCloseAfter),
     // Lukketider arver de gamle fristene (fireDeadline*) for eksisterende
     // installasjoner, så ingen mister sin innstilte kveldsfrist ved oppgradering.
     fireOpenWeekday: s.fireOpenWeekday ?? DEFAULTS.fireOpenWeekday,

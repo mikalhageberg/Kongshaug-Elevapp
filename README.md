@@ -311,6 +311,13 @@ tidsvindu, så et avfotografert skjermbilde slutter å virke etter noen sekunder
 Admin kan også trykke «Ugyldiggjør koder nå» for å nullstille umiddelbart.
 Oppmøte etter `ANDAKT_DEADLINE` markeres som «for sent».
 
+Koden vises bare i et **tidsvindu rundt fristen** (`andaktWindow.js`), og skolen
+setter begge sidene under Innstillinger – standard 30 minutter hver vei. De to
+styrer hver sin ting: åpningen avgjør når koden dukker opp på storskjermen,
+lukkingen hvor lenge en som kommer for sent fortsatt rekker å registrere seg.
+Settes lukkingen til 0, stenger registreringen på slaget, og alt etter fristen
+blir fravær.
+
 ## Prosjektstruktur
 
 ```

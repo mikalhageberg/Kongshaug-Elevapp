@@ -1041,7 +1041,8 @@ async function renderAndakt() {
   }
   if (status.registered) return andaktResult(body, status.status, status.checkedAt, status.sessionDate);
 
-  // QR-en er bare tilgjengelig ±30 min rundt fristen. Utenfor vinduet viser vi
+  // QR-en er bare tilgjengelig i tidsvinduet rundt fristen som skolen har satt.
+  // Utenfor vinduet viser vi
   // når registreringen åpner/stengte i stedet for kameraet.
   if (status.qrOpen === false) {
     const before = status.qrState === 'before';

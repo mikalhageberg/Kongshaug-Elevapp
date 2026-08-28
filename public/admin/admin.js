@@ -874,7 +874,7 @@ async function renderAndakt(main) {
         live.style.display = 'none'; closed.style.display = 'flex';
         pill.className = 'pill pill-amber'; dot.style.background = 'var(--amber)';
         const m = d.state === 'before'
-          ? { pill: `Åpner kl. ${d.opensAt}`, big: 'Ikke tilgjengelig ennå', sub: `QR-koden vises fra kl. ${d.opensAt} – 30 min før fristen.` }
+          ? { pill: `Åpner kl. ${d.opensAt}`, big: 'Ikke tilgjengelig ennå', sub: `QR-koden vises fra kl. ${d.opensAt} – ${d.openBefore} min før fristen.` }
           : d.state === 'after'
             ? { pill: 'Andakten er over', big: 'Andakten er over for i dag', sub: `Registrering var åpen til kl. ${d.closesAt}.` }
             : { pill: 'Ingen andakt', big: 'Ingen andakt i dag', sub: 'Andakt holdes kun på ukedager.' };
@@ -2570,6 +2570,8 @@ async function renderSettings(main) {
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Andakt</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Daglig samling på ukedagene.</div>
       ${timeRow('andaktDeadline', 'Frist for oppmøte', s.andaktDeadline, 'Oppmøte etter dette regnes som «for sent» / fravær.')}
+      ${numRow('andaktQrOpenBefore', 'QR-koden åpner', s.andaktQrOpenBefore, 'min før fristen', 1, 180, 'Når koden dukker opp på storskjermen. Før dette kan ingen registrere seg.')}
+      ${numRow('andaktQrCloseAfter', 'QR-koden stenger', s.andaktQrCloseAfter, 'min etter fristen', 0, 180, 'Hvor lenge en som kommer for sent fortsatt rekker å registrere seg – de blir stående som «for sent». Sett 0 for å stenge på slaget: da er alt etter fristen fravær.')}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
         <div><div style="font-size:15px;font-weight:700">Kun ukedager</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Ingen andakt lørdag og søndag.</div></div>
         <input type="checkbox" name="andaktWeekdaysOnly" ${s.andaktWeekdaysOnly ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
@@ -2655,6 +2657,8 @@ async function renderSettings(main) {
     return {
       andaktDeadline: val('andaktDeadline').value,
       andaktWeekdaysOnly: val('andaktWeekdaysOnly').checked,
+      andaktQrOpenBefore: Number(val('andaktQrOpenBefore').value),
+      andaktQrCloseAfter: Number(val('andaktQrCloseAfter').value),
       fireOpenWeekday: val('fireOpenWeekday').value,
       fireCloseWeekday: val('fireCloseWeekday').value,
       fireOpenFriday: val('fireOpenFriday').value,

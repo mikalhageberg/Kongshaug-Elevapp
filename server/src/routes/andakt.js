@@ -38,8 +38,9 @@ router.post('/checkin', (req, res) => {
   const reviewBypass = isAppReviewUser(req.auth?.username);
   if (reviewBypass) console.warn(`[app-review-bypass] andakt-innsjekk uten GPS/QR/tidsvindu for «${req.auth.username}»`);
 
-  // QR-en er bare tilgjengelig ±30 min rundt fristen. Reviewer-kontoen har ingen
-  // storskjerm og kan testes når som helst, så den hopper over vindu-sjekken.
+  // QR-en er bare tilgjengelig i tidsvinduet rundt fristen (satt av skolen).
+  // Reviewer-kontoen har ingen storskjerm og kan testes når som helst, så den
+  // hopper over vindu-sjekken.
   const win = andaktWindow(new Date(), settings);
   if (!reviewBypass && !win.open) {
     return res.status(400).json({
@@ -109,6 +110,8 @@ router.get('/status', (req, res) => {
     opensAt: win.opensAt || null,
     closesAt: win.closesAt || null,
     deadline: win.deadline,
+    openBefore: win.openBefore ?? null,
+    closeAfter: win.closeAfter ?? null,
   });
 });
 
@@ -126,7 +129,7 @@ router.get('/qr', requireAuth, requireAdmin, async (req, res) => {
 
   // Utenfor tidsvinduet: ingen QR, bare tilstanden så klienten kan forklare når.
   if (!win.open) {
-    return res.json({ sessionDate: date, open: false, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, deadline: win.deadline, refreshMs, count });
+    return res.json({ sessionDate: date, open: false, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, deadline: win.deadline, openBefore: win.openBefore, closeAfter: win.closeAfter, refreshMs, count });
   }
 
   getOrCreateSession(date);
@@ -140,6 +143,8 @@ router.get('/qr', requireAuth, requireAdmin, async (req, res) => {
     opensAt: win.opensAt,
     closesAt: win.closesAt,
     deadline: win.deadline,
+    openBefore: win.openBefore,
+    closeAfter: win.closeAfter,
     refreshMs,
     count,
   });
