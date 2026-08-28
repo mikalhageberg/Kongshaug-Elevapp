@@ -105,6 +105,25 @@ export function getArchivedWeek(weekStart) {
   return { ...JSON.parse(row.report_json), archivedAt: row.created_at };
 }
 
+// Slett én uke fra arkivet. Registreringene uken bygger på slettes samtidig, og
+// det er ikke valgfritt: uten dem ville syncArchive() lagt uken rett inn igjen
+// ved neste gjennomløp. Alt skjer i én transaksjon, så en synk midt imellom
+// ikke rekker å gjenopprette rapporten.
+//
+// Returnerer null hvis uken ikke ligger i arkivet – da røres ingenting. Ellers
+// ville et kall for en vilkårlig uke slettet registreringene dens.
+export function deleteArchivedWeek(weekStart) {
+  return db.transaction(() => {
+    const finnes = db.prepare('SELECT 1 FROM andakt_week_reports WHERE week_start = ?').get(weekStart);
+    if (!finnes) return null;
+    const checkins = db
+      .prepare('DELETE FROM andakt_checkins WHERE session_date BETWEEN ? AND ?')
+      .run(weekStart, weekEndOf(weekStart)).changes;
+    db.prepare('DELETE FROM andakt_week_reports WHERE week_start = ?').run(weekStart);
+    return { weekStart, checkins };
+  })();
+}
+
 // Å slette en konto skal fjerne alt om personen – også fra de frosne
 // rapportene. De ligger som JSON, og nås derfor ikke av ON DELETE CASCADE slik
 // registreringene gjør: her må hver rapport skrives om. Returnerer hvor mange

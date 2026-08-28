@@ -1071,6 +1071,7 @@ async function renderAndaktArkiv(main) {
             <div style="font-size:13px;color:${r.absentCount || r.lateCount ? 'var(--muted)' : 'var(--green-ink)'};font-weight:700;margin-top:3px">${statLinje(r)}</div>
           </div>
           <button class="btn btn-ghost" data-last="${r.weekStart}" style="height:40px;padding:0 16px;font-size:13.5px;flex:0 0 auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Excel</button>
+          <button class="btn" data-slett="${r.weekStart}" title="Slett uken fra arkivet" style="height:40px;width:40px;padding:0;flex:0 0 auto;background:#fff;color:var(--red-ink);border:1.5px solid #f0c4c0"><span style="width:15px;height:15px;display:block">${nav.trash}</span></button>
           <span style="color:var(--muted-2);font-size:15px;flex:0 0 auto;transform:rotate(${åpen ? '180' : '0'}deg)">⌄</span>
         </div>
         ${åpen ? `<div style="background:#fbfcfd">${detaljer(rapporter.get(r.weekStart))}</div>` : ''}
@@ -1085,6 +1086,21 @@ async function renderAndaktArkiv(main) {
         if (!lastNedAndaktUke(uke)) toast('Ingen fravær eller for sent denne uken 🎉');
       } catch (ex) { toast(ex.message); }
       finally { b.disabled = false; }
+    }));
+    // Slett uken. Registreringene bak den ryddes med på serveren – uten det
+    // ville uken kommet rett tilbake ved neste gjennomløp av arkivet.
+    liste.querySelectorAll('[data-slett]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ws = b.dataset.slett;
+      const uke = data.reports.find((x) => x.weekStart === ws);
+      if (!confirm(`Slette ukesrapporten for uke ${uke.isoWeek} (${formatWeekRange(uke.weekStart, uke.weekEnd)}) fra arkivet?\n\nRegistreringene uken bygger på slettes samtidig – ellers ville uken kommet tilbake av seg selv. Dette kan ikke angres.`)) return;
+      b.disabled = true;
+      try {
+        const svar = await api(`/api/andakt/archive/${ws}`, { method: 'DELETE' });
+        rapporter.delete(ws); åpne.delete(ws);
+        toast(`Uke ${uke.isoWeek} er slettet · ${svar.checkins} ${svar.checkins === 1 ? 'registrering' : 'registreringer'} fjernet`);
+        await load();
+      } catch (ex) { toast(ex.message); b.disabled = false; }
     }));
     liste.querySelectorAll('.arkivrad').forEach((rad) => rad.addEventListener('click', async () => {
       const ws = rad.dataset.uke;

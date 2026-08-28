@@ -15,7 +15,7 @@ import {
   rotateSecret,
 } from '../andaktToken.js';
 import { daySummary, weekReport } from '../andaktReport.js';
-import { listArchive, getArchivedWeek, refreshArchive } from '../andaktArchive.js';
+import { listArchive, getArchivedWeek, refreshArchive, deleteArchivedWeek } from '../andaktArchive.js';
 import { weekStartOf, isDateString } from '../isoWeek.js';
 
 const router = Router();
@@ -214,6 +214,16 @@ router.get('/archive/:weekStart', requireAuth, requireAdmin, (req, res) => {
   const rapport = getArchivedWeek(weekStartOf(ws));
   if (!rapport) return res.status(404).json({ error: 'Uken ligger ikke i arkivet.' });
   res.json(rapport);
+});
+
+// Fjern én uke fra arkivet – f.eks. testdata fra før appen ble tatt i bruk.
+// Registreringene uken bygger på ryddes med, ellers kommer uken tilbake.
+router.delete('/archive/:weekStart', requireAuth, requireAdmin, (req, res) => {
+  const ws = String(req.params.weekStart);
+  if (!isDateString(ws)) return res.status(400).json({ error: 'Ugyldig ukedato. Bruk ÅÅÅÅ-MM-DD.' });
+  const slettet = deleteArchivedWeek(weekStartOf(ws));
+  if (!slettet) return res.status(404).json({ error: 'Uken ligger ikke i arkivet.' });
+  res.json({ ok: true, ...slettet });
 });
 
 export default router;

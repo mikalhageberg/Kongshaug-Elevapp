@@ -106,6 +106,11 @@ før appen ble tatt i bruk – hoppes over: en «rapport» der alle står som
 fraværende sier ingenting. Uken som løper nå ligger ikke i arkivet ennå, og
 lastes ned fra Andakt-siden.
 
+En uke kan fjernes manuelt med **«Slett fra arkivet»** – nyttig for testuker fra
+før appen ble tatt i bruk. Knappen sletter registreringene uken bygger på i samme
+transaksjon, og det er ikke valgfritt: uten dem ville påfyllet lagt uken rett inn
+igjen ved neste gjennomløp.
+
 To ting å vite hvis arkivet endres: den generelle lagringstiden over gjelder
 fortsatt som ytre grense, og siden rapportene er JSON nås de ikke av
 `ON DELETE CASCADE` – sletting av en konto rydder dem gjennom
