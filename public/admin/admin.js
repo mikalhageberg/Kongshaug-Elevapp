@@ -108,7 +108,9 @@ function render() {
   if (route.startsWith('administratorer')) return page('administratorer', renderAdmins);
   if (route.startsWith('brannliste')) return page('brannliste', renderBrannliste);
   if (route.startsWith('gjester')) return page('gjester', renderGuests);
-  if (route.startsWith('andaktsarkiv')) return page('andaktsarkiv', renderAndaktArkiv);
+  // Arkivet har ingen egen menyoppføring – det nås fra Andakt-siden, og lyser
+  // opp «Andakt / QR» i menyen så det er tydelig hvor man befinner seg.
+  if (route.startsWith('andaktsarkiv')) return page('andakt', renderAndaktArkiv);
   if (route.startsWith('andakt')) return page('andakt', renderAndakt);
   if (route.startsWith('middag')) return page('middag', renderKitchen);
   if (route.startsWith('internat')) return page('internat', renderInternat);
@@ -211,7 +213,6 @@ function page(active, renderMain) {
     ['brannliste', 'Brannliste', nav.flame, '/brannliste'],
     ['gjester', 'Gjester', nav.guest, '/gjester'],
     ['andakt', 'Andakt / QR', nav.qr, '/andakt'],
-    ['andaktsarkiv', 'Andaktsarkiv', nav.archive, '/andaktsarkiv'],
     ['middag', 'Kjøkken', nav.food, '/middag'],
     ['internat', 'Internat', nav.broom, '/internat'],
     ['ovekonkurranse', 'Øvekonkurranse', nav.timer, '/ovekonkurranse'],
@@ -1004,7 +1005,9 @@ function lastNedAndaktUke(week) {
 }
 
 async function renderAndaktArkiv(main) {
-  header(main, 'Andaktsarkiv', 'Ukesrapporter over fravær og for sent på andakt');
+  header(main, 'Andaktsarkiv', 'Ukesrapporter over fravær og for sent på andakt',
+    `<button class="btn btn-ghost" id="tilbake" style="height:44px;padding:0 18px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>Andakt / QR</button>`);
+  main.querySelector('#tilbake').addEventListener('click', () => go('/andakt'));
   const page = el(`<div class="page" style="max-width:900px">
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:22px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Hvor mye arkivet tar vare på</div>
