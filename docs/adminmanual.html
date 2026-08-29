@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>Kongshaug Elevapp – håndbok for administrasjonen</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 16mm 16mm;
+  }
+  @page :first { margin: 0; }
+
+  :root {
+    --navy: #1e3a5f;
+    --ink: #16202c;
+    --slate: #3f5064;
+    --muted: #5b6b7c;
+    --muted2: #8494a5;
+    --line: #dde4ec;
+    --line2: #c9d4e0;
+    --surface: #f5f7fa;
+    --green: #1f8a4c;
+    --greenbg: #e8f6ee;
+    --amber: #b8860b;
+    --amberbg: #fdf4e0;
+    --red: #c0392b;
+    --redbg: #fdeceb;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.1pt;
+    line-height: 1.48;
+    color: var(--ink);
+  }
+
+  /* ---------- Forside ---------- */
+  .cover {
+    height: 297mm;
+    padding: 34mm 22mm 20mm 22mm;
+    background: var(--navy);
+    color: #fff;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+  .cover .logo {
+    width: 62px; height: 62px; border-radius: 18px;
+    background: rgba(255,255,255,.14);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; margin-bottom: 26mm;
+  }
+  .cover h1 {
+    font-size: 34pt; line-height: 1.08; margin: 0 0 6mm 0;
+    letter-spacing: -1px; font-weight: 800;
+  }
+  .cover .sub { font-size: 14pt; color: #b9cbe0; margin: 0 0 3mm 0; font-weight: 600; }
+  .cover .school { font-size: 11pt; color: #93aec9; }
+  .cover .spacer { flex: 1; }
+  .cover .foot {
+    border-top: 1px solid rgba(255,255,255,.22);
+    padding-top: 6mm; font-size: 9.5pt; color: #a9c0d6;
+    display: flex; justify-content: space-between;
+  }
+  .cover .kicker {
+    display: inline-block; align-self: flex-start;
+    border: 1.5px solid rgba(255,255,255,.35); border-radius: 999px;
+    padding: 4px 14px; font-size: 9pt; font-weight: 700;
+    letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8mm;
+  }
+
+  /* ---------- Typografi ---------- */
+  h2 {
+    font-size: 17pt; color: var(--navy); margin: 0 0 3mm 0;
+    letter-spacing: -.4px; font-weight: 800;
+    padding-bottom: 2.5mm; border-bottom: 2px solid var(--navy);
+  }
+  h2 .num {
+    display: inline-block; min-width: 9mm; color: var(--muted2);
+    font-size: 13pt; font-weight: 800;
+  }
+  h3 {
+    font-size: 11.8pt; color: var(--ink); margin: 5.5mm 0 2mm 0; font-weight: 800;
+  }
+  h4 { font-size: 10.4pt; color: var(--slate); margin: 5mm 0 1.5mm 0; font-weight: 800; }
+  p { margin: 0 0 3mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 5.5mm; }
+  li { margin-bottom: 1.4mm; }
+  strong { font-weight: 700; }
+  .lead { font-size: 11pt; color: var(--muted); margin-bottom: 4mm; }
+
+  section { page-break-before: always; }
+  section.cont { page-break-before: auto; }
+  .avoid { page-break-inside: avoid; }
+  h3, h4 { page-break-after: avoid; }
+  .box, tr, ol.steps > li, .tabbar, .grid2 { page-break-inside: avoid; }
+
+  /* ---------- Innhold ---------- */
+  .toc { margin-top: 4mm; }
+  .toc a, .toc div.row {
+    display: flex; align-items: baseline; gap: 3mm;
+    padding: 1.7mm 0; border-bottom: 1px dotted var(--line2);
+    color: var(--ink); text-decoration: none;
+  }
+  .toc .n { color: var(--navy); font-weight: 800; min-width: 8mm; }
+  .toc .t { font-weight: 600; }
+  .toc .d { flex: 1; }
+  .toc .desc { color: var(--muted2); font-size: 9pt; }
+
+  /* ---------- Bokser ---------- */
+  .box {
+    border: 1px solid var(--line); background: #fff; border-radius: 10px;
+    padding: 4mm 5mm; margin: 0 0 4mm 0;
+  }
+  .box.tip { background: var(--surface); border-color: var(--line2); }
+  .box.warn { background: var(--amberbg); border-color: #ecd9a5; }
+  .box.warn .h { color: #8a6508; }
+  .box.ok { background: var(--greenbg); border-color: #b8e2c9; }
+  .box.ok .h { color: #15693a; }
+  .box.stop { background: var(--redbg); border-color: #f3c3bd; }
+  .box.stop .h { color: #9c2f22; }
+  .box .h { font-weight: 800; font-size: 10.4pt; margin-bottom: 1.5mm; display: block; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+
+  /* ---------- Steg ---------- */
+  ol.steps { list-style: none; padding: 0; counter-reset: step; margin-bottom: 4mm; }
+  ol.steps > li {
+    counter-increment: step; position: relative;
+    padding: 0 0 3mm 10mm; margin: 0;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 6.5mm; height: 6.5mm; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    font-size: 8.5pt; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li .st { font-weight: 700; display: block; }
+
+  /* ---------- Tabeller ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 0 0 3.5mm 0; font-size: 9.3pt; }
+  th {
+    text-align: left; background: var(--navy); color: #fff;
+    padding: 2.2mm 3mm; font-weight: 700; font-size: 9pt;
+    letter-spacing: .3px;
+  }
+  td { padding: 1.9mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfd; }
+  td.k { font-weight: 700; color: var(--navy); white-space: nowrap; }
+
+  /* ---------- Skjermelementer ---------- */
+  .pill {
+    display: inline-block; border-radius: 999px; padding: 1.2mm 3.4mm;
+    font-size: 8.8pt; font-weight: 700; border: 1px solid;
+  }
+  .pill.green { background: var(--greenbg); color: #15693a; border-color: #b8e2c9; }
+  .pill.amber { background: var(--amberbg); color: #8a6508; border-color: #ecd9a5; }
+  .pill.red { background: var(--redbg); color: #9c2f22; border-color: #f3c3bd; }
+  .pill.grey { background: #eef1f5; color: var(--muted); border-color: var(--line2); }
+  .banner {
+    display: block; border-radius: 8px; padding: 2.4mm 3.4mm;
+    font-size: 9.4pt; font-weight: 700; margin-bottom: 2mm; border: 1px solid;
+  }
+  .banner.green { background: var(--greenbg); color: #15693a; border-color: #b8e2c9; }
+  .banner.red { background: var(--redbg); color: #9c2f22; border-color: #f3c3bd; }
+  .banner.grey { background: #eef1f5; color: var(--muted); border-color: var(--line2); }
+  .banner.amber { background: var(--amberbg); color: #8a6508; border-color: #ecd9a5; }
+  .btn {
+    display: inline-block; background: var(--navy); color: #fff;
+    border-radius: 8px; padding: 1.8mm 4mm; font-weight: 700; font-size: 9.4pt;
+  }
+  .btn.green { background: var(--green); }
+  .btn.ghost { background: #fff; color: var(--slate); border: 1.5px solid var(--line2); }
+
+  .tabbar {
+    display: flex; border: 1px solid var(--line2); border-radius: 12px;
+    overflow: hidden; margin-bottom: 4mm; background: #fff;
+  }
+  .tabbar div {
+    flex: 1; text-align: center; padding: 3mm 1mm; font-size: 8.6pt;
+    font-weight: 700; color: var(--muted); border-right: 1px solid var(--line);
+  }
+  .tabbar div:last-child { border-right: 0; }
+  .tabbar div span { display: block; font-size: 15pt; margin-bottom: 1mm; }
+  .tabbar div.active { color: var(--navy); background: var(--surface); }
+
+  .grid2 { display: flex; gap: 4mm; margin-bottom: 4mm; }
+  .grid2 > * { flex: 1; margin-bottom: 0 !important; }
+
+  .kicker-sm {
+    font-size: 8.4pt; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 1.5mm;
+  }
+  .note { font-size: 9.2pt; color: var(--muted); }
+  .side {
+    display: flex; border: 1px solid var(--line2); border-radius: 12px;
+    overflow: hidden; margin-bottom: 4mm; background: var(--navy); color: #fff;
+    flex-wrap: wrap; padding: 3mm 3mm;
+  }
+  .side span {
+    font-size: 8.8pt; font-weight: 700; color: #cbd8e8;
+    padding: 1.6mm 3mm; border-radius: 7px;
+  }
+  .side span.on { background: rgba(255,255,255,.16); color: #fff; }
+  .end {
+    margin-top: 8mm; padding-top: 4mm; border-top: 1px solid var(--line);
+    font-size: 9pt; color: var(--muted2); text-align: center;
+  }
+</style>
+</head>
+<body>
+<!-- ═══════════════ FORSIDE ═══════════════ -->
+<div class="cover">
+  <div class="logo">🗂️</div>
+  <div class="kicker">Håndbok for administrasjonen</div>
+  <h1>Kongshaug<br>Elevapp</h1>
+  <p class="sub">Brannliste · andakt · gjester · kjøkken · internat · varsler</p>
+  <p class="school">Kongshaug Musikkgymnas · adminsiden for ansatte</p>
+  <div class="spacer"></div>
+  <div class="foot">
+    <span>Alle sidene i admin, forklart – med rutinene rundt</span>
+    <span>Versjon 1.4</span>
+  </div>
+</div>
+
+<!-- ═══════════════ INNHOLD ═══════════════ -->
+<section class="cont">
+  <h2><span class="num">&nbsp;</span>Innhold</h2>
+  <p class="lead">Denne håndboken dekker adminsiden – nettsiden ansatte bruker. Elevenes side av systemet er beskrevet i <em>brukermanualen for elever</em>. Er du ny, les kapittel 1–3 og 14 først.</p>
+  <div class="toc">
+    <div class="row"><span class="n">1</span><span class="d"><span class="t">Kom i gang</span> <span class="desc">– tilgang, innlogging, sidemenyen</span></span></div>
+    <div class="row"><span class="n">2</span><span class="d"><span class="t">Dashboard</span> <span class="desc">– dagens status på ett blikk</span></span></div>
+    <div class="row"><span class="n">3</span><span class="d"><span class="t">Elever</span> <span class="desc">– opprette, importere, brukerkort, deaktivere</span></span></div>
+    <div class="row"><span class="n">4</span><span class="d"><span class="t">Administratorer</span> <span class="desc">– kontoer for ansatte</span></span></div>
+    <div class="row"><span class="n">5</span><span class="d"><span class="t">Brannliste</span> <span class="desc">– kveldens oversikt og manuell overstyring</span></span></div>
+    <div class="row"><span class="n">6</span><span class="d"><span class="t">Gjester</span> <span class="desc">– godkjenne besøk og registrere gjester</span></span></div>
+    <div class="row"><span class="n">7</span><span class="d"><span class="t">Andakt / QR</span> <span class="desc">– storskjerm, oppmøte, ukeeksport</span></span></div>
+    <div class="row"><span class="n">8</span><span class="d"><span class="t">Andaktsarkiv</span> <span class="desc">– ukesrapporter over fravær</span></span></div>
+    <div class="row"><span class="n">9</span><span class="d"><span class="t">Kjøkken</span> <span class="desc">– middagstall, kjøkkentjeneste, ukemeny</span></span></div>
+    <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus og signaturer</span></span></div>
+    <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, stilling, dokumentasjon</span></span></div>
+    <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes telefoner</span></span></div>
+    <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
+    <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, ved skolestart</span></span></div>
+    <div class="row"><span class="n">15</span><span class="d"><span class="t">Feilsøking og vanlige spørsmål</span></span></div>
+    <div class="row"><span class="n">16</span><span class="d"><span class="t">Hurtigreferanse</span> <span class="desc">– hvem gjør hva, hvor</span></span></div>
+  </div>
+
+  <h3>To ting å vite før du begynner</h3>
+  <ul>
+    <li><strong>Adminsiden er en nettside</strong>, ikke en app. Den åpnes i nettleser på PC eller nettbrett, med <code>/admin/</code> etter skolens adresse.</li>
+    <li><strong>Alt du endrer, ser elevene med én gang.</strong> Det finnes ingen «publiser»-knapp – lagrer du en meny, en vaskeuke eller en frist, gjelder den umiddelbart i elevappen.</li>
+  </ul>
+
+  <div class="box warn">
+    <span class="h">⚠ Handlinger som ikke kan angres</span>
+    <p>Fire steder i admin sletter data for godt: <strong>slette bruker</strong>, <strong>slette uke fra andaktsarkivet</strong>, <strong>nullstille øvekonkurransen</strong> og <strong>«Kjør sletting nå»</strong> under Innstillinger. Alle spør først – les spørsmålet før du bekrefter.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 1 KOM I GANG ═══════════════ -->
+<section>
+  <h2><span class="num">1</span>Kom i gang</h2>
+  <p class="lead">Adminsiden er bare for ansatte. Elever kommer ikke inn – logger en elevkonto seg på, blir den avvist med beskjed om at appen er for elever.</p>
+
+  <h3>1.1 Åpne adminsiden</h3>
+  <ol class="steps">
+    <li><span class="st">Åpne nettleseren</span> På PC eller nettbrett. Bruk gjerne et bokmerke.</li>
+    <li><span class="st">Gå til skolens adresse med <code>/admin/</code> til slutt</span> Driftsadressen er <code>elevapp.online/admin/</code>. Kjører dere lokalt: <code>localhost:3000/admin/</code>.</li>
+    <li><span class="st">Logg inn</span> Brukernavn og passord, det samme du har fått av skolen.</li>
+    <li><span class="st">Bytt passord første gang</span> Du blir bedt om det automatisk. Minst 8 tegn.</li>
+  </ol>
+
+  <div class="box tip">
+    <span class="h">Skjermstørrelse</span>
+    <p>Sidemenyen skjules på skjermer smalere enn ca. 720 piksler – altså på en mobil i portrett. Brannlisten og andaktsoversikten er laget for å fungere med finger på nettbrett (knappene er ekstra store), men <strong>PC eller nettbrett i landskap</strong> er det som gir hele menyen.</p>
+  </div>
+
+  <h3>1.2 Sidemenyen</h3>
+  <div class="side">
+    <span class="on">Dashboard</span><span>Elever</span><span>Administratorer</span><span>Brannliste</span><span>Gjester</span><span>Andakt / QR</span><span>Kjøkken</span><span>Internat</span><span>Øvekonkurranse</span><span>Varsler</span><span>Innstillinger</span>
+  </div>
+  <p>Nederst i menyen står navnet ditt og en knapp for å logge ut. Kommer det inn en besøksforespørsel fra en elev, får <strong>Gjester</strong> et rødt tall i menyen.</p>
+  <p class="note">Andaktsarkivet har ingen egen menyoppføring – det nås fra Andakt-siden. Storskjermvisningen åpnes i et eget vindu.</p>
+
+  <h3>1.3 Kontoer og sikkerhet</h3>
+  <ul>
+    <li>Innloggingen varer i <strong>12 timer</strong>, deretter må du logge inn på nytt.</li>
+    <li>Passord lagres aldri i klartekst – heller ikke ditt. Ingen, heller ikke en annen administrator, kan lese passordet ditt; de kan bare sette et nytt.</li>
+    <li><strong>Del aldri en adminkonto.</strong> Signerer du internatvask på vegne av en elev, lagres <em>ditt</em> navn på handlingen – da må det være riktig hvem som gjorde det.</li>
+    <li>Logg ut når du forlater en felles PC.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 2 DASHBOARD ═══════════════ -->
+<section>
+  <h2><span class="num">2</span>Dashboard</h2>
+  <p class="lead">Forsiden er dagens status. Den svarer på tre spørsmål: hvem er i bygget i natt, hvem var på andakten, og hvor mange kontoer er i bruk.</p>
+
+  <h3>2.1 De tre nøkkeltallene</h3>
+  <table>
+    <tr><th style="width:30%">Kort</th><th>Hva det viser</th></tr>
+    <tr><td class="k">🔥 På skolen i natt</td><td>Antall registrerte av totalt, med en fremdriftsstripe. Under står <strong>hvor mange som mangler</strong> og hvor mange som har meldt seg borte.</td></tr>
+    <tr><td class="k">📖 Andakt i dag</td><td>Antall til stede, antall fravær, og hvor mange elever det er totalt.</td></tr>
+    <tr><td class="k">👥 Aktive brukere</td><td>Antall aktive elevkontoer, og hvor mange som er deaktivert.</td></tr>
+  </table>
+
+  <h3>2.2 «Ikke registrert på brannlisten i kveld»</h3>
+  <p>Under nøkkeltallene ligger listen som betyr noe om kvelden: elevene som verken har krysset seg til stede eller meldt seg borte, med internat og romnummer. Er alle registrert, står det <em>«Alle elever er registrert 🎉»</em> i grønt.</p>
+  <p class="note">Listen er ikke klikkbar – gå til <strong>Brannliste</strong> for å sette status manuelt.</p>
+
+  <h3>2.3 Varsel om gjester</h3>
+  <p>Har en elev meldt inn en gjest som venter på svar, ligger det et gult banner øverst med navnene. Klikk det for å gå rett til <strong>Gjester</strong>.</p>
+
+  <h3>2.4 Knappen «Vis QR på storskjerm»</h3>
+  <p>Åpner storskjermvisningen i et nytt vindu – den du kaster opp på projektoren før andakten. Se kapittel 7.</p>
+</section>
+
+<!-- ═══════════════ 3 ELEVER ═══════════════ -->
+<section>
+  <h2><span class="num">3</span>Elever</h2>
+  <p class="lead">Alle elevkontoer opprettes her. Det finnes ingen selvregistrering – en elev kan ikke lage seg konto selv.</p>
+
+  <h3>3.1 Listen</h3>
+  <ul>
+    <li><strong>Søk</strong> på navn eller brukernavn i feltet øverst.</li>
+    <li><strong>Sorter</strong> ved å klikke en kolonneoverskrift: navn, brukernavn, klasse, internat/rom eller status. Klikk igjen for å snu retningen. Tomme felt legger seg alltid nederst.</li>
+    <li><strong>Merk av</strong> i avkryssingsboksene for å slette flere om gangen. Din egen konto kan ikke merkes.</li>
+    <li>Deaktiverte kontoer vises nedtonet med merkelappen <span class="pill grey">Deaktivert</span>.</li>
+  </ul>
+
+  <h3>3.2 Legge til én elev</h3>
+  <ol class="steps">
+    <li><span class="st">Klikk blyanten på en rad, eller «Legg til flere» → én rad</span> Skjemaet er det samme.</li>
+    <li><span class="st">Fullt navn</span> Brukernavnet fylles ut automatisk som <code>fornavn.etternavn</code> mens du skriver – helt til du retter det selv.</li>
+    <li><span class="st">Passord</span> La feltet stå tomt, så lages et tilfeldig passord. Eller trykk <strong>Generer</strong> for å se det med én gang.</li>
+    <li><span class="st">Klasse, internat, rom og hovedinstrument</span> Klasse, internat og instrument velges fra faste lister. Rom er fri tekst.</li>
+    <li><span class="st">Opprett elev</span> Passordet vises i en melding nede på skjermen – <strong>skriv det ned nå</strong>.</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="h">⚠ Brukernavnet kan ikke endres etterpå</span>
+    <p>Ved redigering er brukernavnfeltet låst. Skal en elev ha nytt brukernavn, må kontoen opprettes på nytt – og da mister du historikken. Sjekk stavemåten før du oppretter.</p>
+  </div>
+
+  <h3>3.3 Legge til mange på én gang</h3>
+  <p>Knappen <strong>«Legg til flere»</strong> åpner et rutenett med én rad per elev. Nye rader dukker opp av seg selv når du begynner å fylle ut den siste. Brukernavn og passord lages automatisk for alle.</p>
+
+  <h4>Importere fra Excel</h4>
+  <p>Øverst i vinduet velger du hvordan arket skal leses:</p>
+  <table>
+    <tr><th style="width:32%">Valg</th><th>Når du bruker det</th></tr>
+    <tr><td class="k">Arket følger malen<br><span class="note">(standard)</span></td><td>Arket er satt opp som malen under. Leses lokalt på skolens egen server – <strong>ingenting sendes til OpenAI</strong>.</td></tr>
+    <tr><td class="k">Tolk arket med OpenAI</td><td>For ark som ikke følger malen. Bare de første radene sendes til OpenAI, som svarer med hvilken kolonne som er hva. Resten av elevopplysningene sendes ikke ut.</td></tr>
+  </table>
+
+  <p>Malen ser slik ut – rad 1 er overskriftsraden, én elev per rad nedover:</p>
+  <table>
+    <tr><th>Navn</th><th>Klasse</th><th>Internat</th><th>Rom</th><th>Hovedinstrument</th></tr>
+    <tr><td>Ingrid Sæther</td><td>VG1A</td><td>Treet 1</td><td>12</td><td>Fiolin</td></tr>
+    <tr><td>Ola Nordmann</td><td>VG2B</td><td>Svingen nede</td><td>3B</td><td>Trommer/slagverk</td></tr>
+  </table>
+  <ul>
+    <li>Overskriftene må skrives <strong>nøyaktig</strong> slik. Rekkefølgen på kolonnene spiller ingen rolle, og kolonner dere ikke bruker kan sløyfes helt.</li>
+    <li><strong>Navn</strong> må være med – hele navnet i én celle. Klasse, internat og hovedinstrument må være verdier fra listene i 3.6.</li>
+    <li>Enkeltceller kan stå tomme; du fyller dem inn i forhåndsvisningen.</li>
+    <li>Bare <strong>første fane</strong> i arket leses. Er det en skrivefeil, avvises arket med <strong>radnummer og hvilken celle</strong> som er feil.</li>
+    <li>Knappen <strong>«Last ned mal»</strong> gir en tom .xlsx med overskriftene ferdig utfylt.</li>
+  </ul>
+  <p class="note">Elever som allerede finnes, hoppes over – de listes opp som «fantes allerede» etter innlesingen. Radene kan rettes før du trykker Opprett.</p>
+
+  <h3>3.4 Brukerkort – slik deler du ut passordene</h3>
+  <div class="box stop">
+    <span class="h">Passordene vises kun én gang</span>
+    <p>Rett etter at kontoene er opprettet, får du knappen <strong>«Skriv ut brukerkort»</strong>. Den åpner en utskriftsvennlig side med ett kort per elev – navn, klasse, internat, brukernavn og passord – to i bredden på A4, til å klippe fra hverandre. Lukker du vinduet uten å skrive ut, må passordene settes på nytt, én for én.</p>
+  </div>
+  <p>Kortet sier selv at passordet er midlertidig og byttes ved første innlogging. Trenger nettleseren tillatelse til å åpne popup-vinduer, sier siden fra.</p>
+
+  <h3>3.5 Deaktivere eller slette?</h3>
+  <table>
+    <tr><th style="width:26%">Handling</th><th>Hva skjer</th><th>Bruk når</th></tr>
+    <tr><td class="k">Deaktivere<br><span class="note">(fjern «Aktiv konto»)</span></td><td>Eleven kan ikke logge inn, og forsvinner fra brannlisten og andaktsoversikten. All historikk blir stående.</td><td>Eleven har sluttet, er i permisjon, eller kontoen skal hvile.</td></tr>
+    <tr><td class="k">Slette</td><td>Kontoen og <strong>alle registreringer</strong> fjernes for godt. Kan ikke angres.</td><td>Feiloppretting, eller når skolen skal rydde bort gamle data bevisst.</td></tr>
+  </table>
+  <p class="note">Nytt passord til en elev som har glemt sitt: åpne eleven, skriv (eller generer) et passord i passordfeltet, lagre. Eleven blir bedt om å velge sitt eget ved neste innlogging. La feltet stå tomt for å beholde passordet uendret.</p>
+
+  <h3>3.6 Faste lister</h3>
+  <table>
+    <tr><th style="width:24%">Liste</th><th>Verdier</th></tr>
+    <tr><td class="k">Klasser</td><td>VG1A, VG1B, VG2A, VG2B, VG3A, VG3B</td></tr>
+    <tr><td class="k">Internat</td><td>Treet 1, Treet 2, Svingen nede, Svingen oppe, Nedre Vestheim, Øvre Vestheim, Granhaug, Nedre Austheim, Øvre Austheim</td></tr>
+    <tr><td class="k">Hovedinstrument</td><td>Sang, Piano, Orgel, Gitar, Bassgitar, Trommer/slagverk, Fiolin, Bratsj, Cello, Kontrabass, Fløyte, Klarinett, Obo, Fagott, Saksofon, Trompet, Trombone, Horn, Tuba, Harpe</td></tr>
+  </table>
+  <p class="note">Disse listene ligger i koden, ikke i Innstillinger. Skal et internat, en klasse eller et instrument legges til eller fjernes, må den som drifter systemet endre det – si fra i god tid før skolestart.</p>
+</section>
+
+<!-- ═══════════════ 4 ADMINISTRATORER ═══════════════ -->
+<section>
+  <h2><span class="num">4</span>Administratorer</h2>
+  <p class="lead">Ansattkontoer. Samme liste som for elever, men uten klasse, internat og instrument – og med full tilgang til alt i systemet.</p>
+
+  <h3>4.1 Opprette en administrator</h3>
+  <ol class="steps">
+    <li><span class="st">Gå til «Administratorer» → «Legg til flere»</span> Eller rediger en eksisterende med blyanten.</li>
+    <li><span class="st">Fyll inn fullt navn</span> Brukernavn foreslås automatisk.</li>
+    <li><span class="st">Opprett</span> Passordet vises én gang, og brukerkort kan skrives ut på samme måte som for elever.</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="h">Administratorer har full tilgang</span>
+    <p>Det finnes ingen mellomnivåer – en administrator kan opprette og slette brukere, endre alle innstillinger, sende push til alle elever og nullstille øvekonkurransen. Gi rollen bare til dem som faktisk trenger den.</p>
+  </div>
+
+  <h3>4.2 Din egen konto</h3>
+  <ul>
+    <li>Du kan ikke merke eller slette deg selv – raden din er merket <em>(deg)</em>, og avkryssingsboksen er låst.</li>
+    <li>Trenger du å bytte ditt eget passord: åpne din egen rad og skriv inn et nytt.</li>
+  </ul>
+
+  <h3>4.3 Den aller første kontoen</h3>
+  <p>Når systemet settes opp på en tom database, opprettes den første administratoren automatisk fra miljøvariablene <code>ADMIN_USERNAME</code> og <code>ADMIN_PASSWORD</code> på serveren. Finnes det allerede en administrator, gjør oppstarten ingenting. Dette er en driftsoppgave – i det daglige oppretter dere administratorer fra denne siden.</p>
+</section>
+
+<!-- ═══════════════ 5 BRANNLISTE ═══════════════ -->
+<section>
+  <h2><span class="num">5</span>Brannliste</h2>
+  <p class="lead">Kveldens oversikt, sortert på internat. Dette er siden brannvakten går etter – og den eneste siden der du kan overstyre elevenes egne registreringer.</p>
+
+  <h3>5.1 Slik leser du siden</h3>
+  <p>Tittelen sier hvilken natt listen gjelder: <strong>«Brannliste — natt til 3. september»</strong>. Øverst til høyre står tellerne:</p>
+  <p>
+    <span class="pill grey">Til stede: 84 / 96</span>
+    <span class="pill grey">6 borte</span>
+    <span class="pill red">6 mangler</span>
+  </p>
+  <p style="margin-top:3mm">Under ligger filterknapper – <strong>Alle</strong> eller ett internat – og ett kort per internat med elever, rom og en fargeprikk for status.</p>
+  <table>
+    <tr><th style="width:24%">Farge</th><th>Betyr</th></tr>
+    <tr><td class="k">🟢 Grønn</td><td>Krysset seg til stede.</td></tr>
+    <tr><td class="k">🔵 Mørkeblå</td><td>Meldt seg borte i natt.</td></tr>
+    <tr><td class="k">🔴 Rød</td><td>Ikke registrert. Raden har lys rød bakgrunn.</td></tr>
+    <tr><td class="k">🟡 Gul rad</td><td>En gjest – merket «Gjest hos <em>elevnavn</em>» med rom.</td></tr>
+  </table>
+
+  <h3>5.2 Sette status manuelt</h3>
+  <p>Hver elevrad har tre store knapper til høyre:</p>
+  <table>
+    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr>
+    <tr><td class="k">✓ grønn</td><td>Til stede. Hold pekeren over knappen for å se klokkeslettet eleven eventuelt registrerte seg.</td></tr>
+    <tr><td class="k">🏠 blå</td><td>Borte i natt.</td></tr>
+    <tr><td class="k">✕ rød</td><td>Fjerner registreringen – eleven står som «ikke registrert» igjen.</td></tr>
+  </table>
+  <p class="note">Elevene kan bare registrere seg innenfor tidsvinduet skolen har satt (kapittel 13). Du kan sette status <strong>når som helst</strong> – også lenge etter at vinduet stengte. Det er slik du fikser eleven med tomt batteri.</p>
+
+  <h3>5.3 Eksportere listen</h3>
+  <p><strong>«Eksporter PDF»</strong> lager en utskriftsvennlig liste for natten som vises. Skal den komme av seg selv hver dag, sett opp automatisk e-post under Innstillinger (13.3).</p>
+
+  <div class="box stop">
+    <span class="h">Ved brann eller evakuering</span>
+    <p>Ikke stol på at telefonen og nettet virker i en krisesituasjon. Sørg for at kveldens liste finnes <strong>på papir eller som PDF på en enhet</strong> før dere trenger den – det er hele poenget med den daglige e-postutsendingen.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 6 GJESTER ═══════════════ -->
+<section>
+  <h2><span class="num">6</span>Gjester</h2>
+  <p class="lead">Gjester som overnatter skal stå på brannlisten. Siden har to deler: forespørsler fra elever som venter på svar, og gjester dere legger inn selv.</p>
+
+  <h3>6.1 Godkjenne en forespørsel</h3>
+  <ol class="steps">
+    <li><span class="st">Gå til «Gjester»</span> Antall ubehandlede vises som et rødt tall i menyen, og som et banner på Dashboard.</li>
+    <li><span class="st">Les forespørselen</span> Gjestens navn, hvem som er vert, nettene det gjelder, og elevens kommentar.</li>
+    <li><span class="st">Velg internat og rom</span> Elevens eget internat er foreslått, og må fylles ut. Rom er valgfritt, men greit å ha når brannvakten skal finne gjesten.</li>
+    <li><span class="st">Trykk «Godkjenn»</span> Eleven ser statusen endre seg til «Godkjent» i appen, med internat og rom.</li>
+  </ol>
+  <p class="note">Gjesten føres automatisk på brannlisten for hver natt i perioden, i det internatet du valgte.</p>
+
+  <h3>6.2 Legge inn en gjest selv</h3>
+  <p>Kommer beskjeden på en annen måte – på telefon, i gangen, fra en forelder – legger du gjesten inn direkte:</p>
+  <ol class="steps">
+    <li><span class="st">Vert (elev)</span> Søk opp eleven gjesten skal bo hos.</li>
+    <li><span class="st">Navn, kommentar, internat og rom</span> Der gjesten faktisk sover.</li>
+    <li><span class="st">Første natt og siste natt → «Legg til gjest»</span></li>
+  </ol>
+  <div class="box warn">
+    <span class="h">🌙 Datoene er netter, ikke dager</span>
+    <p>«Siste natt» er den siste natten gjesten faktisk sover på internatet – gjesten reiser <strong>morgenen etter</strong>. Velger du samme dato i begge felt, er det ett døgn (én natt).</p>
+  </div>
+
+  <h3>6.3 Kommende gjester</h3>
+  <p>Nederst ligger alle gjester framover, med internat, rom, vert og datoer. Internat og rom rettes direkte i listen, og søppelbøtta sletter en gjest som ikke kommer likevel.</p>
+
+  <h3>6.4 E-postvarsel</h3>
+  <p>Under Innstillinger kan dere slå på <strong>e-post ved nye forespørsler</strong>. Den sendes med én gang eleven melder inn gjesten – ikke på et fast tidspunkt – og inneholder en direktelenke til godkjenningen. Nyttig hvis internatleder ikke er innom admin hver dag.</p>
+</section>
+
+<!-- ═══════════════ 7 ANDAKT / QR ═══════════════ -->
+<section>
+  <h2><span class="num">7</span>Andakt / QR</h2>
+  <p class="lead">Her styrer dere QR-koden elevene skanner, og følger oppmøtet i sanntid. Siden oppdaterer seg selv hvert femte sekund – du trenger ikke laste den på nytt.</p>
+
+  <h3>7.1 QR-kortet</h3>
+  <p>Til venstre står koden med en statusmerkelapp:</p>
+  <table>
+    <tr><th style="width:34%">Merkelapp</th><th>Betyr</th></tr>
+    <tr><td class="k"><span class="pill green">Gyldig nå · til kl. 08:40</span></td><td>Koden vises, og elevene kan registrere seg.</td></tr>
+    <tr><td class="k"><span class="pill amber">Åpner kl. 07:40</span></td><td>For tidlig. Koden dukker opp automatisk når vinduet åpner.</td></tr>
+    <tr><td class="k"><span class="pill amber">Andakten er over</span></td><td>Registreringen stengte. Klokkeslettet står i teksten.</td></tr>
+    <tr><td class="k"><span class="pill grey">Ingen andakt</span></td><td>Det er helg, og «Kun ukedager» er slått på.</td></tr>
+  </table>
+  <p>Koden bytter seg selv ut med noen sekunders mellomrom, så et avfotografert skjermbilde slutter å virke. Knappen <strong>«Ugyldiggjør koder nå»</strong> nullstiller alle koder umiddelbart – bruk den hvis dere mistenker at noen deler et bilde av skjermen.</p>
+
+  <h3>7.2 Storskjerm</h3>
+  <p><strong>«Åpne storskjerm»</strong> gir en ren visning til projektor eller TV: skolens navn, dato, en stor QR-kode og teksten «Skann koden for å registrere oppmøte». Den oppdaterer seg selv, og viser «QR-koden vises snart» / «Andakten er over» / «Ingen andakt i dag» utenom vinduet. Trykk <strong>Lukk</strong> oppe til høyre for å gå tilbake.</p>
+  <div class="box tip">
+    <span class="h">Rutine som funker</span>
+    <p>Åpne storskjermen i et eget nettleservindu på maskinen som styrer projektoren, og la den stå. Den henter ny kode av seg selv hver dag – ingen trenger å gjøre noe før andakten.</p>
+  </div>
+
+  <h3>7.3 Oppmøtelisten</h3>
+  <p>Til høyre ligger to faner: <strong>Til stede</strong> og <strong>Ikke møtt</strong>, med antall i hver. Til stede-listen viser klokkeslett, og «For sent ·» foran tiden for dem som kom etter fristen.</p>
+  <p>Hver rad har tre knapper, akkurat som på brannlisten:</p>
+  <table>
+    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr>
+    <tr><td class="k">✓ grønn</td><td>Til stede.</td></tr>
+    <tr><td class="k">! gul</td><td>For sent.</td></tr>
+    <tr><td class="k">✕ rød</td><td>Fjerner registreringen – eleven står som fravær.</td></tr>
+  </table>
+  <p class="note">Bruk dette for eleven som glemte telefonen, eller som satt der uten å rekke å skanne. Endringen slår inn i ukesrapporten med én gang.</p>
+
+  <h3>7.4 Eksportere ukens fravær</h3>
+  <p>Knappen <strong>«Eksporter ukens fravær (Excel)»</strong> laster ned uken som løper nå – den ligger ikke i arkivet ennå. Arket har én rad per fravær og per «for sent», med navn, klasse, internat, rom, dato, status og hvor sent eleven var. Fravær er markert i rødt, for sent i gult.</p>
+  <p class="note">Er det ingen fravær og ingen forsentkomming denne uken, får du beskjed om det i stedet for en tom fil.</p>
+</section>
+
+<!-- ═══════════════ 8 ANDAKTSARKIV ═══════════════ -->
+<section>
+  <h2><span class="num">8</span>Andaktsarkiv</h2>
+  <p class="lead">Så snart en uke er over, fryses rapporten over hvem som var borte og hvem som kom for sent. Arkivet nås fra knappen <strong>«Arkivet»</strong> på Andakt-siden.</p>
+
+  <h3>8.1 Hvorfor rapportene fryses</h3>
+  <p>Rapporten lagres som en kopi, ikke som et oppslag. Fraværet regnes ut fra elevene som er aktive <em>nå</em> – så en rapport som ble regnet på nytt et halvår senere ville vist andre navn og andre tall enn uken faktisk hadde. Kopien viser uken slik den var.</p>
+
+  <h3>8.2 Bruke arkivet</h3>
+  <ul>
+    <li><strong>Klikk en ukerad</strong> for å folde den ut: én bolk per dag, med fraværende i rødt og for sent i gult (med antall minutter).</li>
+    <li><strong>Excel</strong> laster ned uken i samme format som ukeeksporten på Andakt-siden.</li>
+    <li><strong>Søppelbøtta</strong> sletter uken fra arkivet.</li>
+  </ul>
+
+  <div class="box stop">
+    <span class="h">⚠ Å slette en uke sletter også registreringene</span>
+    <p>Registreringene uken bygger på fjernes i samme operasjon – ellers ville uken kommet rett tilbake i arkivet neste gang det fylles på. Det er altså en <strong>endelig</strong> sletting av andaktsdataene for den uken. Funksjonen er ment for testuker fra før appen ble tatt i bruk.</p>
+  </div>
+
+  <h3>8.3 Hvor lenge arkivet tar vare på uker</h3>
+  <p>Øverst velger dere <strong>hvor mange ukesrapporter</strong> som skal bli liggende – mellom 1 og 260, standard 12 (omtrent et halvt skoleår). Eldre uker fjernes for godt. Setter du tallet lavere, sier siden fra hvor mange rapporter som forsvinner før du bekrefter.</p>
+  <p class="note">Den generelle lagringstiden under Innstillinger gjelder uansett som ytre grense. Trenger skolen tallene lenger enn arkivperioden, last ned Excel-arkene og lagre dem der skolen ellers oppbevarer fraværsdokumentasjon.</p>
+
+  <h3>8.4 Uker som ikke dukker opp</h3>
+  <ul>
+    <li><strong>Uken som løper nå</strong> er ikke arkivert ennå – last den ned fra Andakt-siden.</li>
+    <li><strong>Uker uten en eneste registrering</strong> – ferier, og tiden før appen ble tatt i bruk – hoppes over. En rapport der alle står som fraværende sier ingenting.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 9 KJØKKEN ═══════════════ -->
+<section>
+  <h2><span class="num">9</span>Kjøkken</h2>
+  <p class="lead">Siden samler tre ting: hvor mange som spiser i dag, hvem som har kjøkkentjeneste, og ukemenyen elevene ser i appen.</p>
+
+  <h3>9.1 Dagens middagstall</h3>
+  <p>Øverst står hvem som har kjøkkentjeneste denne uken, deretter to tall: <strong>spiser middag</strong> og <strong>spiser ikke</strong>. Under ligger navnelisten over dem som har meldt seg av – enten selv, eller gjennom et planlagt fravær.</p>
+  <p>Knappen <strong>«Send til kjøkken nå»</strong> sender oversikten på e-post umiddelbart, til adressen som er satt under Innstillinger. Bruk den når kjøkkenet spør, eller for å teste at oppsettet virker.</p>
+
+  <h3>9.2 Kjøkkentjeneste</h3>
+  <p>Tjenesten går på rundgang, én uke om gangen.</p>
+  <ol class="steps">
+    <li><span class="st">Bla til riktig uke</span> Pilene ‹ og › flytter deg en uke fram eller tilbake. Uken vises med nummer og datoer.</li>
+    <li><span class="st">Legg til elever</span> Søk opp eleven i feltet og klikk navnet.</li>
+    <li><span class="st">Fjern hvis noe blir feil</span> Knappen «Fjern» på raden.</li>
+  </ol>
+  <p>Under ligger <strong>Kommende uker</strong> – hele rundgangen framover, slik elevene ser den i appen.</p>
+
+  <h4>Importere turnusen fra Excel</h4>
+  <p>Samme to valg som for elevlista: <strong>arket følger malen</strong> (leses lokalt) eller <strong>tolk med OpenAI</strong>. Malen:</p>
+  <table>
+    <tr><th>Uke</th><th>Navn</th><th>Startdato</th></tr>
+    <tr><td>34</td><td>Ingrid Sæther</td><td>17.08.2026</td></tr>
+    <tr><td></td><td>Ola Nordmann</td><td></td></tr>
+    <tr><td>35</td><td>Kari Ås</td><td></td></tr>
+  </table>
+  <ul>
+    <li><strong>Uke</strong> er ISO-ukenummer 1–53, skrevet som <code>34</code> eller <code>Uke 34</code>. Har flere elever tjeneste samme uke, får de hver sin rad – da kan Uke stå tom, og uken over gjelder videre.</li>
+    <li><strong>Navn</strong> er hele navnet i én celle.</li>
+    <li><strong>Startdato</strong> er valgfri, men skal være <strong>mandagen</strong> i uken hvis den er med. Nyttig over et årsskifte. Uten dato velges nærmeste kommende uke med det nummeret.</li>
+    <li>Navn som ikke finnes blant elevene stopper ikke importen – de vises som «ikke funnet», så du kan rette opp i forhåndsvisningen.</li>
+  </ul>
+  <p class="note">Du bekrefter alltid før noe lagres: importen viser hvilke uker den fant, og du huker av for dem som skal legges inn.</p>
+
+  <h3>9.3 Ukemeny</h3>
+  <ol class="steps">
+    <li><span class="st">Gi menyen en tittel</span> For eksempel «Uke 29».</li>
+    <li><span class="st">Last opp PDF-en</span> Eller trykk «+ Legg til uten PDF» og skriv inn dagene selv.</li>
+    <li><span class="st">Vent på tolkningen</span> Statusen går fra <em>Tolker…</em> til <em>Tolket ✓</em>. Feiler den, står det «Tolkning feilet» – da kan du legge inn dagene manuelt.</li>
+    <li><span class="st">Kontrollér mot PDF-en</span> Tolkningen gjøres av OpenAI, og siden minner deg på å sjekke den. Trykk <strong>Rediger</strong> for å rette dager, retter, merknader og internatvakt.</li>
+  </ol>
+  <p>Elevene ser dagens rett på hjemskjermen, hele uken under «Middag», og kan åpne den opprinnelige PDF-en. Internatvaktene vises både på hjemskjermen og på brannlisteskjermen i appen.</p>
+</section>
+
+<!-- ═══════════════ 10 INTERNAT ═══════════════ -->
+<section>
+  <h2><span class="num">10</span>Internat</h2>
+  <p class="lead">Internatvasken fungerer som kjøkkentjenesten – samme ukevisning, samme import – men i tillegg har den <strong>oppgaver</strong> og <strong>signaturer</strong>.</p>
+
+  <h3>10.1 Oppgavene</h3>
+  <p>Oppgavene er fasit for hva som skal gjøres: 80-gongen, trappegangen, kjøkkenet. Eleven leser hele beskrivelsen i appen og signerer når jobben er gjort.</p>
+  <ol class="steps">
+    <li><span class="st">Trykk «Ny oppgave»</span> Under overskriften Oppgaver.</li>
+    <li><span class="st">Velg internat</span> Oppgavene er knyttet til ett internat hver.</li>
+    <li><span class="st">Skriv navn og beskrivelse</span> Skriv beskrivelsen slik den står på vaskelista – eleven får hele teksten opp.</li>
+    <li><span class="st">Sjekk koden</span> Den lages automatisk, f.eks. <strong>ØVEST1</strong> for Øvre Vestheim, oppgave 1. Du kan overstyre den. Koden er unik på tvers av internatene, og internat med tall i navnet får bindestrek – <code>TREET1-2</code> – så den ikke leses som «uke 12».</li>
+  </ol>
+  <p>Hver oppgave kan senere <strong>redigeres</strong>, <strong>deaktiveres/aktiveres</strong> eller <strong>slettes</strong>.</p>
+
+  <div class="box warn">
+    <span class="h">Deaktiver framfor å slette</span>
+    <p>En oppgave som har vært satt opp på en uke kan ikke slettes – da ville historikken mistet hva som faktisk ble gjort. Systemet sier ifra med hvor mange ganger oppgaven har vært i bruk, og ber deg deaktivere i stedet. Deaktiverte oppgaver kan ikke settes på nye uker, men blir stående i historikken.</p>
+  </div>
+
+  <h3>10.2 Turnus med oppgaver</h3>
+  <p>Excel-malen for internatvask har én kolonne mer enn kjøkkenets – <strong>Oppgave</strong>, der du skriver oppgavekoden:</p>
+  <table>
+    <tr><th>Uke</th><th>Oppgave</th><th>Navn</th><th>Startdato</th></tr>
+    <tr><td>34</td><td>ØVEST1</td><td>Ingrid Sæther</td><td>17.08.2026</td></tr>
+    <tr><td></td><td>ØVEST2</td><td>Ola Nordmann</td><td></td></tr>
+    <tr><td>35</td><td>ØVEST1</td><td>Kari Ås</td><td></td></tr>
+  </table>
+  <ul>
+    <li>Koden arves <strong>ikke</strong> nedover slik ukenummeret gjør – en tom celle betyr «vaskeuke uten bestemt oppgave».</li>
+    <li>Koden må høre til <strong>elevens eget internat</strong>. En kode fra et annet internat er nesten alltid en skrivefeil, og avvises med radnummer.</li>
+    <li><strong>OpenAI-veien leser ikke oppgavekoder.</strong> Skal turnusen ha oppgaver, må arket følge malen.</li>
+  </ul>
+
+  <h3>10.3 Signaturer</h3>
+  <p>Eleven kvitterer selv for at jobben er gjort. I ukelista ser du statusen, og kan gripe inn:</p>
+  <table>
+    <tr><th style="width:26%">Det du ser</th><th>Hva du kan gjøre</th></tr>
+    <tr><td class="k"><span class="pill green">✓ Signert …</span></td><td>Hold pekeren over for å se hvem, når og hvordan. <strong>«Angre»</strong> fjerner signaturen.</td></tr>
+    <tr><td class="k"><span class="pill grey">Ikke signert</span></td><td><strong>«Signer»</strong> signerer på vegne av eleven – for eleven uten telefon, eller som glemte det. Ditt navn lagres på signaturen.</td></tr>
+  </table>
+  <p>Signaturmetoden vises i klartekst:</p>
+  <table>
+    <tr><th style="width:30%">Metode</th><th>Hva den er verdt</th></tr>
+    <tr><td class="k">Face ID / fingeravtrykk</td><td>Signert i mobilappen. <strong>En kvittering, ikke et bevis</strong> – låsingen skjer på elevens egen telefon, og serveren kan ikke etterprøve den. Verdien ligger i forpliktelsen i å skrive under selv.</td></tr>
+    <tr><td class="k">passord</td><td>Signert i nettleseren, kontrollert mot passordet på serveren. Denne er faktisk verifisert.</td></tr>
+    <tr><td class="k">lagt inn av admin</td><td>En administrator signerte på vegne av eleven. Navnet på den som gjorde det, står i oversikten.</td></tr>
+  </table>
+  <p class="note">Ingen kan signere en uke som ikke har begynt, og eleven kan bare signere sine egne oppgaver.</p>
+
+  <h3>10.4 Oversikt uke for uke</h3>
+  <p>Nederst ligger matrisen – oppgavene nedover, ukene bortover. Det er samme oppslag som henger på veggen, men med signaturene fylt inn. Trykk <strong>Utvid</strong> for full bredde, og klikk en ukekolonne for å redigere den uken.</p>
+  <table>
+    <tr><th style="width:26%">Tegn i cellen</th><th>Betyr</th></tr>
+    <tr><td class="k">✓ grønn</td><td>Signert.</td></tr>
+    <tr><td class="k">○ gul</td><td>Uken har vært eller pågår, men er ikke signert.</td></tr>
+    <tr><td class="k">· grå prikk</td><td>Satt opp, men uken har ikke begynt ennå.</td></tr>
+    <tr><td class="k">–</td><td>Ingen satt opp.</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════ 11 ØVEKONKURRANSE ═══════════════ -->
+<section>
+  <h2><span class="num">11</span>Øvekonkurranse</h2>
+  <p class="lead">Elevene konkurrerer om å øve mest på hovedinstrumentet i en avgrenset periode. Hele konkurransen styres herfra – og den er usynlig i elevappen til dere åpner den.</p>
+
+  <h3>11.1 Sette opp konkurransen</h3>
+  <table>
+    <tr><th style="width:34%">Innstilling</th><th>Hva den gjør</th></tr>
+    <tr><td class="k">Starter / Slutter</td><td>Perioden konkurransen varer. <strong>Tom periode = ingen konkurranse</strong>, og kortet vises ikke i elevappen. Økter kan verken startes eller registreres utenfor perioden.</td></tr>
+    <tr><td class="k">Obligatorisk oppvarming</td><td>Antall minutter eleven må gjennom før stoppeklokken tar over. Tiden teller med i totalen.</td></tr>
+    <tr><td class="k">Andel økter som må dokumenteres</td><td>Prosenten som trekkes ut til å ta bilde. Trekkes for hver økt når eleven starter. Sett <strong>100 %</strong> mens elevene læres opp, eller <strong>0 %</strong> for å slå dokumentasjonen av.</td></tr>
+  </table>
+  <p class="note">Terningkastet skjer på serveren når økten starter, og lagres på økten – ellers kunne appen latt være å spørre.</p>
+
+  <h3>11.2 Stillingen</h3>
+  <p>Under innstillingene ligger samlet øvetid, og oppsummeringer <strong>per klasse</strong> og <strong>per instrument</strong>. Deretter kommer selve stillingen, elev for elev.</p>
+  <p>Klikk en elev for å folde ut øktene: dato, lengde og eventuelt dokumentasjonsbilde. Klikk bildet for å se det stort.</p>
+  <div class="box tip">
+    <span class="h">Om bildestempelet</span>
+    <p>Dato og klokkeslett <strong>tegnes ved visning</strong>, fra serverens tidsstempel – det brennes ikke inn av telefonen. Derfor kan det ikke forfalskes av en app, og det ser likt ut i elevappen og her. Elevene bes ta bilde av instrumentet eller notestativet, ikke av seg selv.</p>
+  </div>
+  <p>Søppelbøtta på en økt sletter den: tiden forsvinner fra stillingen, og dokumentasjonsbildet slettes.</p>
+
+  <h3>11.3 Grenser som gjelder uansett</h3>
+  <ul>
+    <li>Selve øvetiden regnes ut <strong>på serveren</strong>, ikke i appen. Appen sender aldri hvor lenge det ble øvd.</li>
+    <li>«Stopp» fryser tiden, slik at minuttene det tar å ta dokumentasjonsbildet ikke teller som øving.</li>
+    <li>Pauser holdes utenfor øvetiden – de kan verken legge til eller trekke fra tid.</li>
+    <li>En økt forkastes når den passerer <strong>seks timer</strong> faktisk øvetid, eller et døgn i klokketid.</li>
+  </ul>
+
+  <h3>11.4 Nullstille konkurransen</h3>
+  <div class="box stop">
+    <span class="h">⚠ Sletter alle økter og alle bilder, for alle elever</span>
+    <p>Knappen <strong>«Nullstill…»</strong> nederst på siden fjerner alle øveøkter og dokumentasjonsbilder. Perioden og innstillingene beholdes – det er resultatene som nullstilles. Bekreftelsen viser hvor mange økter og bilder som forsvinner, og krever at du skriver <strong>NULLSTILL</strong> for hånd. Handlingen logges på serveren med hvem som utførte den.</p>
+  </div>
+  <p class="note">Bruk den mellom to konkurranser, eller etter en testperiode – aldri midt i en pågående konkurranse.</p>
+</section>
+
+<!-- ═══════════════ 12 VARSLER ═══════════════ -->
+<section>
+  <h2><span class="num">12</span>Varsler</h2>
+  <p class="lead">Push-varsler til elevenes telefoner. To automatiske, og én du skriver selv. Varslene når bare elever som har appen installert og har tillatt varsler.</p>
+
+  <h3>12.1 Automatisk påminnelse: husk brannlisten</h3>
+  <p>Sendes <strong>kl. 20:00 hver dag</strong> til elevene som ikke har krysset seg av for kvelden ennå. Tidspunktet er fast, og uavhengig av åpningstidene for innsjekksvinduet.</p>
+  <div class="box">
+    <strong>Husk brannlisten!</strong><br>
+    <span class="note">Du har ikke krysset deg av for i kveld ennå. Åpne appen og registrer om du er til stede eller borte.</span>
+  </div>
+  <p class="note">Er alle registrert når klokken slår 20:00, sendes ingenting.</p>
+
+  <h3>12.2 Varsel om ukestjeneste</h3>
+  <p>Sendes <strong>søndag kl. 18:00</strong> til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</p>
+  <p>Begge de automatiske varslene har en <strong>«Send test nå»</strong>-knapp, som sender akkurat det varselet med én gang – nyttig for å bekrefte at oppsettet virker.</p>
+
+  <h3>12.3 Send til alle nå</h3>
+  <p>Til beskjeder som ikke passer noe annet sted: «Brannøvelse i morgen tidlig», «Middagen er flyttet til 16:30».</p>
+  <ol class="steps">
+    <li><span class="st">Skriv en tittel</span> Maks 80 tegn. Dette er linjen elevene ser først.</li>
+    <li><span class="st">Skriv teksten</span> Maks 240 tegn.</li>
+    <li><span class="st">Trykk «Send til alle»</span></li>
+  </ol>
+  <div class="box warn">
+    <span class="h">⚠ Det finnes ingen angreknapp</span>
+    <p>Varselet går ut til alle elever med én gang, og kan ikke trekkes tilbake. Les korrektur før du sender – og hold det til beskjeder som faktisk haster. Varsler som kommer for ofte, blir skrudd av av elevene, og da mister også brannliste-påminnelsen effekten sin.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 13 INNSTILLINGER ═══════════════ -->
+<section>
+  <h2><span class="num">13</span>Innstillinger</h2>
+  <p class="lead">Her settes fristene, tidsvinduene, e-postutsendingene og lagringstiden. Endringene lagres først når du trykker <strong>«Lagre endringer»</strong> nederst.</p>
+
+  <h3>13.1 Andakt</h3>
+  <table>
+    <tr><th style="width:34%">Innstilling</th><th>Betydning</th></tr>
+    <tr><td class="k">Frist for oppmøte</td><td>Oppmøte etter dette regnes som «for sent» / fravær. Standard 08:10.</td></tr>
+    <tr><td class="k">QR-koden åpner<br><span class="note">min før fristen (1–180)</span></td><td>Når koden dukker opp på storskjermen. Før dette kan ingen registrere seg. Standard 30.</td></tr>
+    <tr><td class="k">QR-koden stenger<br><span class="note">min etter fristen (0–180)</span></td><td>Hvor lenge en som kommer for sent fortsatt rekker å registrere seg – de blir stående som «for sent». <strong>Sett 0</strong> for å stenge på slaget: da er alt etter fristen fravær. Standard 30.</td></tr>
+    <tr><td class="k">Kun ukedager</td><td>Ingen andakt lørdag og søndag.</td></tr>
+  </table>
+
+  <h3>13.2 Brannliste – innsjekksvindu</h3>
+  <p>Tidsrommet om kvelden der elevene kan melde seg til stede. Utenfor vinduet er registrering stengt for elevene – men <strong>du kan alltid overstyre</strong> fra Brannliste-siden.</p>
+  <table>
+    <tr><th style="width:34%">Kveld</th><th>Standard</th></tr>
+    <tr><td class="k">Hverdag (søn–tor)</td><td>20:00 – 23:00 &nbsp;<span class="note">skoledag neste dag</span></td></tr>
+    <tr><td class="k">Fredag</td><td>20:00 – 00:00</td></tr>
+    <tr><td class="k">Lørdag</td><td>20:00 – 00:00</td></tr>
+  </table>
+  <p class="note">Lukketid i helgen kan settes etter midnatt, f.eks. 00:30. Da hører innsjekken fortsatt til kvelden vinduet startet.</p>
+
+  <h3>13.3 E-post</h3>
+  <table>
+    <tr><th style="width:28%">Utsending</th><th>Innhold og tidspunkt</th></tr>
+    <tr><td class="k">Gjesteforespørsler</td><td>Sendes <strong>umiddelbart</strong> når en elev melder gjest, med direktelenke til godkjenningen.</td></tr>
+    <tr><td class="k">Brannliste</td><td>Til ansvarlig lærer, med <strong>hele listen vedlagt som PDF</strong>. Sendes daglig på tidspunktet dere setter. <em>Før kl. 18</em> sendes natten som nettopp er ferdig; <em>fra kl. 18</em> sendes kveldens kommende liste. Standard 14:15.</td></tr>
+    <tr><td class="k">Middag (kjøkken)</td><td>Oversikt over hvor mange som spiser i dag. Standard 13:00. Avsendernavnet kan settes eget, f.eks. «Kongshaug Kjøkken».</td></tr>
+  </table>
+  <p>Alle tre har <strong>«Send test nå»</strong>. Bruk den etter hver endring – da vet dere at det virker før dere trenger det.</p>
+  <div class="box warn">
+    <span class="h">Krever Brevo</span>
+    <p>E-post går gjennom tjenesten Brevo. Er den ikke satt opp, står det et gult varsel på siden om at <code>BREVO_API_KEY</code> og <code>MAIL_FROM</code> mangler i serverens oppsett. Det er en driftsoppgave – kontakt den som drifter systemet.</p>
+  </div>
+
+  <h3>13.4 Personvern: lagringstid</h3>
+  <p>Systemet rydder etter seg selv. Her styrer dere hvor lenge:</p>
+  <table>
+    <tr><th style="width:32%">Innstilling</th><th>Betydning</th></tr>
+    <tr><td class="k">Slett gammel historikk automatisk</td><td>Av/på. Kjøres én gang i døgnet.</td></tr>
+    <tr><td class="k">Lagringstid<br><span class="note">30–3650 dager</span></td><td>Oppmøte, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste, internatvask og øveøkter eldre enn dette slettes for godt. 365 dager ≈ ett skoleår.</td></tr>
+    <tr><td class="k">GPS-koordinater<br><span class="note">1–168 timer</span></td><td>Etter dette nulles posisjonen, mens statusen (til stede / borte / for sent) blir stående. Brannlista trenger statusen, ikke stedet. Standard 24 timer.</td></tr>
+  </table>
+  <p><strong>«Kjør sletting nå»</strong> kjører begge oppryddingene umiddelbart. Sletting er endelig – dataen kan ikke hentes tilbake.</p>
+  <p class="note">Endrer dere periodene, husk å oppdatere skolens personvernerklæring så den sier det samme.</p>
+</section>
+
+<!-- ═══════════════ 14 RUTINER ═══════════════ -->
+<section>
+  <h2><span class="num">14</span>Rutiner gjennom året</h2>
+  <p class="lead">Systemet gjør mesteparten selv. Dette er det som faktisk krever en ansatt.</p>
+
+  <h3>14.1 Hver dag</h3>
+  <table>
+    <tr><th style="width:26%">Når</th><th>Hva</th></tr>
+    <tr><td class="k">Før andakten</td><td>Sjekk at storskjermen viser QR-koden.</td></tr>
+    <tr><td class="k">Etter andakten</td><td>Gå gjennom «Ikke møtt» og rett åpenbare feil.</td></tr>
+    <tr><td class="k">Om kvelden</td><td>Se hvem som mangler, følg opp, og sett status manuelt for dem du får bekreftet.</td></tr>
+    <tr><td class="k">Fortløpende</td><td>Behandle besøksforespørsler – det røde tallet i menyen viser om det ligger noen.</td></tr>
+  </table>
+
+  <h3>14.2 Hver uke</h3>
+  <ul>
+    <li>Legg inn <strong>ukemenyen</strong>, og kontrollér tolkningen mot PDF-en.</li>
+    <li>Sjekk at <strong>kjøkkentjeneste og internatvask</strong> er satt opp for kommende uker.</li>
+    <li>Se over <strong>signaturene</strong> i vaskematrisen – gule ringer er uker uten kvittering.</li>
+    <li>Ved behov: last ned <strong>ukens andaktsfravær</strong>.</li>
+  </ul>
+
+  <h3>14.3 Ved skolestart</h3>
+  <ol class="steps">
+    <li><span class="st">Deaktiver eller slett elever som har sluttet</span> Deaktiver hvis historikken skal bli stående.</li>
+    <li><span class="st">Importer den nye elevlista fra Excel</span> Bruk malen, og last den ned fra knappen så overskriftene blir riktige.</li>
+    <li><span class="st">Skriv ut brukerkortene med én gang</span> Passordene vises kun i dette ene vinduet.</li>
+    <li><span class="st">Gå gjennom Innstillinger</span> Frist for andakt, innsjekksvinduene, mottakere for e-post.</li>
+    <li><span class="st">Legg inn turnusene</span> Kjøkkentjeneste og internatvask, og opprett vaskeoppgavene per internat.</li>
+    <li><span class="st">Slå på varslene, og send en test</span> «Send test nå» på begge e-postutsendingene og begge push-varslene.</li>
+  </ol>
+  <p class="note">Skal klasser, internat eller instrumenter endres, si fra til den som drifter systemet i god tid – de listene ligger i koden.</p>
+
+  <h3>14.4 Ved skoleslutt</h3>
+  <ul>
+    <li>Last ned det skolen trenger å ta vare på: andaktsrapportene fra arkivet, og eventuelle brannliste-PDF-er.</li>
+    <li>Deaktiver avgangselevene.</li>
+    <li>Vurder om øvekonkurransen skal nullstilles før neste år.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 15 FEILSØKING ═══════════════ -->
+<section>
+  <h2><span class="num">15</span>Feilsøking og vanlige spørsmål</h2>
+
+  <h3>15.1 Feilsøking</h3>
+  <table>
+    <tr><th style="width:38%">Problem</th><th>Løsning</th></tr>
+    <tr><td class="k">En elev sier appen nekter å registrere – «ikke på skolens område»</td><td>Be eleven gå ut eller til et vindu og prøve igjen. Går det fortsatt ikke, sett status manuelt fra Brannliste. Skjer det for mange på en gang, kan skolens koordinater eller radius være feil satt opp på serveren.</td></tr>
+    <tr><td class="k">QR-koden vises ikke på storskjermen</td><td>Sjekk klokkeslettet: koden vises bare i vinduet rundt fristen. Statusmerkelappen på Andakt-siden sier når den åpner. Er det helg, er «Kun ukedager» slått på.</td></tr>
+    <tr><td class="k">Eleven fikk «QR-koden er ikke gyldig lenger»</td><td>Normalt – koden byttes ut med noen sekunders mellomrom. Be eleven skanne på nytt.</td></tr>
+    <tr><td class="k">Elever får ikke push-varsler</td><td>Varsler må være tillatt på telefonen, og eleven må ha logget inn i appen. Bruk «Send test nå» for å bekrefte at utsendingen fra serveren virker.</td></tr>
+    <tr><td class="k">E-posten kommer ikke fram</td><td>Trykk «Send test nå». Kommer det et gult Brevo-varsel på Innstillinger, mangler nøklene på serveren. Ellers: sjekk mottakeradressen og søppelpostmappen.</td></tr>
+    <tr><td class="k">Excel-importen avvises</td><td>Feilmeldingen sier radnummer og hvilken celle. Vanligste årsak: en overskrift som ikke er skrevet nøyaktig som i malen, eller en klasse/internat/instrument som ikke finnes i listene. Last ned malen og lim inn dataene der.</td></tr>
+    <tr><td class="k">En oppgave lar seg ikke slette</td><td>Den har vært satt opp på minst én uke. Deaktiver den i stedet – da beholdes historikken.</td></tr>
+    <tr><td class="k">Sidemenyen er borte</td><td>Skjermen er for smal. Bruk PC eller nettbrett i landskap.</td></tr>
+    <tr><td class="k">Du blir kastet ut til innloggingen</td><td>Innloggingen varer 12 timer. Logg inn på nytt.</td></tr>
+    <tr><td class="k">Tallene ser gamle ut</td><td>Brannliste- og elevlistene lastes når du åpner siden. Last siden på nytt. Andakt-siden oppdaterer seg selv hvert femte sekund.</td></tr>
+  </table>
+
+  <h3>15.2 Vanlige spørsmål</h3>
+
+  <h4>Kan en elev fikse sin egen registrering etter at vinduet stengte?</h4>
+  <p>Nei. Etter stengetid er det bare en administrator som kan sette status, fra Brannliste-siden.</p>
+
+  <h4>Ser elevene hverandres status?</h4>
+  <p>Nei. Elevene ser sin egen status. Vaskeplan og kjøkkentjeneste er felles lister, og der ser de navnene til dem de har tjeneste sammen med.</p>
+
+  <h4>Hva skjer med en deaktivert elev sin historikk?</h4>
+  <p>Den blir stående til den generelle lagringstiden fjerner den. Deaktivering sletter ingenting.</p>
+
+  <h4>Kan vi hente tilbake noe som er slettet?</h4>
+  <p>Nei. All sletting i systemet er endelig. Last ned det dere trenger <em>før</em> dere sletter.</p>
+
+  <h4>Sendes elevopplysninger til OpenAI?</h4>
+  <p>Bare hvis dere aktivt velger «Tolk arket med OpenAI» ved import. For elevlista sendes da bare de første radene, for å avgjøre hvilken kolonne som er hva. Standardvalget – «Arket følger malen» – leser alt lokalt på skolens egen server. Ukemenyen tolkes av OpenAI når den lastes opp som PDF.</p>
+
+  <h4>Hvorfor teller andaktsrapporten andre elever enn i dag?</h4>
+  <p>Arkiverte rapporter er frosne kopier av uken slik den var. Nye eller deaktiverte elever påvirker ikke gamle uker.</p>
+
+  <h4>Kan vi endre hvem som er internatvakt i appen?</h4>
+  <p>Internatvaktene ligger i ukemenyen. Trykk <strong>Rediger</strong> på menyen under Kjøkken og rett dem der.</p>
+</section>
+
+<!-- ═══════════════ 16 HURTIGREFERANSE ═══════════════ -->
+<section>
+  <h2><span class="num">16</span>Hurtigreferanse</h2>
+  <p class="lead">Hvor du gjør hva. Heng den gjerne opp ved kontor-PC-en.</p>
+
+  <table>
+    <tr><th style="width:44%">Jeg skal …</th><th>Gå til</th></tr>
+    <tr><td class="k">se hvem som mangler på brannlisten</td><td>Dashboard, eller Brannliste</td></tr>
+    <tr><td class="k">krysse av en elev manuelt</td><td>Brannliste → knappene på raden</td></tr>
+    <tr><td class="k">ta med brannlisten ut</td><td>Brannliste → Eksporter PDF</td></tr>
+    <tr><td class="k">godkjenne et overnattingsbesøk</td><td>Gjester → velg internat og rom → Godkjenn</td></tr>
+    <tr><td class="k">vise QR-koden før andakten</td><td>Dashboard → Vis QR på storskjerm</td></tr>
+    <tr><td class="k">rette oppmøte på andakt</td><td>Andakt / QR → «Ikke møtt» → knappene på raden</td></tr>
+    <tr><td class="k">hente fraværet for en uke</td><td>Andakt / QR → Eksporter ukens fravær, eller Arkivet → Excel</td></tr>
+    <tr><td class="k">opprette nye elever</td><td>Elever → Legg til flere → importer fra Excel</td></tr>
+    <tr><td class="k">gi en elev nytt passord</td><td>Elever → blyanten → skriv passord → Lagre</td></tr>
+    <tr><td class="k">legge inn ukemenyen</td><td>Kjøkken → Ukemeny → Last opp PDF</td></tr>
+    <tr><td class="k">sette opp vaskeoppgaver</td><td>Internat → Oppgaver → Ny oppgave</td></tr>
+    <tr><td class="k">signere vask for en elev uten telefon</td><td>Internat → uken → Signer</td></tr>
+    <tr><td class="k">sende en beskjed til alle elever</td><td>Varsler → Send til alle nå</td></tr>
+    <tr><td class="k">endre fristen for andakt</td><td>Innstillinger → Andakt</td></tr>
+  </table>
+
+  <h3>De fire som ikke kan angres</h3>
+  <ol>
+    <li><strong>Slette bruker</strong> – fjerner alle registreringer for eleven.</li>
+    <li><strong>Slette uke fra arkivet</strong> – sletter også registreringene uken bygger på.</li>
+    <li><strong>Nullstill konkurransen</strong> – alle øveøkter og bilder, for alle elever.</li>
+    <li><strong>Kjør sletting nå</strong> – rydder historikk og GPS etter periodene som er satt.</li>
+  </ol>
+
+  <div class="box tip" style="margin-top:6mm">
+    <span class="h">Manualen for elevene</span>
+    <p>Elevenes side av systemet er beskrevet i <strong>«Kongshaug Elevapp · brukermanual for elever»</strong>. Del den ut ved skolestart.</p>
+  </div>
+
+  <p class="end">Kongshaug Elevapp · håndbok for administrasjonen · Kongshaug Musikkgymnas</p>
+</section>
+
+</body>
+</html>

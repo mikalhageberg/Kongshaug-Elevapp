@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>Kongshaug Elevapp – brukermanual for elever</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 16mm 16mm;
+  }
+  @page :first { margin: 0; }
+
+  :root {
+    --navy: #1e3a5f;
+    --ink: #16202c;
+    --slate: #3f5064;
+    --muted: #5b6b7c;
+    --muted2: #8494a5;
+    --line: #dde4ec;
+    --line2: #c9d4e0;
+    --surface: #f5f7fa;
+    --green: #1f8a4c;
+    --greenbg: #e8f6ee;
+    --amber: #b8860b;
+    --amberbg: #fdf4e0;
+    --red: #c0392b;
+    --redbg: #fdeceb;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.4pt;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
+  /* ---------- Forside ---------- */
+  .cover {
+    height: 297mm;
+    padding: 34mm 22mm 20mm 22mm;
+    background: var(--navy);
+    color: #fff;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+  .cover .logo {
+    width: 62px; height: 62px; border-radius: 18px;
+    background: rgba(255,255,255,.14);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; margin-bottom: 26mm;
+  }
+  .cover h1 {
+    font-size: 34pt; line-height: 1.08; margin: 0 0 6mm 0;
+    letter-spacing: -1px; font-weight: 800;
+  }
+  .cover .sub { font-size: 14pt; color: #b9cbe0; margin: 0 0 3mm 0; font-weight: 600; }
+  .cover .school { font-size: 11pt; color: #93aec9; }
+  .cover .spacer { flex: 1; }
+  .cover .foot {
+    border-top: 1px solid rgba(255,255,255,.22);
+    padding-top: 6mm; font-size: 9.5pt; color: #a9c0d6;
+    display: flex; justify-content: space-between;
+  }
+  .cover .kicker {
+    display: inline-block; align-self: flex-start;
+    border: 1.5px solid rgba(255,255,255,.35); border-radius: 999px;
+    padding: 4px 14px; font-size: 9pt; font-weight: 700;
+    letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8mm;
+  }
+
+  /* ---------- Typografi ---------- */
+  h2 {
+    font-size: 17pt; color: var(--navy); margin: 0 0 3mm 0;
+    letter-spacing: -.4px; font-weight: 800;
+    padding-bottom: 2.5mm; border-bottom: 2px solid var(--navy);
+  }
+  h2 .num {
+    display: inline-block; min-width: 9mm; color: var(--muted2);
+    font-size: 13pt; font-weight: 800;
+  }
+  h3 {
+    font-size: 11.8pt; color: var(--ink); margin: 5.5mm 0 2mm 0; font-weight: 800;
+  }
+  h4 { font-size: 10.4pt; color: var(--slate); margin: 5mm 0 1.5mm 0; font-weight: 800; }
+  p { margin: 0 0 3mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 5.5mm; }
+  li { margin-bottom: 1.4mm; }
+  strong { font-weight: 700; }
+  .lead { font-size: 11pt; color: var(--muted); margin-bottom: 4mm; }
+
+  section { page-break-before: always; }
+  section.cont { page-break-before: auto; }
+  .avoid { page-break-inside: avoid; }
+  h3, h4 { page-break-after: avoid; }
+  .box, tr, ol.steps > li, .tabbar, .grid2 { page-break-inside: avoid; }
+
+  /* ---------- Innhold ---------- */
+  .toc { margin-top: 4mm; }
+  .toc a, .toc div.row {
+    display: flex; align-items: baseline; gap: 3mm;
+    padding: 1.7mm 0; border-bottom: 1px dotted var(--line2);
+    color: var(--ink); text-decoration: none;
+  }
+  .toc .n { color: var(--navy); font-weight: 800; min-width: 8mm; }
+  .toc .t { font-weight: 600; }
+  .toc .d { flex: 1; }
+  .toc .desc { color: var(--muted2); font-size: 9pt; }
+
+  /* ---------- Bokser ---------- */
+  .box {
+    border: 1px solid var(--line); background: #fff; border-radius: 10px;
+    padding: 4mm 5mm; margin: 0 0 4mm 0;
+  }
+  .box.tip { background: var(--surface); border-color: var(--line2); }
+  .box.warn { background: var(--amberbg); border-color: #ecd9a5; }
+  .box.warn .h { color: #8a6508; }
+  .box.ok { background: var(--greenbg); border-color: #b8e2c9; }
+  .box.ok .h { color: #15693a; }
+  .box.stop { background: var(--redbg); border-color: #f3c3bd; }
+  .box.stop .h { color: #9c2f22; }
+  .box .h { font-weight: 800; font-size: 10.4pt; margin-bottom: 1.5mm; display: block; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+
+  /* ---------- Steg ---------- */
+  ol.steps { list-style: none; padding: 0; counter-reset: step; margin-bottom: 4mm; }
+  ol.steps > li {
+    counter-increment: step; position: relative;
+    padding: 0 0 3mm 10mm; margin: 0;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 6.5mm; height: 6.5mm; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    font-size: 8.5pt; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li .st { font-weight: 700; display: block; }
+
+  /* ---------- Tabeller ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 0 0 4mm 0; font-size: 9.6pt; }
+  th {
+    text-align: left; background: var(--navy); color: #fff;
+    padding: 2.2mm 3mm; font-weight: 700; font-size: 9pt;
+    letter-spacing: .3px;
+  }
+  td { padding: 2.2mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfd; }
+  td.k { font-weight: 700; color: var(--navy); white-space: nowrap; }
+
+  /* ---------- Skjermelementer ---------- */
+  .pill {
+    display: inline-block; border-radius: 999px; padding: 1.2mm 3.4mm;
+    font-size: 8.8pt; font-weight: 700; border: 1px solid;
+  }
+  .pill.green { background: var(--greenbg); color: #15693a; border-color: #b8e2c9; }
+  .pill.amber { background: var(--amberbg); color: #8a6508; border-color: #ecd9a5; }
+  .pill.red { background: var(--redbg); color: #9c2f22; border-color: #f3c3bd; }
+  .pill.grey { background: #eef1f5; color: var(--muted); border-color: var(--line2); }
+  .banner {
+    display: block; border-radius: 8px; padding: 2.4mm 3.4mm;
+    font-size: 9.4pt; font-weight: 700; margin-bottom: 2mm; border: 1px solid;
+  }
+  .banner.green { background: var(--greenbg); color: #15693a; border-color: #b8e2c9; }
+  .banner.red { background: var(--redbg); color: #9c2f22; border-color: #f3c3bd; }
+  .banner.grey { background: #eef1f5; color: var(--muted); border-color: var(--line2); }
+  .banner.amber { background: var(--amberbg); color: #8a6508; border-color: #ecd9a5; }
+  .btn {
+    display: inline-block; background: var(--navy); color: #fff;
+    border-radius: 8px; padding: 1.8mm 4mm; font-weight: 700; font-size: 9.4pt;
+  }
+  .btn.green { background: var(--green); }
+  .btn.ghost { background: #fff; color: var(--slate); border: 1.5px solid var(--line2); }
+
+  .tabbar {
+    display: flex; border: 1px solid var(--line2); border-radius: 12px;
+    overflow: hidden; margin-bottom: 4mm; background: #fff;
+  }
+  .tabbar div {
+    flex: 1; text-align: center; padding: 3mm 1mm; font-size: 8.6pt;
+    font-weight: 700; color: var(--muted); border-right: 1px solid var(--line);
+  }
+  .tabbar div:last-child { border-right: 0; }
+  .tabbar div span { display: block; font-size: 15pt; margin-bottom: 1mm; }
+  .tabbar div.active { color: var(--navy); background: var(--surface); }
+
+  .grid2 { display: flex; gap: 4mm; margin-bottom: 4mm; }
+  .grid2 > * { flex: 1; margin-bottom: 0 !important; }
+
+  .kicker-sm {
+    font-size: 8.4pt; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 1.5mm;
+  }
+  .note { font-size: 9.2pt; color: var(--muted); }
+  .end {
+    margin-top: 8mm; padding-top: 4mm; border-top: 1px solid var(--line);
+    font-size: 9pt; color: var(--muted2); text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ FORSIDE ═══════════════ -->
+<div class="cover">
+  <div class="logo">🏫</div>
+  <div class="kicker">Brukermanual for elever</div>
+  <h1>Kongshaug<br>Elevapp</h1>
+  <p class="sub">Brannliste · andakt · middag · internat · øvekonkurranse</p>
+  <p class="school">Kongshaug Musikkgymnas</p>
+  <div class="spacer"></div>
+  <div class="foot">
+    <span>Alt du trenger å vite om appen, steg for steg</span>
+    <span>Versjon 1.4</span>
+  </div>
+</div>
+
+<!-- ═══════════════ INNHOLD ═══════════════ -->
+<section class="cont">
+  <h2><span class="num">&nbsp;</span>Innhold</h2>
+  <p class="lead">Denne manualen går gjennom alt du gjør i elevappen. Er du ny, les kapittel 1–4 først – resten kan du slå opp i når du trenger det.</p>
+  <div class="toc">
+    <div class="row"><span class="n">1</span><span class="d"><span class="t">Kom i gang</span> <span class="desc">– installere, logge inn, velge passord</span></span></div>
+    <div class="row"><span class="n">2</span><span class="d"><span class="t">Slik er appen bygget opp</span> <span class="desc">– de fem fanene og hjemskjermen</span></span></div>
+    <div class="row"><span class="n">3</span><span class="d"><span class="t">Posisjon (GPS) – hva banneret betyr</span></span></div>
+    <div class="row"><span class="n">4</span><span class="d"><span class="t">Brannliste</span> <span class="desc">– melde deg til stede eller borte hver kveld</span></span></div>
+    <div class="row"><span class="n">5</span><span class="d"><span class="t">Planlagt fravær</span> <span class="desc">– meld deg borte på forhånd</span></span></div>
+    <div class="row"><span class="n">6</span><span class="d"><span class="t">Gjest på internatet</span> <span class="desc">– søke om overnattingsbesøk</span></span></div>
+    <div class="row"><span class="n">7</span><span class="d"><span class="t">Andakt</span> <span class="desc">– registrere oppmøte med QR-kode</span></span></div>
+    <div class="row"><span class="n">8</span><span class="d"><span class="t">Middag og kjøkkentjeneste</span></span></div>
+    <div class="row"><span class="n">9</span><span class="d"><span class="t">Internat og internatvask</span> <span class="desc">– oppgaver og signering</span></span></div>
+    <div class="row"><span class="n">10</span><span class="d"><span class="t">Øvekonkurransen</span> <span class="desc">– oppvarming, stoppeklokke og dokumentasjon</span></span></div>
+    <div class="row"><span class="n">11</span><span class="d"><span class="t">Varsler på telefonen</span></span></div>
+    <div class="row"><span class="n">12</span><span class="d"><span class="t">Personvern og sikkerhet</span></span></div>
+    <div class="row"><span class="n">13</span><span class="d"><span class="t">Feilsøking</span> <span class="desc">– når noe ikke virker</span></span></div>
+    <div class="row"><span class="n">14</span><span class="d"><span class="t">Ofte stilte spørsmål</span></span></div>
+    <div class="row"><span class="n">15</span><span class="d"><span class="t">Huskeliste</span> <span class="desc">– hele appen på én side</span></span></div>
+  </div>
+
+  <h3>Om tidspunktene i denne manualen</h3>
+  <p>Klokkeslettene som står nevnt – når brannlisten åpner, når andaktsfristen går ut – er <strong>standardverdiene</strong> i appen. Skolen kan endre dem. Appen viser alltid de tidene som faktisk gjelder, så det er tallene på skjermen som er fasit.</p>
+
+  <div class="box tip">
+    <span class="h">Kort fortalt: dette må du gjøre hver dag</span>
+    <ul>
+      <li><strong>Morgen:</strong> skann QR-koden på storskjerm på andakten.</li>
+      <li><strong>Kveld:</strong> meld deg til stede på brannlisten – eller meld deg borte hvis du ikke sover på skolen.</li>
+    </ul>
+    <p style="margin-top:2mm">Alt annet i appen – middag, vask, øving, gjester – gjør du når det er aktuelt.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 1 KOM I GANG ═══════════════ -->
+<section>
+  <h2><span class="num">1</span>Kom i gang</h2>
+  <p class="lead">Appen heter <strong>Kongshaug Elevapp</strong> og finnes til både iPhone og Android. Den fungerer også i nettleseren, men appen på telefonen er den du bør bruke: den har bedre kamera og GPS, og du slipper å logge inn hele tiden.</p>
+
+  <h3>1.1 Installere appen</h3>
+  <ol class="steps">
+    <li><span class="st">Last ned appen</span> Søk opp «Kongshaug Elevapp» i App Store eller Google Play, eller bruk lenken skolen har delt ut.</li>
+    <li><span class="st">Åpne appen</span> Du møter innloggingsskjermen med skolens logo.</li>
+  </ol>
+  <p class="note">Har du ikke telefon tilgjengelig, kan du bruke nettversjonen på adressen skolen oppgir. Der gjør du de samme tingene, men signering av internatvask skjer med passord i stedet for Face ID.</p>
+
+  <h3>1.2 Logge inn første gang</h3>
+  <ol class="steps">
+    <li><span class="st">Brukernavn</span> Brukernavnet ditt er som regel <strong>fornavn.etternavn</strong> – for eksempel <code>ingrid.saether</code>. Du får det utdelt av administrasjonen.</li>
+    <li><span class="st">Midlertidig passord</span> Skriv inn passordet du fikk av skolen.</li>
+    <li><span class="st">Trykk «Logg inn»</span></li>
+    <li><span class="st">Velg ditt eget passord</span> Første gang blir du bedt om å bytte passord. Det nye passordet må ha <strong>minst 8 tegn</strong>, og du må skrive det likt to ganger. Velg noe bare du kjenner – ikke noe du deler med andre elever.</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="h">⚠ Passordet er ditt ansvar</span>
+    <p>Registreringen på brannlisten er en sikkerhetsrutine: brannvakten stoler på at det er <em>du</em> som har krysset deg av. Låner du bort brukeren din, er det ikke lenger sant. Har du mistanke om at noen kjenner passordet ditt, bytt det, eller si fra til administrasjonen.</p>
+  </div>
+
+  <h3>1.3 Tillatelser appen ber om</h3>
+  <p>Første gang du bruker appen får du noen spørsmål fra telefonen. Alle tre er nødvendige for at appen skal virke som den skal:</p>
+  <table>
+    <tr><th style="width:26%">Tillatelse</th><th style="width:34%">Hva den brukes til</th><th>Hva skjer hvis du sier nei</th></tr>
+    <tr><td class="k">📍 Posisjon</td><td>Bekrefte at du faktisk er på skolens område når du registrerer deg.</td><td>Du får ikke meldt deg til stede på brannlisten, og ikke registrert oppmøte på andakt.</td></tr>
+    <tr><td class="k">📷 Kamera</td><td>Skanne QR-koden på andakt, og ta dokumentasjonsbilde i øvekonkurransen.</td><td>Du får ikke skannet QR-koden.</td></tr>
+    <tr><td class="k">🔔 Varsler</td><td>Påminnelse om brannlisten, og beskjed om at du har ukestjeneste.</td><td>Appen virker som normalt, men du får ingen påminnelser.</td></tr>
+  </table>
+  <p class="note">Sa du nei ved et uhell? Du kan slå tillatelsene på igjen under telefonens innstillinger → Kongshaug Elevapp.</p>
+
+  <h3>1.4 Appen låses med Face ID</h3>
+  <p>Du forblir innlogget i lang tid, men appen låser seg når den har ligget i bakgrunnen en stund. Da møter du låseskjermen:</p>
+  <div class="box">
+    <p style="text-align:center;margin-bottom:3mm">🏠 <strong>Kongshaug Elevapp</strong><br><span class="note">Lås opp med Face ID eller koden din.</span></p>
+    <p style="text-align:center;margin:0"><span class="btn">Lås opp</span> &nbsp; <span class="btn ghost">Logg ut</span></p>
+  </div>
+  <ul>
+    <li>Låsingen bruker telefonens egen <strong>Face ID, fingeravtrykk eller kode</strong> – appen har ingen egen PIN-kode.</li>
+    <li>Avbryter du opplåsingen, står du på låseskjermen til du prøver igjen.</li>
+    <li>Bytter du raskt mellom appen og noe annet (for eksempel når du åpner en meny-PDF), blir du <em>ikke</em> bedt om Face ID – bare når du har vært borte over et minutt.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 2 OPPBYGGING ═══════════════ -->
+<section>
+  <h2><span class="num">2</span>Slik er appen bygget opp</h2>
+  <p class="lead">Nederst på skjermen ligger fem faner. Du kan alltid trykke deg mellom dem.</p>
+
+  <div class="tabbar">
+    <div class="active"><span>🏠</span>Hjem</div>
+    <div><span>🔥</span>Brannliste</div>
+    <div><span>📖</span>Andakt</div>
+    <div><span>🍽️</span>Middag</div>
+    <div><span>🧹</span>Internat</div>
+  </div>
+
+  <table>
+    <tr><th style="width:22%">Fane</th><th>Hva du finner der</th></tr>
+    <tr><td class="k">🏠 Hjem</td><td>Oversikt over dagen: om du er registrert på brannlisten og andakten, hva som serveres til middag, hvem som har internatvakt i natt, om du har ukestjeneste, og øvekonkurransen.</td></tr>
+    <tr><td class="k">🔥 Brannliste</td><td>Melde deg til stede i kveld, melde deg borte, planlegge fravær framover og melde gjest.</td></tr>
+    <tr><td class="k">📖 Andakt</td><td>Kameraet som skanner QR-koden på storskjerm.</td></tr>
+    <tr><td class="k">🍽️ Middag</td><td>Melde deg av middagen i dag, ukemenyen dag for dag, og kjøkkentjenesten.</td></tr>
+    <tr><td class="k">🧹 Internat</td><td>Internatvasken: hvem som vasker denne uken, oppgavene dine og signeringen.</td></tr>
+  </table>
+
+  <h3>2.1 Hjemskjermen</h3>
+  <p>Hjemskjermen er statusoversikten din. Øverst står hilsenen med navnet ditt og dagens dato, og rett under kommer <strong>GPS-banneret</strong> (se kapittel 3). Deretter dukker det opp kort etter hva som er aktuelt akkurat nå:</p>
+  <ul>
+    <li><strong>Gjest venter på godkjenning / godkjent</strong> – hvis du har meldt inn en gjest.</li>
+    <li><strong>Ukestjeneste</strong> – et gult kort i uken du har kjøkkentjeneste eller internatvask, og et diskret varsel uken før.</li>
+    <li><strong>Øvekonkurranse</strong> – vises bare mens en konkurranse pågår.</li>
+    <li><strong>I dag</strong> – middagsretten og hvem som har internatvakt i natt.</li>
+    <li><strong>Brannliste i kveld</strong> og <strong>Andakt i dag</strong> – med en merkelapp som viser statusen din.</li>
+  </ul>
+  <p>Merkelappene betyr dette:</p>
+  <p>
+    <span class="pill green">Registrert 20:14</span>
+    <span class="pill grey">🏠 Meldt borte i natt</span>
+    <span class="pill red">Ikke registrert</span>
+    <span class="pill amber">Registrert for sent</span>
+  </p>
+  <div class="box tip">
+    <span class="h">Tips</span>
+    <p>Dra skjermen nedover for å oppdatere hjemskjermen. Trykker du på et kort, hopper appen rett til den fanen.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 3 GPS ═══════════════ -->
+<section>
+  <h2><span class="num">3</span>Posisjon (GPS) – hva banneret betyr</h2>
+  <p class="lead">Både brannliste og andakt krever at du er fysisk på skolens område. Derfor sender appen posisjonen din i det øyeblikket du registrerer deg – og bare da.</p>
+
+  <h3>3.1 De fire tilstandene</h3>
+  <span class="banner green">📍 Du er ved skolen · GPS OK</span>
+  <p class="note" style="margin-bottom:4mm">Alt er klart. Du kan registrere deg.</p>
+
+  <span class="banner red">📍 Du er ikke ved skolen · 840 m unna<br>Din posisjon: 60.18102, 5.41338</span>
+  <p class="note" style="margin-bottom:4mm">Du er utenfor området. Registreringen blir avvist. Avstanden og koordinatene vises så du kan se om telefonen har målt feil.</p>
+
+  <span class="banner grey">📍 Du ser ut til å være ved skolen · bekrefter…</span>
+  <p class="note" style="margin-bottom:4mm">Appen bruker en posisjon den hadde fra før, mens den henter et ferskt signal. Vent et par sekunder – banneret retter seg selv.</p>
+
+  <span class="banner grey">📍 Ser ut til å være ved skolen · fikk ikke ferskt GPS-signal</span>
+  <p class="note">Telefonen klarte ikke å hente en ny posisjon. Prøv å registrere deg likevel – posisjonen hentes på nytt i det du trykker, og det er den som gjelder.</p>
+
+  <h3>3.2 Hvis GPS ikke vil samarbeide</h3>
+  <ol class="steps">
+    <li><span class="st">Gå ut, eller til et vindu</span> GPS-signalet er dårlig innerst i et betongbygg.</li>
+    <li><span class="st">Sjekk at posisjon er slått på</span> Både på telefonen generelt, og for Kongshaug Elevapp spesielt.</li>
+    <li><span class="st">Slå av og på flymodus</span> Det tvinger telefonen til å finne posisjonen på nytt.</li>
+    <li><span class="st">Prøv igjen etter noen sekunder</span> Første måling etter at telefonen har ligget stille en stund tar alltid lengst tid.</li>
+  </ol>
+
+  <div class="box tip">
+    <span class="h">Godt å vite</span>
+    <p>Posisjonen brukes bare til å svare på ett spørsmål: <em>er du på skolen akkurat nå?</em> Svaret lagres som «til stede» eller «borte» – selve koordinatene slettes automatisk etter et døgn, og ingen leser dem underveis. Se kapittel 12.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 4 BRANNLISTE ═══════════════ -->
+<section>
+  <h2><span class="num">4</span>Brannliste</h2>
+  <p class="lead">Hver kveld skal alle som sover på internatet krysse seg av. Ved brann er det denne listen brannvakten går etter for å vite hvem som er i bygget. Derfor er den viktigste regelen enkel: <strong>meld alltid fra – enten du er her eller ikke.</strong></p>
+
+  <h3>4.1 Når kan du registrere deg?</h3>
+  <p>Registreringen er åpen i et tidsvindu om kvelden, slik at du krysser deg av på det tidspunktet du faktisk er på internatet – ikke midt på dagen. Skolen setter tidene, og de kan være forskjellige på hverdag, fredag og lørdag.</p>
+  <table>
+    <tr><th style="width:34%">Kveld</th><th>Standard åpningstid</th></tr>
+    <tr><td class="k">Søndag–torsdag</td><td>20:00 – 23:00</td></tr>
+    <tr><td class="k">Fredag</td><td>20:00 – 00:00</td></tr>
+    <tr><td class="k">Lørdag</td><td>20:00 – 00:00</td></tr>
+  </table>
+  <p>Er du for tidlig ute, står det <span class="pill grey">🕘 Registrering åpner kl. 20:00</span> på skjermen. Er du for sen, står det at registreringen stengte – da må du si fra til internatvakten på vanlig måte.</p>
+
+  <h3>4.2 Melde deg til stede</h3>
+  <ol class="steps">
+    <li><span class="st">Åpne fanen 🔥 Brannliste</span></li>
+    <li><span class="st">Sjekk at GPS-banneret er grønt</span> Er det rødt, står du utenfor skolens område.</li>
+    <li><span class="st">Trykk den grønne knappen</span> <span class="btn green">✓ Jeg er til stede</span></li>
+    <li><span class="st">Ferdig</span> Du får en stor grønn hake, teksten «Du er registrert» og klokkeslettet du krysset deg av.</li>
+  </ol>
+  <p class="note">Registreringen gjelder <strong>natten som kommer</strong>. Krysser du deg av mandag kveld, står du oppført på listen for natt til tirsdag.</p>
+
+  <h3>4.3 Melde deg borte</h3>
+  <p>Skal du ikke sove på skolen i natt – du reiser hjem, er på besøk, eller overnatter et annet sted – trykker du <span class="btn ghost">Jeg er ikke på skolen i natt</span>. Da vet brannvakten at de ikke skal lete etter deg.</p>
+  <p>På bekreftelsesskjermen ligger en bryter:</p>
+  <div class="box">
+    <strong>Jeg skal heller ikke ha middag i dag</strong><br>
+    <span class="note">Så slipper kjøkkenet å lage mat til deg.</span>
+  </div>
+  <p>Bryteren står på fra før. Skal du likevel spise middag på skolen, slår du den av.</p>
+
+  <div class="box ok">
+    <span class="h">✓ Ombestemt deg?</span>
+    <p>Begge veier går an, så lenge vinduet er åpent. Har du meldt deg borte, men blir likevel værende, trykker du <strong>«Jeg er likevel på skolen»</strong>. Har du krysset deg til stede, men drar hjem, trykker du <strong>«Jeg er likevel ikke på skolen»</strong>.</p>
+  </div>
+
+  <h3>4.4 Internatvakt i natt</h3>
+  <p>Nederst på brannlisteskjermen ligger et kort med <strong>🌙 Internatvakt denne uken</strong> – hvilken ansatt som har vakt hvilken kveld. Der finner du hvem du skal kontakte hvis noe skjer på natten.</p>
+
+  <h3>4.5 Påminnelse</h3>
+  <p>Har skolen slått det på, får du en push-varsling om kvelden hvis du ikke har krysset deg av ennå:</p>
+  <div class="box">
+    <strong>Husk brannlisten!</strong><br>
+    <span class="note">Du har ikke krysset deg av for i kveld ennå. Åpne appen og registrer om du er til stede eller borte.</span>
+  </div>
+  <p class="note">Varselet er en hjelp, ikke en garanti. Ansvaret for å krysse seg av er ditt uansett om varselet kommer fram.</p>
+</section>
+
+<!-- ═══════════════ 5 PLANLAGT FRAVÆR ═══════════════ -->
+<section>
+  <h2><span class="num">5</span>Planlagt fravær</h2>
+  <p class="lead">Vet du allerede nå at du skal være borte – en helg hjemme, en turné, en ferie – kan du melde det på forhånd. Da slipper du å huske på det hver enkelt kveld, og kjøkkenet slipper å lage mat til deg.</p>
+
+  <h3>5.1 Slik legger du inn fravær</h3>
+  <ol class="steps">
+    <li><span class="st">Fanen 🔥 Brannliste → «📅 Planlegg fravær»</span></li>
+    <li><span class="st">Trykk kvelden du reiser</span> Den dagen blir markert mørk.</li>
+    <li><span class="st">Trykk den siste kvelden du er borte</span> Hele perioden mellom markeres.<br><span class="note">Skal du bare være borte én natt: trykk samme dag to ganger.</span></li>
+    <li><span class="st">Velg om du skal ha middag</span> Bryteren «Jeg skal heller ikke ha middag i perioden» står på fra før.</li>
+    <li><span class="st">Trykk «Legg til fravær»</span> Du får en grønn kvittering som gjentar nøyaktig hva som ble lagret.</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="h">🌙 Fraværet gjelder natten – les dette to ganger</span>
+    <p>Velger du <strong>19. juli</strong>, blir du meldt borte <strong>natt til 20. juli</strong>. Det er kvelden du reiser du skal trykke på, ikke dagen du kommer tilbake. Kvitteringen skriver det ut i klartekst, så les den før du lukker vinduet – der ser du med én gang om du har bommet med en dag.</p>
+  </div>
+
+  <h3>5.2 Se og slette planlagt fravær</h3>
+  <p>Under kalenderen ligger <strong>Kommende fravær</strong> med alle periodene du har lagt inn, antall netter og om du står uten middag. Trykk <strong>Slett</strong> for å fjerne en periode du ikke trenger likevel.</p>
+
+  <h3>5.3 Hva skjer på en planlagt fraværsdag?</h3>
+  <ul>
+    <li>Brannlisteskjermen viser <strong>«Planlagt borte i natt»</strong> – du trenger ikke gjøre noe mer.</li>
+    <li>Middagsskjermen viser at du er meldt av middagen, hvis du valgte det.</li>
+    <li>Blir planene endret og du er på skolen likevel, trykker du <strong>«✓ Jeg er likevel på skolen»</strong> og registrerer deg som normalt.</li>
+  </ul>
+  <p class="note">Planlagt fravær erstatter ikke beskjed til skolen om fravær fra undervisning – det er en egen sak. Dette handler kun om hvem som sover i bygget.</p>
+</section>
+
+<!-- ═══════════════ 6 GJEST ═══════════════ -->
+<section>
+  <h2><span class="num">6</span>Gjest på internatet</h2>
+  <p class="lead">Skal noen overnatte hos deg – foreldre, søsken, en venn – må besøket meldes inn og godkjennes av administrasjonen. Gjesten skal også stå på brannlisten.</p>
+
+  <h3>6.1 Melde inn en gjest</h3>
+  <ol class="steps">
+    <li><span class="st">Fanen 🔥 Brannliste → «👤 Meld gjest på internatet»</span></li>
+    <li><span class="st">Skriv gjestens fulle navn</span></li>
+    <li><span class="st">Legg gjerne til en kommentar</span> For eksempel «foreldre» eller «søster». Valgfritt, men det gjør godkjenningen enklere.</li>
+    <li><span class="st">Velg nettene</span> Samme kalender som for planlagt fravær: trykk kvelden gjesten kommer, så den siste kvelden. Én natt = trykk samme dag to ganger.</li>
+    <li><span class="st">Trykk «Send til godkjenning»</span></li>
+  </ol>
+
+  <div class="box stop">
+    <span class="h">⚠ Vent på svar før gjesten kommer</span>
+    <p>Du kan ikke ta imot gjesten før besøket er godkjent. Administrasjonen tildeler internat og rom, og statusen endrer seg fra <span class="pill amber">Venter på godkjenning</span> til <span class="pill green">Godkjent</span>.</p>
+  </div>
+
+  <h3>6.2 Følge med på statusen</h3>
+  <p>Meldte gjester ligger under <strong>Mine gjester</strong> i samme vindu, og statusen vises også som et banner øverst på hjemskjermen:</p>
+  <span class="banner amber">🕑 Gjest venter på godkjenning: Kari Nordmann</span>
+  <span class="banner green">✓ Gjest godkjent: Kari Nordmann · Treet 1 · rom 12 · 4. – 6. sep.</span>
+  <p style="margin-top:3mm">Blir besøket avlyst, trykker du <strong>Slett</strong> ved siden av gjesten. Da fjernes forespørselen.</p>
+  <p class="note">Også gjestens besøk regnes fra kvelden: velger du 19. juli, betyr det at gjesten er på internatet natt til 20. juli.</p>
+</section>
+
+<!-- ═══════════════ 7 ANDAKT ═══════════════ -->
+<section>
+  <h2><span class="num">7</span>Andakt</h2>
+  <p class="lead">Oppmøtet på andakt registreres ved at du skanner en QR-kode som vises på storskjermen i salen. Koden bytter seg selv ut hvert halvminutt, så et skjermbilde fra en venn virker ikke – du må være til stede.</p>
+
+  <h3>7.1 Slik registrerer du oppmøte</h3>
+  <ol class="steps">
+    <li><span class="st">Åpne fanen 📖 Andakt</span> Kameraet starter av seg selv.</li>
+    <li><span class="st">Rett kameraet mot QR-koden på storskjerm</span> Hold telefonen i ro til rammen fanger koden – du trenger ikke trykke på noe.</li>
+    <li><span class="st">Se bekreftelsen</span> Grønn hake og «Oppmøte registrert», med klokkeslettet.</li>
+    <li><span class="st">Trykk «Ferdig»</span></li>
+  </ol>
+
+  <h3>7.2 Tidsvinduet</h3>
+  <p>QR-koden er ikke framme hele dagen. Den vises rundt fristen for oppmøte – som standard <strong>30 minutter før og 30 minutter etter</strong>. Fristen er typisk 08:10, men skolen setter både frist og vindu selv.</p>
+  <table>
+    <tr><th style="width:38%">Det du ser</th><th>Hva det betyr</th></tr>
+    <tr><td class="k">🕘 Registrering åpner snart</td><td>Du er for tidlig ute. Skjermen sier fra hvilket klokkeslett koden dukker opp.</td></tr>
+    <tr><td class="k">📖 Ingen andakt i dag</td><td>Det er andakt på ukedager (mandag–fredag). I helgen er skjermen tom.</td></tr>
+    <tr><td class="k">🕘 Andakten er over</td><td>Registreringen stengte. Da telles dagen som fravær, og du må ta det opp med skolen.</td></tr>
+  </table>
+
+  <h3>7.3 «Registrert etter fristen»</h3>
+  <p>Skanner du etter fristen, men før vinduet lukkes, blir du registrert – men med gult utropstegn og teksten <em>«Oppmøtet ditt kl. 08:16 er etter fristen og kan telle som fravær.»</em> Du er altså med på listen, men markert som for sen.</p>
+
+  <h3>7.4 Feilmeldinger på andaktsskjermen</h3>
+  <table>
+    <tr><th style="width:38%">Melding</th><th>Hva du gjør</th></tr>
+    <tr><td class="k">📍 Du er ikke på skolens område</td><td>Du må være fysisk på skolen. Se kapittel 3 hvis du <em>er</em> på skolen og likevel får denne.</td></tr>
+    <tr><td class="k">QR-koden er ikke gyldig lenger</td><td>Koden rakk å bytte seg ut. Trykk «Skann på nytt» og hold telefonen litt roligere.</td></tr>
+    <tr><td class="k">Ugyldig QR-kode</td><td>Du har skannet en annen QR-kode enn andaktskoden – eller et bilde av en. Skann koden på storskjermen.</td></tr>
+    <tr><td class="k">📶 Fikk ikke kontakt med serveren</td><td>Telefonen har ikke nett. Sjekk wifi eller mobildata og trykk «Prøv igjen».</td></tr>
+    <tr><td class="k">📍 Fikk ikke posisjonen din</td><td>GPS-en svarte ikke. Gå nærmere et vindu og prøv igjen.</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="h">Tips</span>
+    <p>Har du allerede registrert deg i dag, åpner fanen rett på kvitteringen i stedet for kameraet. Da vet du at du er i boks.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 8 MIDDAG ═══════════════ -->
+<section>
+  <h2><span class="num">8</span>Middag og kjøkkentjeneste</h2>
+  <p class="lead">Fanen 🍽️ Middag har tre ting: om du skal ha middag i dag, ukemenyen, og kjøkkentjenesten.</p>
+
+  <h3>8.1 Melde deg av middagen</h3>
+  <p>Skal du ikke spise på skolen i dag, trykker du <span class="btn ghost">Meld fra – jeg spiser ikke i dag</span>. Da lager ikke kjøkkenet mat til deg, og vi kaster mindre. Ombestemmer du deg, trykker du <span class="btn">Jeg spiser likevel middag</span>.</p>
+  <div class="box tip">
+    <span class="h">Er du meldt av gjennom et planlagt fravær?</span>
+    <p>Da står det <strong>«Meldt av middag i dag – del av et planlagt fravær»</strong>, og knappen er borte. Endringen gjør du under <strong>Brannliste → Planlegg fravær</strong>.</p>
+  </div>
+
+  <h3>8.2 Ukemenyen</h3>
+  <p>Under <strong>Ukemeny</strong> ligger menyen dag for dag, med rettene og eventuelle merknader. Er menyen lastet opp som PDF, kan du trykke <strong>Åpne PDF</strong> for å se originalen. Står det «Tolker meny…», jobber systemet fortsatt med å lese den – dagene dukker opp av seg selv om litt.</p>
+  <p>Dagens rett vises også på hjemskjermen, sammen med hvem som har internatvakt i natt.</p>
+
+  <h3>8.3 Kjøkkentjeneste</h3>
+  <p>Kjøkkentjenesten går på rundgang, én uke om gangen.</p>
+  <ul>
+    <li><strong>Denne uken:</strong> listen over hvem som har tjeneste, med klassen deres. Står du der selv, er du merket <span class="pill amber">Deg</span>.</li>
+    <li><strong>Din neste tjeneste:</strong> et banner som sier hvilken uke det er din tur igjen.</li>
+    <li><strong>Vis hele planen:</strong> hele rundgangen framover, uke for uke. Dine egne uker er markert i gult.</li>
+  </ul>
+  <p>I uken du har tjeneste får du et gult kort på hjemskjermen, og uken før får du et lite varsel. Har skolen slått på varsler, kommer det også en push-melding søndag kveld.</p>
+</section>
+
+<!-- ═══════════════ 9 INTERNAT ═══════════════ -->
+<section>
+  <h2><span class="num">9</span>Internat og internatvask</h2>
+  <p class="lead">Fanen 🧹 Internat viser internatvasken: hvem som vasker denne uken, hvilke <strong>oppgaver</strong> som skal gjøres, og hvor du signerer når jobben er ferdig.</p>
+
+  <h3>9.1 Uken din</h3>
+  <p>Øverst står inneværende uke med alle som er satt opp. Hver rad viser navn og oppgave – for eksempel <strong>ØVEST1 · 80-gongen</strong>. Koden er den samme som står på vaskelista på veggen.</p>
+
+  <div class="box tip">
+    <span class="h">Symbolene i listen</span>
+    <ul>
+      <li><span class="pill green">Signert</span> &nbsp;oppgaven er kvittert ut &nbsp;·&nbsp; <span class="pill amber">Deg</span> &nbsp;dette er din rad</li>
+      <li><strong>✅ grønt kort:</strong> din oppgave er signert – trykk for kvitteringen</li>
+      <li><strong>🧹 gult kort:</strong> din oppgave venter på deg – trykk for å lese og signere</li>
+    </ul>
+  </div>
+
+  <h3>9.2 Dine oppgaver – les og signer</h3>
+  <ol class="steps">
+    <li><span class="st">Trykk på oppgaven din</span> Under «Dine oppgaver denne uken» ligger ett kort per oppgave du har.</li>
+    <li><span class="st">Les beskrivelsen</span> Hele beskrivelsen står der, slik den er skrevet av skolen – hva som skal gjøres, og hvor.</li>
+    <li><span class="st">Gjør jobben</span></li>
+    <li><span class="st">Trykk «Signer med Face ID»</span> Telefonen ber om Face ID, fingeravtrykk eller koden din.</li>
+    <li><span class="st">Ferdig</span> Kortet blir grønt, og kvitteringen viser dato, klokkeslett og hvordan du signerte.</li>
+  </ol>
+
+  <div class="box warn">
+    <span class="h">Om signaturen</span>
+    <p>Signaturen står med navnet ditt og klokkeslettet i internatets oversikt. Du kan bare signere <strong>dine egne</strong> oppgaver, og bare i en uke som har begynt. Angrer du, må en administrator fjerne signaturen.</p>
+  </div>
+
+  <h3>9.3 Hvis telefonen ikke har Face ID</h3>
+  <p>Har telefonen verken Face ID, fingeravtrykk eller kode, har appen ingenting å signere med. Da slår du på låsing i telefonens innstillinger, eller signerer i <strong>nettleserversjonen</strong> med passordet ditt.</p>
+
+  <h3>9.4 Hele rundgangen</h3>
+  <p>Trykk <span class="btn ghost">Vis hele planen</span> for å se vaskeplanen uke for uke framover. Ukene der du selv står oppført er markert i gult, og du får et banner som sier når din neste vaskeuke er.</p>
+
+</section>
+
+<!-- ═══════════════ 10 ØVEKONKURRANSE ═══════════════ -->
+<section>
+  <h2><span class="num">10</span>Øvekonkurransen</h2>
+  <p class="lead">Når skolen arrangerer øvekonkurranse, konkurrerer dere om å øve mest på hovedinstrumentet i en gitt periode. Kortet dukker opp på hjemskjermen mens konkurransen pågår – ellers er det ikke der.</p>
+
+  <h3>10.1 Slik gjennomfører du en økt</h3>
+  <ol class="steps">
+    <li><span class="st">Trykk «Øvekonkurranse» på hjemskjermen</span> Du ser totaltiden din og antall registrerte økter.</li>
+    <li><span class="st">Trykk «Start øving»</span></li>
+    <li><span class="st">Varm opp</span> Økten begynner med en obligatorisk oppvarming, vist som en sirkulær skive som tømmer seg mot klokken. Oppvarmingen <strong>teller med</strong> i tiden din.</li>
+    <li><span class="st">Øv</span> Når skiven er tom tar stoppeklokken over av seg selv.</li>
+    <li><span class="st">Trykk «Stopp og registrer» når du er ferdig</span> Tiden fryses i det du trykker.</li>
+    <li><span class="st">Ta dokumentasjonsbilde hvis du blir bedt om det</span> Se 10.3.</li>
+    <li><span class="st">Trykk «Registrer øving»</span> Du får en animert kvittering med tiden som ble lagt til.</li>
+  </ol>
+
+  <h3>10.2 Pause, skjule og avbryte</h3>
+  <table>
+    <tr><th style="width:30%">Knapp</th><th>Hva den gjør</th></tr>
+    <tr><td class="k">Pause / Fortsett</td><td>Stopper klokken midlertidig. Pausen teller <strong>ikke</strong> med i øvetiden din – den kan verken legge til eller trekke fra tid.</td></tr>
+    <tr><td class="k">Skjul – økten fortsetter</td><td>Lukker vinduet uten å avslutte økten. Klokken går videre, og du finner økten igjen når du åpner appen på nytt.</td></tr>
+    <tr><td class="k">Avbryt økten</td><td>Kaster økten. Tiden blir ikke registrert.</td></tr>
+  </table>
+  <p class="note">Skjermen holdes våken mens klokken går, så du ser nedtellingen fra andre siden av rommet. Lukker du appen midt i en økt, plukkes den opp igjen der den var.</p>
+
+  <h3>10.3 Dokumentasjonsbildet</h3>
+  <p>Noen økter må dokumenteres med et bilde – hvilke avgjøres tilfeldig når økten starter, så du vet det ikke på forhånd. Da står det:</p>
+  <span class="banner amber">📷 Denne økten må dokumenteres med et bilde før den kan registreres.</span>
+  <ul style="margin-top:3mm">
+    <li>Ta bilde av <strong>instrumentet, notestativet eller rommet</strong> – helst ikke av deg selv eller andre.</li>
+    <li>Bildet får automatisk et dato- og klokkeslettstempel. Stempelet settes av serveren, ikke av telefonen din.</li>
+    <li>Du ser bildet før det sendes, og kan velge <strong>Ta på nytt</strong>.</li>
+    <li>Bildet lagres hos skolen sammen med økten.</li>
+  </ul>
+  <p class="note">Minuttene det tar å ta bildet teller ikke som øvetid – klokken ble frosset da du trykket «Stopp».</p>
+
+  <h3>10.4 Regler som er verdt å vite</h3>
+  <ul>
+    <li>Økter kan bare startes og registreres <strong>innenfor konkurranseperioden</strong>.</li>
+    <li>En økt forkastes hvis den passerer <strong>seks timer</strong> faktisk øvetid, eller står åpen i mer enn et døgn.</li>
+    <li>Tiden regnes ut på serveren, ikke i appen – appen viser bare tallene.</li>
+    <li>Under <strong>Mine økter</strong> ser du alle registrerte økter med dato, lengde og om de er dokumentert.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 11 VARSLER ═══════════════ -->
+<section>
+  <h2><span class="num">11</span>Varsler på telefonen</h2>
+  <p class="lead">Appen sender bare noen få varsler, og bare hvis skolen har slått dem på.</p>
+  <table>
+    <tr><th style="width:34%">Varsel</th><th style="width:22%">Når</th><th>Innhold</th></tr>
+    <tr><td class="k">Husk brannlisten!</td><td>Om kvelden</td><td>Sendes bare til deg som ikke har krysset deg av ennå.</td></tr>
+    <tr><td class="k">Ukestjeneste</td><td>Søndag kl. 18:00</td><td>Beskjed om at du har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har du begge, kommer det ett varsel om hver.</td></tr>
+  </table>
+  <h3>11.1 Får du ikke varsler?</h3>
+  <ol class="steps">
+    <li><span class="st">Sjekk telefonens innstillinger</span> Varsler må være tillatt for Kongshaug Elevapp.</li>
+    <li><span class="st">Logg ut og inn igjen</span> Da registrerer appen telefonen din på nytt.</li>
+    <li><span class="st">Husk at varsler er en ekstra hjelp</span> Ansvaret for å krysse deg av og gjøre tjenesten din er ditt uansett.</li>
+  </ol>
+  <p class="note">Logger du ut, avregistreres telefonen din, og du slutter å få varsler til du logger inn igjen.</p>
+</section>
+
+<!-- ═══════════════ 12 PERSONVERN ═══════════════ -->
+<section>
+  <h2><span class="num">12</span>Personvern og sikkerhet</h2>
+  <p class="lead">Appen samler inn så lite som mulig, og rydder etter seg selv. Her er hva som faktisk lagres om deg.</p>
+
+  <table>
+    <tr><th style="width:30%">Opplysning</th><th style="width:36%">Hva den brukes til</th><th>Hvor lenge</th></tr>
+    <tr><td class="k">GPS-koordinater</td><td>Avgjøre om du er på skolens område i selve registreringsøyeblikket. De leses aldri igjen etterpå.</td><td>Nulles automatisk etter et døgn</td></tr>
+    <tr><td class="k">Status (til stede / borte / for sent)</td><td>Brannsikkerhet og fraværsoversikt.</td><td>Som standard ett skoleår</td></tr>
+    <tr><td class="k">Planlagt fravær, gjester, middagsvalg</td><td>Planlegging for internat og kjøkken.</td><td>Som standard ett skoleår</td></tr>
+    <tr><td class="k">Signatur på internatvask</td><td>Dokumentere at oppgaven er gjort.</td><td>Som standard ett skoleår</td></tr>
+    <tr><td class="k">Øvingsbilder</td><td>Dokumentere øvingsøkter i konkurransen.</td><td>Slettes sammen med økten</td></tr>
+    <tr><td class="k">Passordet ditt</td><td>Innlogging.</td><td>Lagres aldri i klartekst – bare som en kryptografisk hash</td></tr>
+  </table>
+
+  <h3>12.1 Det du bør vite</h3>
+  <ul>
+    <li>Appen sporer deg <strong>ikke</strong> i bakgrunnen. Posisjonen hentes bare i det øyeblikket du trykker for å registrere deg.</li>
+    <li>Sletting er endelig – data som er slettet, kan ikke hentes tilbake.</li>
+    <li>Full personvernerklæring finner du via lenken nederst på innloggingsskjermen.</li>
+  </ul>
+
+  <div class="box tip">
+    <span class="h">Sikkerhetsvettregler</span>
+    <ul>
+      <li>Del aldri passordet ditt med andre elever.</li>
+      <li>Ikke la noen andre krysse deg av på brannlisten – det setter både deg og dem i en dårlig situasjon hvis det faktisk brenner.</li>
+      <li>Slå på Face ID eller kode på telefonen, slik at ingen kommer inn i appen din hvis telefonen blir liggende.</li>
+      <li>Mister du telefonen: si fra til administrasjonen, og bytt passord.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 13 FEILSØKING ═══════════════ -->
+<section>
+  <h2><span class="num">13</span>Feilsøking</h2>
+  <p class="lead">De vanligste problemene, og hva du gjør med dem.</p>
+
+  <table>
+    <tr><th style="width:40%">Problem</th><th>Løsning</th></tr>
+    <tr><td class="k">«Du må være innenfor skolens område»<br>– men jeg står på skolen</td><td>Gå ut eller nærmere et vindu, sjekk at posisjon er tillatt for appen, og prøv igjen. Hjelper det ikke: slå flymodus av og på. Posisjonen hentes på nytt i det du trykker på knappen.</td></tr>
+    <tr><td class="k">Knappen «Jeg er til stede» er grå</td><td>Enten er registreringsvinduet stengt (skjermen sier når det åpner), eller appen har ikke fått posisjonen din ennå. Vent noen sekunder.</td></tr>
+    <tr><td class="k">Kameraet er svart på andaktsskjermen</td><td>Appen mangler kameratilgang. Trykk «Gi kameratilgang», eller slå det på i telefonens innstillinger.</td></tr>
+    <tr><td class="k">QR-koden vil ikke skanne</td><td>Hold telefonen i ro, litt lenger unna skjermen, og unngå at lys speiler seg i den. Koden byttes ut hvert halvminutt – det er normalt at et gammelt forsøk blir «ikke gyldig lenger».</td></tr>
+    <tr><td class="k">«Fikk ikke kontakt med serveren»</td><td>Telefonen mangler nett. Bytt mellom wifi og mobildata og prøv igjen. Appen prøver selv én gang til før den gir opp.</td></tr>
+    <tr><td class="k">Appen ber om Face ID hele tiden</td><td>Det er normalt når appen har ligget i bakgrunnen over ett minutt. Er det plagsomt ofte, sjekk at du ikke lukker appen helt mellom hver gang.</td></tr>
+    <tr><td class="k">Jeg har glemt passordet mitt</td><td>Ta kontakt med administrasjonen. De setter et nytt midlertidig passord, og du velger ditt eget ved neste innlogging.</td></tr>
+    <tr><td class="k">«Denne appen er for elever»</td><td>Du har logget inn med en administratorkonto. Ansatte bruker nettsiden.</td></tr>
+    <tr><td class="k">Jeg krysset meg av på feil dag</td><td>Så lenge vinduet er åpent kan du bytte selv med «Jeg er likevel …»-knappene. Er vinduet stengt, si fra til internatvakten eller administrasjonen.</td></tr>
+    <tr><td class="k">Fraværet mitt ble lagt inn én dag feil</td><td>Slett perioden under «Planlegg fravær» og legg den inn på nytt. Husk: du trykker på <em>kvelden</em> du reiser.</td></tr>
+    <tr><td class="k">Jeg får ikke signert internatvasken</td><td>Sjekk at det er din egen oppgave, og at uken har begynt. Mangler telefonen Face ID/kode, signer i nettleseren med passordet ditt.</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="h">Hjelper ingenting?</span>
+    <p>Lukk appen helt og åpne den på nytt. Virker det fortsatt ikke, si fra til internatvakten eller administrasjonen – og fortell hva som sto på skjermen, gjerne med et skjermbilde. Det gjør feilsøkingen mye raskere.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 14 FAQ ═══════════════ -->
+<section>
+  <h2><span class="num">14</span>Ofte stilte spørsmål</h2>
+
+  <h4>Må jeg krysse meg av hver eneste kveld?</h4>
+  <p>Ja – hver kveld du sover på internatet. Er du borte, melder du deg borte. Har du lagt inn planlagt fravær, er du dekket for de nettene.</p>
+
+  <h4>Hva skjer hvis jeg glemmer å krysse meg av?</h4>
+  <p>Du står som «ikke registrert» på brannlisten, og internatvakten må lete etter deg. Får du push-varsel om kvelden, er det nettopp for å hindre dette.</p>
+
+  <h4>Kan jeg krysse meg av hjemmefra, eller på bussen?</h4>
+  <p>Nei. Appen sjekker posisjonen din i det du trykker, og registreringen avvises utenfor skolens område.</p>
+
+  <h4>Kan en venn skanne QR-koden for meg?</h4>
+  <p>Nei. Koden er knyttet til brukeren som skanner, og den byttes ut hvert halvminutt, så et bilde av skjermen slutter å virke nesten med en gang.</p>
+
+  <h4>Jeg kom for sent på andakten. Er det fravær?</h4>
+  <p>Skanner du innenfor vinduet etter fristen, blir du registrert som «for sent». Det kan telle som fravær – ta det opp med skolen hvis det var en god grunn.</p>
+
+  <h4>Trenger jeg internett?</h4>
+  <p>Ja, til alt som registreres. GPS-statusen kan appen regne ut selv, men selve registreringen må fram til serveren.</p>
+
+  <h4>Hva om telefonen min er tom for strøm?</h4>
+  <p>Si fra til internatvakten. Administrasjonen kan registrere deg manuelt – men det er en nødløsning, ikke en vane.</p>
+
+  <h4>Kan jeg bruke appen på nettbrett eller PC?</h4>
+  <p>Nettversjonen fungerer i nettleser. Appen på telefonen anbefales fordi kamera og GPS er bedre der.</p>
+
+  <h4>Hvorfor må jeg ta bilde av øvingen min?</h4>
+  <p>Bare noen økter blir trukket ut, tilfeldig, for at konkurransen skal være rettferdig. Ta bilde av instrumentet eller notestativet – ikke av deg selv.</p>
+
+  <h4>Kan jeg se hvem andre som har krysset seg av?</h4>
+  <p>Nei. Du ser din egen status. Vaskeplan og kjøkkentjeneste er felles lister, og der ser du navnene til dem du har tjeneste sammen med.</p>
+
+  <h4>Hva skjer med dataene mine når jeg slutter på skolen?</h4>
+  <p>Historikken slettes automatisk etter lagringstiden skolen har satt – som standard ett skoleår – og posisjonsdata allerede etter et døgn.</p>
+</section>
+
+<!-- ═══════════════ 15 HUSKELISTE ═══════════════ -->
+<section>
+  <h2><span class="num">15</span>Huskeliste</h2>
+  <p class="lead">Hele appen på én side. Heng den gjerne opp.</p>
+
+  <div class="grid2">
+    <div class="box ok">
+      <span class="h">Hver morgen</span>
+      <p><strong>📖 Andakt</strong> → skann QR-koden på storskjerm.<br>
+      Vær der før fristen – etterpå blir det «for sent».</p>
+    </div>
+    <div class="box ok">
+      <span class="h">Hver kveld</span>
+      <p><strong>🔥 Brannliste</strong> → «Jeg er til stede»,<br>eller «Jeg er ikke på skolen i natt».<br>Åpent i kveldsvinduet skolen har satt.</p>
+    </div>
+  </div>
+
+  <h3>Når det er aktuelt</h3>
+  <table>
+    <tr><th style="width:36%">Situasjon</th><th>Hva du gjør i appen</th></tr>
+    <tr><td class="k">Skal reise bort i helgen</td><td>Brannliste → Planlegg fravær → trykk kvelden du reiser og den siste kvelden.</td></tr>
+    <tr><td class="k">Får overnattingsbesøk</td><td>Brannliste → Meld gjest → vent på godkjenning før gjesten kommer.</td></tr>
+    <tr><td class="k">Skal ikke spise middag</td><td>Middag → «Meld fra – jeg spiser ikke i dag».</td></tr>
+    <tr><td class="k">Har kjøkkentjeneste</td><td>Middag → se hvem du har uken sammen med.</td></tr>
+    <tr><td class="k">Har internatvask</td><td>Internat → les oppgaven → gjør jobben → signer med Face ID.</td></tr>
+    <tr><td class="k">Skal øve i konkurransen</td><td>Hjem → Øvekonkurranse → Start øving → varm opp → stopp og registrer.</td></tr>
+  </table>
+
+  <h3>Tre ting som ofte går galt</h3>
+  <ol>
+    <li><strong>Fravær lagt inn én dag feil.</strong> Du trykker på <em>kvelden du reiser</em> – ikke dagen du kommer hjem. Les kvitteringen.</li>
+    <li><strong>Glemt kveldsregistrering.</strong> Slå på varsler, så minner appen deg på det.</li>
+    <li><strong>Rødt GPS-banner.</strong> Gå ut eller til et vindu, og gi telefonen noen sekunder på å finne signalet.</li>
+  </ol>
+
+  <div class="box tip" style="margin-top:6mm">
+    <span class="h">Trenger du hjelp?</span>
+    <p>Spør internatvakten eller administrasjonen. Ta med et skjermbilde av det som står i appen – da er problemet som regel løst på minuttet.</p>
+  </div>
+
+  <p class="end">Kongshaug Elevapp · brukermanual for elever · Kongshaug Musikkgymnas</p>
+</section>
+
+</body>
+</html>
