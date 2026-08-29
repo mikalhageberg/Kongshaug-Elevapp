@@ -17,6 +17,7 @@ import pushRoutes from './routes/push.js';
 import { createDutyRouter } from './routes/duty.js';
 import dormTaskRoutes from './routes/dormTasks.js';
 import practiceRoutes from './routes/practice.js';
+import handbookRoutes from './routes/handbooks.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 import { startRetentionScheduler } from './retention.js';
@@ -59,6 +60,8 @@ app.use('/api/push', pushRoutes);
 app.use('/api/dorm-duty', createDutyRouter('dorm'));
 app.use('/api/dorm-tasks', dormTaskRoutes);
 app.use('/api/practice', practiceRoutes);
+// Håndbøkene (PDF) – kun for innlogget administrator, se routes/handbooks.js.
+app.use('/api/handbooks', handbookRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

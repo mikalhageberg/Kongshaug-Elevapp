@@ -89,6 +89,7 @@ const nav = {
   broom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 3 12.75 11.25"/><path d="M10 8.5 15.5 14 9 20.5 3.5 15Z"/><path d="M6.75 11.75 12.25 17.25"/></svg>',
   timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="8"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="m18.5 6.5 1.5-1.5"/></svg>',
   archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="5" rx="1.5"/><path d="M4.5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V8.5"/><path d="M10 12h4"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5Z"/><path d="M8 6.5h8"/></svg>',
 };
 
 init();
@@ -116,6 +117,7 @@ function render() {
   if (route.startsWith('internat')) return page('internat', renderInternat);
   if (route.startsWith('ovekonkurranse')) return page('ovekonkurranse', renderPractice);
   if (route.startsWith('varsler')) return page('varsler', renderVarsler);
+  if (route.startsWith('handboker')) return page('handboker', renderHandbooks);
   if (route.startsWith('innstillinger')) return page('innstillinger', renderSettings);
   return page('dashboard', renderDashboard);
 }
@@ -217,6 +219,7 @@ function page(active, renderMain) {
     ['internat', 'Internat', nav.broom, '/internat'],
     ['ovekonkurranse', 'Øvekonkurranse', nav.timer, '/ovekonkurranse'],
     ['varsler', 'Varsler', nav.bell, '/varsler'],
+    ['handboker', 'Håndbøker', nav.book, '/handboker'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
   ];
   root.innerHTML = '';
@@ -2422,6 +2425,56 @@ function mountMenuManager(container) {
   });
 
   loadMenus();
+}
+
+// ── Håndbøker ────────────────────────────────────────────────
+// Brukermanualen for elever og håndboken for administrasjonen, som PDF.
+// Filene ligger i docs/ og serveres av /api/handbooks, som krever innlogget
+// administrator – de ligger altså ikke på en åpen URL. «Åpne» viser PDF-en i
+// nettleserens egen leser; «Last ned» gir filen med filnavn.
+function filstørrelse(bytes) {
+  if (!bytes) return '';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1).replace('.', ',')} MB` : `${Math.round(bytes / 1024)} kB`;
+}
+
+// «oppdatert 29. august 2026» – tidsstempelet er filens egen dato, i ISO.
+function oppdatert(iso) {
+  if (!iso) return '';
+  return `oppdatert ${formatDateLong(String(iso).slice(0, 10))}`;
+}
+
+async function renderHandbooks(main) {
+  header(main, 'Håndbøker', 'Bruksanvisningene for elevappen og for admin');
+  const page = el(`<div class="page" style="max-width:760px"><div id="liste"></div>
+    <div style="font-size:13px;color:var(--muted-2);line-height:1.55;margin-top:20px">
+      Håndbøkene er bare tilgjengelige for innloggede administratorer – lenkene virker ikke for
+      utenforstående. Elevmanualen er laget for å deles ut: last den ned og skriv den ut, eller send
+      den videre. Kilden til begge ligger i <b>docs/</b> i prosjektet, og PDF-ene bygges derfra.
+    </div></div>`);
+  main.appendChild(page);
+
+  const d = await api('/api/handbooks').catch(() => null);
+  const liste = page.querySelector('#liste');
+  if (!d) { liste.innerHTML = '<p style="color:var(--muted-2)">Kunne ikke laste håndbøkene.</p>'; return; }
+
+  liste.innerHTML = d.handbooks.map((h) => `
+    <div class="kpi" style="display:flex;gap:18px;align-items:flex-start;padding:20px 22px;margin-bottom:14px">
+      <div style="width:46px;height:46px;border-radius:13px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:24px;height:24px">${nav.book}</span></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:17px;font-weight:800">${esc(h.title)}</div>
+        <div style="font-size:13.5px;color:var(--muted);line-height:1.55;margin-top:4px">${esc(h.description)}</div>
+        <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:8px">
+          ${h.available ? `PDF · ${filstørrelse(h.size)} · ${oppdatert(h.updatedAt)}` : 'Filen mangler på serveren'}
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+          ${h.available ? `
+            <a class="btn btn-primary" href="/api/handbooks/${h.slug}" target="_blank" rel="noopener" style="height:42px;padding:0 18px;font-size:14px;display:inline-flex;align-items:center;text-decoration:none">Åpne</a>
+            <a class="btn btn-ghost" href="/api/handbooks/${h.slug}?last=1" style="height:42px;padding:0 18px;font-size:14px;display:inline-flex;align-items:center;text-decoration:none">Last ned</a>`
+            : '<span class="pill pill-amber">Ikke bygget ennå</span>'}
+        </div>
+      </div>
+    </div>`).join('');
 }
 
 // ── Innstillinger ────────────────────────────────────────────

@@ -112,4 +112,8 @@ export const paths = {
   // DATA_DIR beholdes den gamle plasseringen.
   data: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, '..', 'data'),
   public: path.join(__dirname, '..', '..', 'public'),
+  // Håndbøkene (PDF) som vises under «Håndbøker» i admin. De ligger utenfor
+  // public/ med vilje: de serveres gjennom /api/handbooks, som krever
+  // innlogging, i stedet for å ligge på en åpen URL.
+  docs: path.join(__dirname, '..', '..', 'docs'),
 };
