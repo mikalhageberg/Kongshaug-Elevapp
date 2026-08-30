@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, Platform, ScrollView, StyleSheet } from 'react-native';
 import { api } from './api';
 import { C, formatWeekRange } from './theme';
 import { Button, Pill } from './ui';
-import { authenticate } from './screens/LockScreen';
+import { authenticate, biometriNavn } from './screens/LockScreen';
 
 // Én oppgave i internatvasken: hele beskrivelsen slik den står på vaskelista,
 // og signeringen når jobben er gjort.
@@ -20,7 +20,6 @@ const stempel = (iso) => {
 };
 
 const METODE = {
-  biometri: 'Face ID / fingeravtrykk',
   passord: 'passord i nettleseren',
   admin: 'lagt inn av administrasjonen',
 };
@@ -28,7 +27,11 @@ const METODE = {
 export default function OppgaveModal({ visible, onClose, duty, week, base, kanSignere, onSigned }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  // Gjett ut fra plattformen med én gang, så knappen aldri står tom, og rett
+  // den opp når telefonen har svart på hva den faktisk støtter.
+  const [biometri, setBiometri] = useState(Platform.OS === 'ios' ? 'Face ID' : 'fingeravtrykk');
 
+  useEffect(() => { biometriNavn().then(setBiometri).catch(() => {}); }, []);
   useEffect(() => { if (visible) setErr(null); }, [visible]);
 
   if (!duty) return null;
@@ -39,11 +42,12 @@ export default function OppgaveModal({ visible, onClose, duty, week, base, kanSi
     setErr(null);
     setBusy(true);
     try {
-      const r = await authenticate();
+      const r = await authenticate({ prompt: 'Signer at oppgaven er gjort' });
       // Uten Face ID/kode på telefonen har vi ingenting å signere med. Da er det
       // ærligere å si det enn å lagre en signatur ingen faktisk har gitt.
       if (r.unprotected) {
-        setErr('Telefonen har verken Face ID, fingeravtrykk eller kode. Slå det på i telefonens innstillinger, eller signer i nettleseren med passordet ditt.');
+        // Her nevner vi ikke én bestemt metode: telefonen har ingen av dem.
+        setErr('Telefonen har verken biometri eller kode slått på. Slå det på i telefonens innstillinger, eller signer i nettleseren med passordet ditt.');
         return;
       }
       if (!r.success) { setErr('Signeringen ble avbrutt.'); return; }
@@ -79,18 +83,18 @@ export default function OppgaveModal({ visible, onClose, duty, week, base, kanSi
             <View style={styles.kvittering}>
               <Text style={styles.kvitteringTittel}>✓ Signert {stempel(done.at)}</Text>
               <Text style={styles.kvitteringSub}>
-                {METODE[done.method] || done.method}
+                {done.method === 'biometri' ? biometri : (METODE[done.method] || done.method)}
                 {done.method === 'admin' && done.by ? ` · ${done.by}` : ''}
               </Text>
             </View>
           ) : kanSignere ? (
             <>
               <Text style={styles.forklaring}>
-                Når jobben er gjort, signerer du med Face ID eller fingeravtrykk. Signaturen står med navnet ditt
+                Når jobben er gjort, signerer du med {biometri}. Signaturen står med navnet ditt
                 og klokkeslettet i internatets oversikt.
               </Text>
               <Button
-                title="Signer med Face ID"
+                title={`Signer med ${biometri}`}
                 onPress={signer}
                 loading={busy}
                 disabled={busy}

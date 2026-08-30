@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Platform, StyleSheet } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { C } from '../theme';
 import { Button } from '../ui';
@@ -18,12 +18,25 @@ export async function deviceLockLevel() {
   }
 }
 
-export async function authenticate() {
+// Hva telefonens biometri heter for eleven: «Face ID» på iPhone med
+// ansiktslås, «Touch ID» på eldre iPhone, «fingeravtrykk» på Android.
+// Brukes i knappetekster, så appen ikke lover Face ID på en Android-telefon.
+export async function biometriNavn() {
+  if (Platform.OS !== 'ios') return 'fingeravtrykk';
+  try {
+    const typer = await LocalAuthentication.supportedAuthenticationTypesAsync();
+    return typer.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? 'Face ID' : 'Touch ID';
+  } catch {
+    return 'Face ID';
+  }
+}
+
+export async function authenticate({ prompt = 'Lås opp Kongshaug Elevapp' } = {}) {
   const level = await deviceLockLevel();
   if (level === LocalAuthentication.SecurityLevel.NONE) return { success: true, unprotected: true };
   try {
     const r = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Lås opp Kongshaug Elevapp',
+      promptMessage: prompt,
       cancelLabel: 'Avbryt',
       disableDeviceFallback: false, // -> faller tilbake til telefonens kode
     });
@@ -36,6 +49,9 @@ export async function authenticate() {
 export default function LockScreen({ onUnlocked, onLogout }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [biometri, setBiometri] = useState(Platform.OS === 'ios' ? 'Face ID' : 'fingeravtrykk');
+
+  useEffect(() => { biometriNavn().then(setBiometri).catch(() => {}); }, []);
 
   const tryUnlock = useCallback(async () => {
     setBusy(true);
@@ -55,7 +71,7 @@ export default function LockScreen({ onUnlocked, onLogout }) {
       <Text style={styles.sub}>
         {failed
           ? 'Låsingen ble avbrutt. Prøv igjen for å fortsette.'
-          : 'Lås opp med Face ID eller koden din.'}
+          : `Lås opp med ${biometri} eller koden din.`}
       </Text>
       <View style={{ height: 22 }} />
       <Button title="Lås opp" onPress={tryUnlock} loading={busy} style={{ alignSelf: 'stretch' }} />
