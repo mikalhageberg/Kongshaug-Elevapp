@@ -4,6 +4,7 @@ import { api, resolveCampusStatus } from '../api';
 import { C, formatTime, formatDateLong, formatDateShort, formatWeekRange, initials, todayStr, greeting } from '../theme';
 import { Card, Pill, Banner, Button, campusBanner } from '../ui';
 import { DUTY_KINDS } from '../DutyPlan';
+import Versjon from '../Versjon';
 import OvingModal from './OvingModal';
 
 // Totaltid i øvekonkurransen, kort form: «2 t 15 min».
@@ -233,6 +234,10 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
       <Button title="Logg ut" onPress={onLogout} color="#fff" textColor={C.slate}
         style={{ marginTop: 24, borderWidth: 1.5, borderColor: '#d3dae2', height: 48 }} />
+
+      {/* Hvilken app og hvilken oppdatering som kjører. Diskret, men det gjør
+          «hvilken versjon har du?» til et spørsmål eleven kan svare på. */}
+      <Versjon />
 
       <OvingModal visible={ovingOpen} onClose={() => { setOvingOpen(false); load(); }} />
     </ScrollView>
