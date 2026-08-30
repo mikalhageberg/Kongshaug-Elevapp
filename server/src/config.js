@@ -43,6 +43,14 @@ export const config = {
     qrTtlSeconds: Number(process.env.ANDAKT_QR_TTL_SECONDS ?? 30),
   },
 
+  // Lenker til appen i butikkene. Brukes av /distribusjon – siden elevene får
+  // for å laste ned appen. Tom lenke = knappen skjules, slik at siden kan tas i
+  // bruk før begge butikkene har godkjent appen.
+  stores: {
+    appStore: cleanStoreUrl(process.env.APP_STORE_URL),
+    playStore: cleanStoreUrl(process.env.PLAY_STORE_URL),
+  },
+
   // OpenAI: leser ukemeny-PDF-er og gjør dem om til strukturert tekst i appen.
   // Uten OPENAI_API_KEY hoppes tolkningen over – PDF-en vises fortsatt som før.
   openai: {
@@ -98,6 +106,20 @@ export const config = {
     bypassUsername: (process.env.APPLE_REVIEW_USERNAME || '').trim().toLowerCase(),
   },
 };
+
+// Butikklenkene kommer fra miljøvariabler og havner rett i en href. Godta
+// derfor bare http(s)-adresser – en «javascript:»-lenke ville blitt kjørt i
+// nettleseren til alle som åpner siden.
+function cleanStoreUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+  } catch {}
+  console.warn(`Ignorerer ugyldig butikklenke: «${url}» (må være en http(s)-adresse)`);
+  return '';
+}
 
 function parseTimeToMinutes(hhmm) {
   const [h, m] = String(hhmm).split(':').map(Number);

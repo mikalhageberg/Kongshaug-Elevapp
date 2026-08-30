@@ -13,6 +13,9 @@ To deler som deler samme backend:
 - **Administrasjon** (`/admin/`) – nettside for ansatte: opprette/administrere
   brukere, se kveldens brannliste, vise dagens QR-kode på storskjerm og følge
   oppmøtet i sanntid.
+- **Nedlastingsside** (`/distribusjon`) – enkel mobilside med app-ikonet og
+  knapper til App Store og Google Play. Lenken (eller en QR-kode av den) er det
+  elevene får når de skal installere appen.
 
 ## Kom i gang
 
@@ -346,6 +349,27 @@ lukkingen hvor lenge en som kommer for sent fortsatt rekker å registrere seg.
 Settes lukkingen til 0, stenger registreringen på slaget, og alt etter fristen
 blir fravær.
 
+### Nedlastingsside (`/distribusjon`)
+
+Siden elevene sendes til for å laste ned appen: app-ikonet, en kort beskrivelse
+og knapper til butikkene. Butikken telefonen faktisk kan bruke legges øverst.
+
+Lenkene settes som miljøvariabler (i Railway, eller i `server/.env` lokalt):
+
+| Variabel | Eksempel |
+| --- | --- |
+| `APP_STORE_URL` | `https://apps.apple.com/no/app/kongshaug-elevapp/id1234567890` |
+| `PLAY_STORE_URL` | `https://play.google.com/store/apps/details?id=no.kongshaug.elevapp` |
+
+En tom variabel skjuler den knappen, så siden kan tas i bruk før begge
+butikkene har godkjent appen. Er begge tomme, vises bare en melding om at appen
+ikke er lagt ut ennå, med lenke til nettleserversjonen. Bare `http(s)`-adresser
+godtas – andre ignoreres med en advarsel i loggen.
+
+Selve siden ligger i `server/src/views/distribusjon.html` og fylles ut av
+`server/src/routes/distribution.js` (den ligger utenfor `public/` så malen med
+plassholdere aldri kan serveres rå).
+
 ## Prosjektstruktur
 
 ```
@@ -365,6 +389,7 @@ Kongshaug/
 │  │  ├─ practice.js       # øvekonkurransen
 │  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata
+│  │  ├─ views/            # server-fylte sider (nedlastingssiden)
 │  │  └─ routes/           # auth, users, firelist, andakt, history
 │  └─ data/                # SQLite-fil (opprettes automatisk)
 └─ public/                 # frontend (serveres av backend)

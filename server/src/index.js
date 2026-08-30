@@ -18,6 +18,7 @@ import { createDutyRouter } from './routes/duty.js';
 import dormTaskRoutes from './routes/dormTasks.js';
 import practiceRoutes from './routes/practice.js';
 import handbookRoutes from './routes/handbooks.js';
+import distributionRoutes from './routes/distribution.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 import { startRetentionScheduler } from './retention.js';
@@ -65,6 +66,11 @@ app.use('/api/handbooks', handbookRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// ── Nedlastingsside ──────────────────────────────────────────
+// «/distribusjon» er den enkle siden elevene sendes til for å laste ned appen.
+// Den må ligge foran express.static, som ellers ville servert malen rå.
+app.use('/distribusjon', distributionRoutes);
+
 // ── Statiske frontends ───────────────────────────────────────
 // Sett eksplisitt charset=utf-8 på alle tekstbaserte filer, slik at norske
 // tegn (æ ø å) alltid tolkes riktig i nettleseren.
@@ -98,6 +104,7 @@ app.listen(config.port, () => {
   console.log(`\n  Kongshaug Elevapp kjører:`);
   console.log(`  → Elevapp:  http://localhost:${config.port}/app/`);
   console.log(`  → Admin:    http://localhost:${config.port}/admin/`);
+  console.log(`  → Nedlasting: http://localhost:${config.port}/distribusjon`);
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);
   startEmailSchedulers();
   startRetentionScheduler();
