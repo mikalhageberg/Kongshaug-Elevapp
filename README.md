@@ -261,19 +261,19 @@ Samme valg som for elevlista, men de to tjenestene har hver sin form:
 
   **Internatvask** – oppgavene nedover, ukene bortover:
 
-  | Oppgave | Beskrivelse | Uke 45 | Uke 46 | Uke 47 |
-  | ------- | ----------- | ------ | ------ | ------ |
-  | Startdato |  | 03.11.2025 | 10.11.2025 | 17.11.2025 |
-  | ØVEST1 | 80-gongen | Olivia | Chandra | Signe |
-  | ØVEST2 | KJØKKEN | Mari |  | Inga |
+  | Oppgave | Uke 45 | Uke 46 | Uke 47 |
+  | ------- | ------ | ------ | ------ |
+  | Startdato | 03.11.2025 | 10.11.2025 | 17.11.2025 |
+  | ØVEST1 | Olivia | Chandra | Signe |
+  | ØVEST2 | Mari |  | Inga |
 
-  **«Last ned mal» lager denne ferdig utfylt**: oppgavene som rader (i
-  internatrekkefølge), 20 uker som kolonner og `Startdato`-raden med
-  mandagsdatoene. Da er det bare navnene som skal skrives inn.
+  **«Last ned mal» gir rammen**: overskriftsraden med 20 ukekolonner, og
+  `Startdato`-raden med mandagsdatoene. Selve oppgavekodene og navnene skriver
+  man inn selv – malen er tom, og inneholder ingen data fra basen.
 
   - Første celle må hete `Oppgave`, og første kolonne inneholder
-    **oppgavekoden**. `Beskrivelse` er valgfri og tolkes ikke – den er der
-    for at man skal se hva koden betyr.
+    **oppgavekoden**, én per rad. Vil man ha oppgavenavnet synlig i arket, kan
+    man legge inn en kolonne kalt `Beskrivelse`; den leses ikke.
   - Ukekolonnene godtar `Uke 45`, `Veke 45` og `45`. `Startdato`-raden er
     valgfri, og pinner ukene til konkrete mandager.
   - I cellene står **navnet**. Fornavn holder så lenge bare én elev heter det;

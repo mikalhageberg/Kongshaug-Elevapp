@@ -1298,17 +1298,19 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           <ol style="margin:8px 0 0;padding-left:18px">
             ${cfg.hasTasks ? `
             <li><b>Oppgavene nedover, ukene bortover</b> – samme oppsett som vaskelista på veggen. Rad 1 er
-                overskriftsraden: første celle er <b>Oppgave</b>, så en valgfri <b>Beskrivelse</b>, og deretter
-                én kolonne per uke (<b>Uke 45</b>, <b>Veke 46</b> eller bare <b>47</b>).</li>
+                overskriftsraden: første celle er <b>Oppgave</b>, og deretter én kolonne per uke
+                (<b>Uke 45</b>, <b>Veke 46</b> eller bare <b>47</b>).</li>
             <li><b>Første kolonne</b> er oppgavekoden (<b>ØVEST1</b>), slik den står i oppgavelista lenger ned på
-                siden. Beskrivelses-kolonnen er bare til å lese – den tolkes ikke.</li>
+                siden – én kode per rad. Vil du ha oppgavenavnet synlig i arket, kan du legge inn en kolonne kalt
+                <b>Beskrivelse</b>; den leses ikke.</li>
             <li><b>I cellene skriver du navnet</b> på den som har oppgaven den uken. Tom celle = ingen satt opp.
                 Flere på samme oppgave samme uke skilles med komma eller linjeskift.</li>
             <li><b>Fornavn holder</b> så lenge bare én elev heter det – ellers skriver du hele navnet. Står
                 romnummeret foran («Rom 81 Olivia»), leses navnet likevel. <b>Signer</b>-rader fra de gamle listene
                 hoppes over; signaturen ligger i appen nå.</li>
             <li>En valgfri <b>Startdato</b>-rad rett under overskriftene gir mandagsdatoen for hver uke
-                (<b>17.08.2026</b>) – nyttig over et årsskifte. Malen du laster ned har den ferdig utfylt.</li>
+                (<b>17.08.2026</b>) – nyttig over et årsskifte. Malen du laster ned har ukene og datoene ferdig
+                utfylt; oppgavekodene og navnene skriver du selv.</li>
             <li>Koden må høre til <b>elevens eget internat</b>, og bare <b>den første fanen</b> i arket leses.</li>` : `
             <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
                 <b>Uke</b>, <b>Navn</b>, <b>Startdato</b>.</li>
@@ -1814,28 +1816,22 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
     }
 
     // Internatvasken får samme oppsett som vaskelista på veggen: oppgavene
-    // nedover, ukene bortover. Oppgavene og ukene fylles inn på forhånd, så
-    // det bare er navnene som skal skrives.
-    const aktive = tasks.filter((t) => t.active);
-    if (!aktive.length) { toast('Opprett oppgavene først – de blir radene i malen.'); return; }
+    // nedover, ukene bortover. Malen er tom – den gir bare rammen, med ukene
+    // og mandagsdatoene ferdig utfylt. Oppgavekodene og navnene skriver man selv.
     const btn = e.currentTarget; btn.disabled = true; const gammelTekst = btn.textContent; btn.textContent = 'Lager…';
     try {
-      const d = await api(`${cfg.base}?weeks=20`);
-      const uker = d.weeks;
-      const header = ['Oppgave', 'Beskrivelse', ...uker.map((w) => `Uke ${w.isoWeek}`)];
+      const uker = (await api(`${cfg.base}?weeks=20`)).weeks;
+      const header = ['Oppgave', ...uker.map((w) => `Uke ${w.isoWeek}`)];
       // Startdato-raden pinner ukene til konkrete mandager, så et årsskifte
       // midt i turnusen ikke kan tolkes feil.
-      const datorad = ['Startdato', '', ...uker.map((w) => {
+      const datorad = ['Startdato', ...uker.map((w) => {
         const [y, m, dag] = w.weekStart.split('-');
         return `${dag}.${m}.${y}`;
       })];
-      const rader = DORMS
-        .flatMap((dorm) => aktive.filter((t) => t.dorm === dorm))
-        .map((t) => [t.code, t.title, ...uker.map(() => '')]);
       downloadBlob('internatvask-mal.xlsx', buildXlsx({
-        rows: [header.map((v) => ({ v, s: 1 })), datorad, ...rader],
+        rows: [header.map((v) => ({ v, s: 1 })), datorad],
         sheetName: 'Internatvask',
-        cols: [14, 30, ...uker.map(() => 13)],
+        cols: [16, ...uker.map(() => 13)],
       }));
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; btn.textContent = gammelTekst; }
