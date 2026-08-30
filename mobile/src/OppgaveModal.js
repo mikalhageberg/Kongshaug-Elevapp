@@ -24,7 +24,7 @@ const METODE = {
   admin: 'lagt inn av administrasjonen',
 };
 
-export default function OppgaveModal({ visible, onClose, duty, week, base, kanSignere, onSigned }) {
+export default function OppgaveModal({ visible, onClose, duty, week, base, erMin, kanSignere, onSigned }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   // Gjett ut fra plattformen med én gang, så knappen aldri står tom, og rett
@@ -101,6 +101,14 @@ export default function OppgaveModal({ visible, onClose, duty, week, base, kanSi
                 style={{ marginTop: 16 }}
               />
             </>
+          ) : erMin ? (
+            // Egen oppgave i en uke som ikke har begynt: her leser man den på
+            // forhånd. Signeringen åpner seg når uken faktisk starter – det er
+            // også serveren som håndhever det (se routes/duty.js).
+            <Text style={styles.forklaring}>
+              Dette er din oppgave{week ? ` i uke ${week.isoWeek}` : ''}. Du kan lese den nå, og signere
+              når uken starter.
+            </Text>
           ) : (
             <Text style={styles.forklaring}>Denne oppgaven står på en annen elev denne uken.</Text>
           )}

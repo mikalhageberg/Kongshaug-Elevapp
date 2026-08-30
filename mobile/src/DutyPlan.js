@@ -37,7 +37,9 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
   const cfg = DUTY_KINDS[kind];
   const [weeks, setWeeks] = useState(null);
   const [planOpen, setPlanOpen] = useState(false);
-  const [åpenOppgave, setÅpenOppgave] = useState(null);   // raden som vises i oppgavevinduet
+  // { duty, week, kanSignere } – oppgavevinduet åpnes både fra denne uken og
+  // fra planen, så uken må følge med raden.
+  const [åpenOppgave, setÅpenOppgave] = useState(null);
 
   const load = useCallback(async () => {
     const d = await api(`${cfg.base}?weeks=12`).catch(() => null);
@@ -86,7 +88,7 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
           // Egne oppgaver kan åpnes: der ligger hele beskrivelsen og signeringen.
           if (!cfg.hasTasks || !min) return rad;
           return (
-            <Pressable key={s.dutyId || s.id} onPress={() => setÅpenOppgave(s)}>{rad}</Pressable>
+            <Pressable key={s.dutyId || s.id} onPress={() => setÅpenOppgave({ duty: s, week: now, kanSignere: true })}>{rad}</Pressable>
           );
         }) : (
           <Text style={styles.tom}>Ingen satt opp denne uken.</Text>
@@ -100,7 +102,7 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
           <Text style={styles.mineTittel}>Dine oppgaver denne uken</Text>
           {minesNå.map((s) => (
             <Card key={s.dutyId} style={[styles.mineKort, s.done && { backgroundColor: C.greenBg, borderColor: C.greenBg }]}
-              onPress={() => setÅpenOppgave(s)}>
+              onPress={() => setÅpenOppgave({ duty: s, week: now, kanSignere: true })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Text style={{ fontSize: 20 }}>{s.done ? '✅' : cfg.emoji}</Text>
                 <View style={{ flex: 1 }}>
@@ -139,9 +141,35 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
                   <Text style={[styles.planWeek, isMine && { color: C.amberInk }]}>Uke {w.isoWeek}</Text>
                   <Text style={styles.planRange}>{formatWeekRange(w.weekStart, w.weekEnd)}</Text>
                 </View>
-                <Text style={[styles.planNames, isMine && { color: C.amberInk }, !w.students.length && { color: C.muted2 }]}>
-                  {w.students.map((s) => s.fullName).join(', ') || 'Ingen satt opp'}
-                </Text>
+                {/* Med oppgaver får hver elev sin egen linje, så man ser hvem som
+                    har hva. Egne linjer kan åpnes: da leser man hele oppgaven i
+                    god tid før uken begynner. */}
+                {cfg.hasTasks && w.students.length ? w.students.map((s) => {
+                  const min = s.id === user?.id;
+                  const linje = (
+                    <View key={s.dutyId} style={styles.planRad}>
+                      <Text style={[styles.planNavn, isMine && { color: C.amberInk }]} numberOfLines={1}>
+                        {s.fullName}
+                      </Text>
+                      {s.task ? (
+                        <Text style={[styles.planOppgave, isMine && { color: C.amberInk }]} numberOfLines={1}>
+                          {s.task.title}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                  if (!min) return linje;
+                  return (
+                    <Pressable key={s.dutyId} onPress={() => setÅpenOppgave({ duty: s, week: w, kanSignere: false })}>
+                      {linje}
+                      <Text style={styles.planLes}>Trykk for å lese oppgaven</Text>
+                    </Pressable>
+                  );
+                }) : (
+                  <Text style={[styles.planNames, isMine && { color: C.amberInk }, !w.students.length && { color: C.muted2 }]}>
+                    {w.students.map((s) => s.fullName).join(', ') || 'Ingen satt opp'}
+                  </Text>
+                )}
               </Card>
             );
           }) : null}
@@ -151,10 +179,11 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
       {cfg.hasTasks ? (
         <OppgaveModal
           visible={!!åpenOppgave}
-          duty={åpenOppgave}
-          week={now}
+          duty={åpenOppgave?.duty}
+          week={åpenOppgave?.week}
           base={cfg.base}
-          kanSignere={åpenOppgave?.id === user?.id}
+          erMin={åpenOppgave?.duty?.id === user?.id}
+          kanSignere={!!åpenOppgave?.kanSignere && åpenOppgave?.duty?.id === user?.id}
           onClose={() => setÅpenOppgave(null)}
           onSigned={load}
         />
@@ -181,4 +210,8 @@ const styles = StyleSheet.create({
   planWeek: { fontSize: 14, fontWeight: '800', color: C.ink },
   planRange: { fontSize: 12.5, fontWeight: '600', color: C.muted2 },
   planNames: { fontSize: 14.5, fontWeight: '600', color: C.ink, marginTop: 3, lineHeight: 20 },
+  planRad: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 8, marginTop: 4 },
+  planNavn: { fontSize: 14.5, fontWeight: '700', color: C.ink, flexShrink: 1 },
+  planOppgave: { fontSize: 13, fontWeight: '600', color: C.muted2, flexShrink: 1 },
+  planLes: { fontSize: 12.5, fontWeight: '700', color: C.navy, marginTop: 2 },
 });

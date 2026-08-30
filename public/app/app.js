@@ -705,15 +705,37 @@ async function renderDutyPlan(node, kind) {
   listEl.innerHTML = upcoming.map((w) => {
     const isMine = w.students.some((s) => s.id === user.id);
     const names = w.students.map((s) => esc(s.fullName)).join(', ');
+    // Med oppgaver får hver elev sin egen linje, og egne linjer kan foldes ut:
+    // da leser man hele oppgaven i god tid før uken begynner.
+    const linjer = w.students.map((s) => {
+      const min = s.id === user.id;
+      const navn = `<span style="font-weight:700">${esc(s.fullName)}</span>${s.task ? `<span style="color:var(--muted-2);font-weight:600"> · ${esc(s.task.title)}</span>` : ''}`;
+      if (!min || !s.task) return `<div style="font-size:14px;margin-top:3px">${navn}</div>`;
+      return `
+        <div style="margin-top:5px">
+          <div style="font-size:14px">${navn}</div>
+          <button type="button" data-les="${s.dutyId}" style="background:none;border:none;padding:0;margin-top:1px;font:inherit;font-size:12.5px;font-weight:700;color:var(--navy);cursor:pointer">Les oppgaven</button>
+          <div data-tekst="${s.dutyId}" style="display:none;font-size:13.5px;line-height:1.55;white-space:pre-wrap;margin-top:6px;padding:10px 12px;background:#fff;border-radius:10px">${esc(s.task.description || 'Ingen beskrivelse er lagt inn på denne oppgaven ennå.')}</div>
+        </div>`;
+    }).join('');
     return `
       <div class="card" style="border-radius:14px;padding:12px 16px;margin-bottom:8px;${isMine ? 'border-color:var(--amber);background:var(--amber-bg)' : ''}">
         <div style="display:flex;align-items:baseline;gap:8px">
           <span style="font-size:14px;font-weight:800;${isMine ? 'color:var(--amber-ink)' : ''}">Uke ${w.isoWeek}</span>
           <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${formatWeekRange(w.weekStart, w.weekEnd)}</span>
         </div>
-        <div style="font-size:14.5px;font-weight:600;margin-top:3px;${w.students.length ? (isMine ? 'color:var(--amber-ink)' : '') : 'color:var(--muted-2)'}">${names || 'Ingen satt opp'}</div>
+        ${cfg.hasTasks && w.students.length
+          ? linjer
+          : `<div style="font-size:14.5px;font-weight:600;margin-top:3px;${w.students.length ? (isMine ? 'color:var(--amber-ink)' : '') : 'color:var(--muted-2)'}">${names || 'Ingen satt opp'}</div>`}
       </div>`;
   }).join('');
+
+  listEl.querySelectorAll('[data-les]').forEach((b) => b.addEventListener('click', () => {
+    const boks = listEl.querySelector(`[data-tekst="${b.dataset.les}"]`);
+    const åpen = boks.style.display === 'block';
+    boks.style.display = åpen ? 'none' : 'block';
+    b.textContent = åpen ? 'Les oppgaven' : 'Skjul oppgaven';
+  }));
 
   const toggle = node.querySelector('#planToggle');
   toggle.addEventListener('click', () => {
