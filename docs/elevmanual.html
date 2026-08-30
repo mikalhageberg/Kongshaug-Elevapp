@@ -60,6 +60,19 @@
   .cover .sub { font-size: 14pt; color: #b9cbe0; margin: 0 0 3mm 0; font-weight: 600; }
   .cover .school { font-size: 11pt; color: #93aec9; }
   .cover .spacer { flex: 1; }
+  .cover .qrrow {
+    display: flex; align-items: center; gap: 6mm;
+    border-top: 1px solid rgba(255,255,255,.22);
+    padding-top: 7mm; margin-bottom: 7mm;
+  }
+  .cover .qrrow .kort {
+    flex: 0 0 auto; width: 30mm; height: 30mm;
+    background: #fff; border-radius: 8px; padding: 2mm;
+  }
+  .cover .qrrow .kort svg { display: block; width: 100%; height: 100%; }
+  .cover .qrrow .tekst { font-size: 11pt; font-weight: 700; line-height: 1.45; color: #dbe7f3; }
+  .cover .qrrow .tekst span { display: block; font-size: 9.5pt; font-weight: 600; color: #9db6cf; margin-top: 1.5mm; }
+
   .cover .foot {
     border-top: 1px solid rgba(255,255,255,.22);
     padding-top: 6mm; font-size: 9.5pt; color: #a9c0d6;
@@ -97,6 +110,8 @@
   .avoid { page-break-inside: avoid; }
   h3, h4 { page-break-after: avoid; }
   .box, tr, ol.steps > li, .tabbar, .grid2 { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  tbody tr:first-child { page-break-before: avoid; }
 
   /* ---------- Innhold ---------- */
   .toc { margin-top: 4mm; }
@@ -149,7 +164,7 @@
     letter-spacing: .3px;
   }
   td { padding: 2.2mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tr:nth-child(even) td { background: #fafbfd; }
+  tbody tr:nth-child(odd) td { background: #fafbfd; }
   td.k { font-weight: 700; color: var(--navy); white-space: nowrap; }
 
   /* ---------- Skjermelementer ---------- */
@@ -188,8 +203,18 @@
   .tabbar div span { display: block; font-size: 15pt; margin-bottom: 1mm; }
   .tabbar div.active { color: var(--navy); background: var(--surface); }
 
+
   .grid2 { display: flex; gap: 4mm; margin-bottom: 4mm; }
   .grid2 > * { flex: 1; margin-bottom: 0 !important; }
+
+  .valg { margin: 3mm 0; }
+  .valg > div {
+    display: flex; align-items: baseline; gap: 3mm; flex-wrap: wrap;
+    padding: 2mm 0; border-top: 1px solid rgba(138,101,8,.22);
+  }
+  .valg .hvem { min-width: 20mm; font-weight: 800; font-size: 9.6pt; }
+  .valg .hva { font-weight: 800; }
+  .valg .eng { font-size: 9pt; opacity: .75; }
 
   .kicker-sm {
     font-size: 8.4pt; font-weight: 800; letter-spacing: .8px;
@@ -212,6 +237,12 @@
   <p class="sub">Brannliste · andakt · middag · internat · øvekonkurranse</p>
   <p class="school">Kongshaug Musikkgymnas</p>
   <div class="spacer"></div>
+  <div class="qrrow">
+    <div class="kort"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" shape-rendering="crispEdges"><path stroke="#1e3a5f" d="M4 4.5h7m3 0h5m2 0h1m2 0h2m4 0h1m3 0h7M4 5.5h1m5 0h1m11 0h1m6 0h2m3 0h1m5 0h1M4 6.5h1m1 0h3m1 0h1m1 0h6m4 0h4m3 0h2m3 0h1m1 0h3m1 0h1M4 7.5h1m1 0h3m1 0h1m1 0h1m1 0h1m2 0h2m1 0h4m1 0h3m1 0h1m1 0h2m1 0h1m1 0h3m1 0h1M4 8.5h1m1 0h3m1 0h1m4 0h1m2 0h1m5 0h2m1 0h1m2 0h1m3 0h1m1 0h3m1 0h1M4 9.5h1m5 0h1m2 0h2m1 0h1m2 0h3m1 0h1m2 0h1m1 0h1m5 0h1m5 0h1M4 10.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M13 11.5h1m1 0h1m1 0h2m3 0h3m1 0h1m2 0h1m1 0h2M7 12.5h2m1 0h2m1 0h2m1 0h3m3 0h2m3 0h3m2 0h1m4 0h2M6 13.5h1m4 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m3 0h1m3 0h2m1 0h2M4 14.5h1m2 0h1m1 0h4m1 0h2m1 0h4m1 0h5m2 0h1m3 0h4m1 0h3M4 15.5h1m1 0h2m1 0h1m1 0h2m1 0h2m4 0h1m3 0h4m2 0h2m1 0h2m2 0h2m1 0h1M6 16.5h2m2 0h1m6 0h2m1 0h1m1 0h1m3 0h1m5 0h1m1 0h1m2 0h1m2 0h1M4 17.5h3m1 0h1m5 0h1m1 0h1m1 0h1m2 0h3m1 0h2m3 0h4m2 0h1m1 0h2M4 18.5h3m1 0h3m1 0h3m1 0h2m1 0h2m1 0h1m1 0h1m2 0h1m1 0h4m1 0h1m2 0h4M4 19.5h2m3 0h1m6 0h1m2 0h5m3 0h2m1 0h3m1 0h1m2 0h4M7 20.5h4m1 0h2m1 0h1m1 0h1m1 0h3m1 0h5m1 0h1m1 0h1m1 0h3m2 0h1m1 0h1M4 21.5h6m1 0h2m1 0h2m4 0h2m5 0h2m2 0h1m1 0h1m1 0h1m1 0h3M6 22.5h2m2 0h6m1 0h2m1 0h1m1 0h4m4 0h2m1 0h5m2 0h1M4 23.5h4m3 0h1m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h2m1 0h5m1 0h3m1 0h1M4 24.5h4m2 0h4m1 0h2m2 0h2m1 0h3m3 0h1m1 0h1m1 0h3m1 0h2m2 0h1M4 25.5h2m2 0h1m2 0h2m3 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h3m1 0h3M4 26.5h1m2 0h2m1 0h1m4 0h5m3 0h2m1 0h1m2 0h1m1 0h1m4 0h1m1 0h1m1 0h1M5 27.5h1m2 0h1m2 0h2m1 0h3m3 0h2m3 0h5m1 0h3m1 0h1m1 0h3M4 28.5h3m1 0h5m2 0h3m4 0h3m1 0h1m1 0h2m5 0h3m1 0h1M4 29.5h1m2 0h2m2 0h1m1 0h2m1 0h1m2 0h2m1 0h1m6 0h2m3 0h1m2 0h2M4 30.5h5m1 0h1m1 0h1m1 0h1m1 0h3m1 0h4m3 0h5m2 0h4m1 0h2M4 31.5h1m2 0h1m1 0h1m1 0h1m7 0h1m1 0h2m1 0h1m1 0h2m4 0h2m1 0h1m2 0h1M4 32.5h1m2 0h2m1 0h2m2 0h2m2 0h1m9 0h2m1 0h7M12 33.5h1m1 0h3m2 0h6m4 0h1m1 0h2m3 0h4M4 34.5h7m1 0h2m1 0h1m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m1 0h3m1 0h1M4 35.5h1m5 0h1m2 0h1m1 0h4m1 0h2m2 0h2m1 0h3m1 0h2m3 0h2m2 0h1M4 36.5h1m1 0h3m1 0h1m1 0h3m1 0h1m3 0h5m1 0h1m3 0h7m2 0h1M4 37.5h1m1 0h3m1 0h1m1 0h1m5 0h2m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h1m3 0h1M4 38.5h1m1 0h3m1 0h1m2 0h2m2 0h1m2 0h6m1 0h1m7 0h2m2 0h2M4 39.5h1m5 0h1m7 0h1m1 0h1m3 0h5m1 0h1m6 0h4M4 40.5h7m2 0h3m1 0h1m2 0h2m2 0h2m1 0h1m4 0h2m2 0h1m3 0h1"/></svg></div>
+    <div class="tekst">Skann for å laste ned appen
+      <span>elevapp.online/distribusjon · bruk telefonens vanlige kamera</span>
+    </div>
+  </div>
   <div class="foot">
     <span>Alt du trenger å vite om appen, steg for steg</span>
     <span>Versjon 1.4</span>
@@ -261,9 +292,11 @@
   <h3>1.1 Installere appen</h3>
   <ol class="steps">
     <li><span class="st">Last ned appen</span> Søk opp «Kongshaug Elevapp» i App Store eller Google Play, eller bruk lenken skolen har delt ut.</li>
-    <li><span class="st">Åpne appen</span> Du møter innloggingsskjermen med skolens logo.</li>
+    <li><span class="st">Åpne appen</span> Du møter innloggingsskjermen: «Kongshaug Musikkgymnas» øverst, så «Logg inn» og feltene for brukernavn og passord.</li>
   </ol>
-  <p class="note">Har du ikke telefon tilgjengelig, kan du bruke nettversjonen på adressen skolen oppgir. Der gjør du de samme tingene, men signering av internatvask skjer med passord i stedet for Face ID.</p>
+  <p class="note">Har du ikke appen ennå: <strong>QR-koden på forsiden</strong> tar deg rett til nedlastingssiden.</p>
+
+  <p class="note">Uten telefon kan du bruke nettversjonen på adressen skolen oppgir. Der gjør du det samme, men signerer internatvask med passord i stedet for biometri.</p>
 
   <h3>1.2 Logge inn første gang</h3>
   <ol class="steps">
@@ -279,25 +312,36 @@
   </div>
 
   <h3>1.3 Tillatelser appen ber om</h3>
-  <p>Første gang du bruker appen får du noen spørsmål fra telefonen. Alle tre er nødvendige for at appen skal virke som den skal:</p>
+  <p>Første gang du bruker appen spør telefonen om tre ting. Alle tre trengs:</p>
   <table>
-    <tr><th style="width:26%">Tillatelse</th><th style="width:34%">Hva den brukes til</th><th>Hva skjer hvis du sier nei</th></tr>
-    <tr><td class="k">📍 Posisjon</td><td>Bekrefte at du faktisk er på skolens område når du registrerer deg.</td><td>Du får ikke meldt deg til stede på brannlisten, og ikke registrert oppmøte på andakt.</td></tr>
+    <thead>    <tr><th style="width:26%">Tillatelse</th><th style="width:34%">Hva den brukes til</th><th>Hva skjer hvis du sier nei</th></tr></thead>
+    <tbody>
+    <tr><td class="k">📍 Posisjon<br><span class="note">mens appen er i bruk</span></td><td>Bekrefte at du faktisk er på skolens område når du registrerer deg.</td><td>Du får ikke meldt deg til stede på brannlisten, og ikke registrert oppmøte på andakt.</td></tr>
     <tr><td class="k">📷 Kamera</td><td>Skanne QR-koden på andakt, og ta dokumentasjonsbilde i øvekonkurransen.</td><td>Du får ikke skannet QR-koden.</td></tr>
     <tr><td class="k">🔔 Varsler</td><td>Påminnelse om brannlisten, og beskjed om at du har ukestjeneste.</td><td>Appen virker som normalt, men du får ingen påminnelser.</td></tr>
+    </tbody>
   </table>
-  <p class="note">Sa du nei ved et uhell? Du kan slå tillatelsene på igjen under telefonens innstillinger → Kongshaug Elevapp.</p>
+  <div class="box warn">
+    <span class="h">📍 Viktig: velg «Mens appen er i bruk»</span>
+    <p>Når telefonen spør om posisjon, får du flere valg. Du må velge det som gir appen posisjonen <strong>så lenge appen er i bruk</strong> – ikke «Alltid», som appen ikke trenger:</p>
+    <div class="valg">
+      <div><span class="hvem">iPhone</span><span class="hva">«Tillat mens appen er i bruk»</span><span class="eng">Allow While Using App</span></div>
+      <div><span class="hvem">Android</span><span class="hva">«Mens appen er i bruk»</span><span class="eng">While using the app</span></div>
+    </div>
+    <p><strong>«Tillat én gang» / «Bare denne gangen»</strong> virker der og da, men faller bort etterpå – da blir du spurt på nytt hver kveld. <strong>«Ikke tillat»</strong> gjør at du verken får krysset deg av eller registrert oppmøte.</p>
+  </div>
+  <p class="note">Sa du nei ved et uhell? Du kan slå tillatelsene på igjen under telefonens innstillinger → Kongshaug Elevapp → Posisjon → «Mens appen er i bruk».</p>
 
-  <h3>1.4 Appen låses med Face ID</h3>
-  <p>Du forblir innlogget i lang tid, men appen låser seg når den har ligget i bakgrunnen en stund. Da møter du låseskjermen:</p>
+  <h3>1.4 Appen låses med biometri</h3>
+  <p>Du forblir innlogget lenge, men appen låser seg når den har ligget i bakgrunnen en stund:</p>
   <div class="box">
-    <p style="text-align:center;margin-bottom:3mm">🏠 <strong>Kongshaug Elevapp</strong><br><span class="note">Lås opp med Face ID eller koden din.</span></p>
+    <p style="text-align:center;margin-bottom:3mm">🏠 <strong>Kongshaug Elevapp</strong><br><span class="note">Lås opp med biometri eller koden din.</span></p>
     <p style="text-align:center;margin:0"><span class="btn">Lås opp</span> &nbsp; <span class="btn ghost">Logg ut</span></p>
   </div>
   <ul>
-    <li>Låsingen bruker telefonens egen <strong>Face ID, fingeravtrykk eller kode</strong> – appen har ingen egen PIN-kode.</li>
+    <li>Låsingen bruker telefonens egen <strong>biometri – ansikt eller fingeravtrykk – eller koden din</strong>. Appen har ingen egen PIN-kode.</li>
     <li>Avbryter du opplåsingen, står du på låseskjermen til du prøver igjen.</li>
-    <li>Bytter du raskt mellom appen og noe annet (for eksempel når du åpner en meny-PDF), blir du <em>ikke</em> bedt om Face ID – bare når du har vært borte over et minutt.</li>
+    <li>Bytter du raskt mellom appen og noe annet, blir du <em>ikke</em> bedt om biometri – bare når du har vært borte over et minutt.</li>
   </ul>
 </section>
 
@@ -315,12 +359,14 @@
   </div>
 
   <table>
-    <tr><th style="width:22%">Fane</th><th>Hva du finner der</th></tr>
+    <thead>    <tr><th style="width:22%">Fane</th><th>Hva du finner der</th></tr></thead>
+    <tbody>
     <tr><td class="k">🏠 Hjem</td><td>Oversikt over dagen: om du er registrert på brannlisten og andakten, hva som serveres til middag, hvem som har internatvakt i natt, om du har ukestjeneste, og øvekonkurransen.</td></tr>
     <tr><td class="k">🔥 Brannliste</td><td>Melde deg til stede i kveld, melde deg borte, planlegge fravær framover og melde gjest.</td></tr>
     <tr><td class="k">📖 Andakt</td><td>Kameraet som skanner QR-koden på storskjerm.</td></tr>
     <tr><td class="k">🍽️ Middag</td><td>Melde deg av middagen i dag, ukemenyen dag for dag, og kjøkkentjenesten.</td></tr>
     <tr><td class="k">🧹 Internat</td><td>Internatvasken: hvem som vasker denne uken, oppgavene dine og signeringen.</td></tr>
+    </tbody>
   </table>
 
   <h3>2.1 Hjemskjermen</h3>
@@ -366,7 +412,7 @@
   <h3>3.2 Hvis GPS ikke vil samarbeide</h3>
   <ol class="steps">
     <li><span class="st">Gå ut, eller til et vindu</span> GPS-signalet er dårlig innerst i et betongbygg.</li>
-    <li><span class="st">Sjekk at posisjon er slått på</span> Både på telefonen generelt, og for Kongshaug Elevapp spesielt.</li>
+    <li><span class="st">Sjekk at posisjon er slått på</span> Både på telefonen generelt, og for Kongshaug Elevapp spesielt – der skal det stå <strong>«Mens appen er i bruk»</strong>.</li>
     <li><span class="st">Slå av og på flymodus</span> Det tvinger telefonen til å finne posisjonen på nytt.</li>
     <li><span class="st">Prøv igjen etter noen sekunder</span> Første måling etter at telefonen har ligget stille en stund tar alltid lengst tid.</li>
   </ol>
@@ -385,10 +431,12 @@
   <h3>4.1 Når kan du registrere deg?</h3>
   <p>Registreringen er åpen i et tidsvindu om kvelden, slik at du krysser deg av på det tidspunktet du faktisk er på internatet – ikke midt på dagen. Skolen setter tidene, og de kan være forskjellige på hverdag, fredag og lørdag.</p>
   <table>
-    <tr><th style="width:34%">Kveld</th><th>Standard åpningstid</th></tr>
+    <thead>    <tr><th style="width:34%">Kveld</th><th>Standard åpningstid</th></tr></thead>
+    <tbody>
     <tr><td class="k">Søndag–torsdag</td><td>20:00 – 23:00</td></tr>
     <tr><td class="k">Fredag</td><td>20:00 – 00:00</td></tr>
     <tr><td class="k">Lørdag</td><td>20:00 – 00:00</td></tr>
+    </tbody>
   </table>
   <p>Er du for tidlig ute, står det <span class="pill grey">🕘 Registrering åpner kl. 20:00</span> på skjermen. Er du for sen, står det at registreringen stengte – da må du si fra til internatvakten på vanlig måte.</p>
 
@@ -501,10 +549,12 @@
   <h3>7.2 Tidsvinduet</h3>
   <p>QR-koden er ikke framme hele dagen. Den vises rundt fristen for oppmøte – som standard <strong>30 minutter før og 30 minutter etter</strong>. Fristen er typisk 08:10, men skolen setter både frist og vindu selv.</p>
   <table>
-    <tr><th style="width:38%">Det du ser</th><th>Hva det betyr</th></tr>
+    <thead>    <tr><th style="width:38%">Det du ser</th><th>Hva det betyr</th></tr></thead>
+    <tbody>
     <tr><td class="k">🕘 Registrering åpner snart</td><td>Du er for tidlig ute. Skjermen sier fra hvilket klokkeslett koden dukker opp.</td></tr>
     <tr><td class="k">📖 Ingen andakt i dag</td><td>Det er andakt på ukedager (mandag–fredag). I helgen er skjermen tom.</td></tr>
     <tr><td class="k">🕘 Andakten er over</td><td>Registreringen stengte. Da telles dagen som fravær, og du må ta det opp med skolen.</td></tr>
+    </tbody>
   </table>
 
   <h3>7.3 «Registrert etter fristen»</h3>
@@ -512,12 +562,14 @@
 
   <h3>7.4 Feilmeldinger på andaktsskjermen</h3>
   <table>
-    <tr><th style="width:38%">Melding</th><th>Hva du gjør</th></tr>
+    <thead>    <tr><th style="width:38%">Melding</th><th>Hva du gjør</th></tr></thead>
+    <tbody>
     <tr><td class="k">📍 Du er ikke på skolens område</td><td>Du må være fysisk på skolen. Se kapittel 3 hvis du <em>er</em> på skolen og likevel får denne.</td></tr>
     <tr><td class="k">QR-koden er ikke gyldig lenger</td><td>Koden rakk å bytte seg ut. Trykk «Skann på nytt» og hold telefonen litt roligere.</td></tr>
     <tr><td class="k">Ugyldig QR-kode</td><td>Du har skannet en annen QR-kode enn andaktskoden – eller et bilde av en. Skann koden på storskjermen.</td></tr>
     <tr><td class="k">📶 Fikk ikke kontakt med serveren</td><td>Telefonen har ikke nett. Sjekk wifi eller mobildata og trykk «Prøv igjen».</td></tr>
     <tr><td class="k">📍 Fikk ikke posisjonen din</td><td>GPS-en svarte ikke. Gå nærmere et vindu og prøv igjen.</td></tr>
+    </tbody>
   </table>
 
   <div class="box tip">
@@ -574,7 +626,7 @@
     <li><span class="st">Trykk på oppgaven din</span> Under «Dine oppgaver denne uken» ligger ett kort per oppgave du har.</li>
     <li><span class="st">Les beskrivelsen</span> Hele beskrivelsen står der, slik den er skrevet av skolen – hva som skal gjøres, og hvor.</li>
     <li><span class="st">Gjør jobben</span></li>
-    <li><span class="st">Trykk «Signer med Face ID»</span> Telefonen ber om Face ID, fingeravtrykk eller koden din.</li>
+    <li><span class="st">Trykk signeringsknappen</span> Telefonen ber om biometri – ansikt eller fingeravtrykk – eller koden din.</li>
     <li><span class="st">Ferdig</span> Kortet blir grønt, og kvitteringen viser dato, klokkeslett og hvordan du signerte.</li>
   </ol>
 
@@ -583,8 +635,8 @@
     <p>Signaturen står med navnet ditt og klokkeslettet i internatets oversikt. Du kan bare signere <strong>dine egne</strong> oppgaver, og bare i en uke som har begynt. Angrer du, må en administrator fjerne signaturen.</p>
   </div>
 
-  <h3>9.3 Hvis telefonen ikke har Face ID</h3>
-  <p>Har telefonen verken Face ID, fingeravtrykk eller kode, har appen ingenting å signere med. Da slår du på låsing i telefonens innstillinger, eller signerer i <strong>nettleserversjonen</strong> med passordet ditt.</p>
+  <h3>9.3 Hvis telefonen ikke har biometri</h3>
+  <p>Har telefonen verken biometri eller kode, har appen ingenting å signere med. Da slår du på låsing i telefonens innstillinger, eller signerer i <strong>nettleserversjonen</strong> med passordet ditt.</p>
 
   <h3>9.4 Hele rundgangen</h3>
   <p>Trykk <span class="btn ghost">Vis hele planen</span> for å se vaskeplanen uke for uke framover. Ukene der du selv står oppført er markert i gult, og du får et banner som sier når din neste vaskeuke er.</p>
@@ -609,10 +661,12 @@
 
   <h3>10.2 Pause, skjule og avbryte</h3>
   <table>
-    <tr><th style="width:30%">Knapp</th><th>Hva den gjør</th></tr>
+    <thead>    <tr><th style="width:30%">Knapp</th><th>Hva den gjør</th></tr></thead>
+    <tbody>
     <tr><td class="k">Pause / Fortsett</td><td>Stopper klokken midlertidig. Pausen teller <strong>ikke</strong> med i øvetiden din – den kan verken legge til eller trekke fra tid.</td></tr>
     <tr><td class="k">Skjul – økten fortsetter</td><td>Lukker vinduet uten å avslutte økten. Klokken går videre, og du finner økten igjen når du åpner appen på nytt.</td></tr>
     <tr><td class="k">Avbryt økten</td><td>Kaster økten. Tiden blir ikke registrert.</td></tr>
+    </tbody>
   </table>
   <p class="note">Skjermen holdes våken mens klokken går, så du ser nedtellingen fra andre siden av rommet. Lukker du appen midt i en økt, plukkes den opp igjen der den var.</p>
 
@@ -641,9 +695,11 @@
   <h2><span class="num">11</span>Varsler på telefonen</h2>
   <p class="lead">Appen sender bare noen få varsler, og bare hvis skolen har slått dem på.</p>
   <table>
-    <tr><th style="width:34%">Varsel</th><th style="width:22%">Når</th><th>Innhold</th></tr>
+    <thead>    <tr><th style="width:34%">Varsel</th><th style="width:22%">Når</th><th>Innhold</th></tr></thead>
+    <tbody>
     <tr><td class="k">Husk brannlisten!</td><td>Om kvelden</td><td>Sendes bare til deg som ikke har krysset deg av ennå.</td></tr>
     <tr><td class="k">Ukestjeneste</td><td>Søndag kl. 18:00</td><td>Beskjed om at du har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har du begge, kommer det ett varsel om hver.</td></tr>
+    </tbody>
   </table>
   <h3>11.1 Får du ikke varsler?</h3>
   <ol class="steps">
@@ -660,13 +716,15 @@
   <p class="lead">Appen samler inn så lite som mulig, og rydder etter seg selv. Her er hva som faktisk lagres om deg.</p>
 
   <table>
-    <tr><th style="width:30%">Opplysning</th><th style="width:36%">Hva den brukes til</th><th>Hvor lenge</th></tr>
+    <thead>    <tr><th style="width:30%">Opplysning</th><th style="width:36%">Hva den brukes til</th><th>Hvor lenge</th></tr></thead>
+    <tbody>
     <tr><td class="k">GPS-koordinater</td><td>Avgjøre om du er på skolens område i selve registreringsøyeblikket. De leses aldri igjen etterpå.</td><td>Nulles automatisk etter et døgn</td></tr>
     <tr><td class="k">Status (til stede / borte / for sent)</td><td>Brannsikkerhet og fraværsoversikt.</td><td>Som standard ett skoleår</td></tr>
     <tr><td class="k">Planlagt fravær, gjester, middagsvalg</td><td>Planlegging for internat og kjøkken.</td><td>Som standard ett skoleår</td></tr>
     <tr><td class="k">Signatur på internatvask</td><td>Dokumentere at oppgaven er gjort.</td><td>Som standard ett skoleår</td></tr>
     <tr><td class="k">Øvingsbilder</td><td>Dokumentere øvingsøkter i konkurransen.</td><td>Slettes sammen med økten</td></tr>
     <tr><td class="k">Passordet ditt</td><td>Innlogging.</td><td>Lagres aldri i klartekst – bare som en kryptografisk hash</td></tr>
+    </tbody>
   </table>
 
   <h3>12.1 Det du bør vite</h3>
@@ -681,7 +739,7 @@
     <ul>
       <li>Del aldri passordet ditt med andre elever.</li>
       <li>Ikke la noen andre krysse deg av på brannlisten – det setter både deg og dem i en dårlig situasjon hvis det faktisk brenner.</li>
-      <li>Slå på Face ID eller kode på telefonen, slik at ingen kommer inn i appen din hvis telefonen blir liggende.</li>
+      <li>Slå på biometri eller kode på telefonen, slik at ingen kommer inn i appen din hvis telefonen blir liggende.</li>
       <li>Mister du telefonen: si fra til administrasjonen, og bytt passord.</li>
     </ul>
   </div>
@@ -693,18 +751,20 @@
   <p class="lead">De vanligste problemene, og hva du gjør med dem.</p>
 
   <table>
-    <tr><th style="width:40%">Problem</th><th>Løsning</th></tr>
-    <tr><td class="k">«Du må være innenfor skolens område»<br>– men jeg står på skolen</td><td>Gå ut eller nærmere et vindu, sjekk at posisjon er tillatt for appen, og prøv igjen. Hjelper det ikke: slå flymodus av og på. Posisjonen hentes på nytt i det du trykker på knappen.</td></tr>
+    <thead>    <tr><th style="width:40%">Problem</th><th>Løsning</th></tr></thead>
+    <tbody>
+    <tr><td class="k">«Du må være innenfor skolens område»<br>– men jeg står på skolen</td><td>Gå ut eller nærmere et vindu, og sjekk at posisjon står på <strong>«Mens appen er i bruk»</strong>. Hjelper det ikke: slå flymodus av og på. Posisjonen hentes uansett på nytt når du trykker.</td></tr>
     <tr><td class="k">Knappen «Jeg er til stede» er grå</td><td>Enten er registreringsvinduet stengt (skjermen sier når det åpner), eller appen har ikke fått posisjonen din ennå. Vent noen sekunder.</td></tr>
     <tr><td class="k">Kameraet er svart på andaktsskjermen</td><td>Appen mangler kameratilgang. Trykk «Gi kameratilgang», eller slå det på i telefonens innstillinger.</td></tr>
-    <tr><td class="k">QR-koden vil ikke skanne</td><td>Hold telefonen i ro, litt lenger unna skjermen, og unngå at lys speiler seg i den. Koden byttes ut hvert halvminutt – det er normalt at et gammelt forsøk blir «ikke gyldig lenger».</td></tr>
+    <tr><td class="k">QR-koden vil ikke skanne</td><td>Hold telefonen i ro, litt lenger unna skjermen, og unngå speiling i skjermen. Koden byttes hvert halvminutt – at et gammelt forsøk blir «ikke gyldig» er normalt.</td></tr>
     <tr><td class="k">«Fikk ikke kontakt med serveren»</td><td>Telefonen mangler nett. Bytt mellom wifi og mobildata og prøv igjen. Appen prøver selv én gang til før den gir opp.</td></tr>
-    <tr><td class="k">Appen ber om Face ID hele tiden</td><td>Det er normalt når appen har ligget i bakgrunnen over ett minutt. Er det plagsomt ofte, sjekk at du ikke lukker appen helt mellom hver gang.</td></tr>
+    <tr><td class="k">Appen ber om biometri hele tiden</td><td>Det er normalt når appen har ligget i bakgrunnen over ett minutt. Er det plagsomt ofte, sjekk at du ikke lukker appen helt mellom hver gang.</td></tr>
     <tr><td class="k">Jeg har glemt passordet mitt</td><td>Ta kontakt med administrasjonen. De setter et nytt midlertidig passord, og du velger ditt eget ved neste innlogging.</td></tr>
     <tr><td class="k">«Denne appen er for elever»</td><td>Du har logget inn med en administratorkonto. Ansatte bruker nettsiden.</td></tr>
-    <tr><td class="k">Jeg krysset meg av på feil dag</td><td>Så lenge vinduet er åpent kan du bytte selv med «Jeg er likevel …»-knappene. Er vinduet stengt, si fra til internatvakten eller administrasjonen.</td></tr>
+    <tr><td class="k">Jeg krysset meg av på feil dag</td><td>Så lenge vinduet er åpent bytter du selv med «Jeg er likevel …»-knappene. Er det stengt, si fra til internatvakten.</td></tr>
     <tr><td class="k">Fraværet mitt ble lagt inn én dag feil</td><td>Slett perioden under «Planlegg fravær» og legg den inn på nytt. Husk: du trykker på <em>kvelden</em> du reiser.</td></tr>
-    <tr><td class="k">Jeg får ikke signert internatvasken</td><td>Sjekk at det er din egen oppgave, og at uken har begynt. Mangler telefonen Face ID/kode, signer i nettleseren med passordet ditt.</td></tr>
+    <tr><td class="k">Jeg får ikke signert internatvasken</td><td>Sjekk at det er din egen oppgave, og at uken har begynt. Mangler telefonen biometri og kode, signer i nettleseren med passordet ditt.</td></tr>
+    </tbody>
   </table>
 
   <div class="box tip">
@@ -770,13 +830,15 @@
 
   <h3>Når det er aktuelt</h3>
   <table>
-    <tr><th style="width:36%">Situasjon</th><th>Hva du gjør i appen</th></tr>
+    <thead>    <tr><th style="width:36%">Situasjon</th><th>Hva du gjør i appen</th></tr></thead>
+    <tbody>
     <tr><td class="k">Skal reise bort i helgen</td><td>Brannliste → Planlegg fravær → trykk kvelden du reiser og den siste kvelden.</td></tr>
     <tr><td class="k">Får overnattingsbesøk</td><td>Brannliste → Meld gjest → vent på godkjenning før gjesten kommer.</td></tr>
     <tr><td class="k">Skal ikke spise middag</td><td>Middag → «Meld fra – jeg spiser ikke i dag».</td></tr>
     <tr><td class="k">Har kjøkkentjeneste</td><td>Middag → se hvem du har uken sammen med.</td></tr>
-    <tr><td class="k">Har internatvask</td><td>Internat → les oppgaven → gjør jobben → signer med Face ID.</td></tr>
+    <tr><td class="k">Har internatvask</td><td>Internat → les oppgaven → gjør jobben → signer med biometri.</td></tr>
     <tr><td class="k">Skal øve i konkurransen</td><td>Hjem → Øvekonkurranse → Start øving → varm opp → stopp og registrer.</td></tr>
+    </tbody>
   </table>
 
   <h3>Tre ting som ofte går galt</h3>

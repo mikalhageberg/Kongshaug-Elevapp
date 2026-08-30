@@ -97,6 +97,8 @@
   .avoid { page-break-inside: avoid; }
   h3, h4 { page-break-after: avoid; }
   .box, tr, ol.steps > li, .tabbar, .grid2 { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  tbody tr:first-child { page-break-before: avoid; }
 
   /* ---------- Innhold ---------- */
   .toc { margin-top: 4mm; }
@@ -149,7 +151,7 @@
     letter-spacing: .3px;
   }
   td { padding: 1.9mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tr:nth-child(even) td { background: #fafbfd; }
+  tbody tr:nth-child(odd) td { background: #fafbfd; }
   td.k { font-weight: 700; color: var(--navy); white-space: nowrap; }
 
   /* ---------- Skjermelementer ---------- */
@@ -303,10 +305,12 @@
 
   <h3>2.1 De tre nøkkeltallene</h3>
   <table>
-    <tr><th style="width:30%">Kort</th><th>Hva det viser</th></tr>
+    <thead>    <tr><th style="width:30%">Kort</th><th>Hva det viser</th></tr></thead>
+    <tbody>
     <tr><td class="k">🔥 På skolen i natt</td><td>Antall registrerte av totalt, med en fremdriftsstripe. Under står <strong>hvor mange som mangler</strong> og hvor mange som har meldt seg borte.</td></tr>
     <tr><td class="k">📖 Andakt i dag</td><td>Antall til stede, antall fravær, og hvor mange elever det er totalt.</td></tr>
     <tr><td class="k">👥 Aktive brukere</td><td>Antall aktive elevkontoer, og hvor mange som er deaktivert.</td></tr>
+    </tbody>
   </table>
 
   <h3>2.2 «Ikke registrert på brannlisten i kveld»</h3>
@@ -353,16 +357,20 @@
   <h4>Importere fra Excel</h4>
   <p>Øverst i vinduet velger du hvordan arket skal leses:</p>
   <table>
-    <tr><th style="width:32%">Valg</th><th>Når du bruker det</th></tr>
+    <thead>    <tr><th style="width:32%">Valg</th><th>Når du bruker det</th></tr></thead>
+    <tbody>
     <tr><td class="k">Arket følger malen<br><span class="note">(standard)</span></td><td>Arket er satt opp som malen under. Leses lokalt på skolens egen server – <strong>ingenting sendes til OpenAI</strong>.</td></tr>
     <tr><td class="k">Tolk arket med OpenAI</td><td>For ark som ikke følger malen. Bare de første radene sendes til OpenAI, som svarer med hvilken kolonne som er hva. Resten av elevopplysningene sendes ikke ut.</td></tr>
+    </tbody>
   </table>
 
   <p>Malen ser slik ut – rad 1 er overskriftsraden, én elev per rad nedover:</p>
   <table>
-    <tr><th>Navn</th><th>Klasse</th><th>Internat</th><th>Rom</th><th>Hovedinstrument</th></tr>
+    <thead>    <tr><th>Navn</th><th>Klasse</th><th>Internat</th><th>Rom</th><th>Hovedinstrument</th></tr></thead>
+    <tbody>
     <tr><td>Ingrid Sæther</td><td>VG1A</td><td>Treet 1</td><td>12</td><td>Fiolin</td></tr>
     <tr><td>Ola Nordmann</td><td>VG2B</td><td>Svingen nede</td><td>3B</td><td>Trommer/slagverk</td></tr>
+    </tbody>
   </table>
   <ul>
     <li>Overskriftene må skrives <strong>nøyaktig</strong> slik. Rekkefølgen på kolonnene spiller ingen rolle, og kolonner dere ikke bruker kan sløyfes helt.</li>
@@ -382,18 +390,22 @@
 
   <h3>3.5 Deaktivere eller slette?</h3>
   <table>
-    <tr><th style="width:26%">Handling</th><th>Hva skjer</th><th>Bruk når</th></tr>
+    <thead>    <tr><th style="width:26%">Handling</th><th>Hva skjer</th><th>Bruk når</th></tr></thead>
+    <tbody>
     <tr><td class="k">Deaktivere<br><span class="note">(fjern «Aktiv konto»)</span></td><td>Eleven kan ikke logge inn, og forsvinner fra brannlisten og andaktsoversikten. All historikk blir stående.</td><td>Eleven har sluttet, er i permisjon, eller kontoen skal hvile.</td></tr>
     <tr><td class="k">Slette</td><td>Kontoen og <strong>alle registreringer</strong> fjernes for godt. Kan ikke angres.</td><td>Feiloppretting, eller når skolen skal rydde bort gamle data bevisst.</td></tr>
+    </tbody>
   </table>
   <p class="note">Nytt passord til en elev som har glemt sitt: åpne eleven, skriv (eller generer) et passord i passordfeltet, lagre. Eleven blir bedt om å velge sitt eget ved neste innlogging. La feltet stå tomt for å beholde passordet uendret.</p>
 
   <h3>3.6 Faste lister</h3>
   <table>
-    <tr><th style="width:24%">Liste</th><th>Verdier</th></tr>
+    <thead>    <tr><th style="width:24%">Liste</th><th>Verdier</th></tr></thead>
+    <tbody>
     <tr><td class="k">Klasser</td><td>VG1A, VG1B, VG2A, VG2B, VG3A, VG3B</td></tr>
     <tr><td class="k">Internat</td><td>Treet 1, Treet 2, Svingen nede, Svingen oppe, Nedre Vestheim, Øvre Vestheim, Granhaug, Nedre Austheim, Øvre Austheim</td></tr>
     <tr><td class="k">Hovedinstrument</td><td>Sang, Piano, Orgel, Gitar, Bassgitar, Trommer/slagverk, Fiolin, Bratsj, Cello, Kontrabass, Fløyte, Klarinett, Obo, Fagott, Saksofon, Trompet, Trombone, Horn, Tuba, Harpe</td></tr>
+    </tbody>
   </table>
   <p class="note">Disse listene ligger i koden, ikke i Innstillinger. Skal et internat, en klasse eller et instrument legges til eller fjernes, må den som drifter systemet endre det – si fra i god tid før skolestart.</p>
 </section>
@@ -439,20 +451,24 @@
   </p>
   <p style="margin-top:3mm">Under ligger filterknapper – <strong>Alle</strong> eller ett internat – og ett kort per internat med elever, rom og en fargeprikk for status.</p>
   <table>
-    <tr><th style="width:24%">Farge</th><th>Betyr</th></tr>
+    <thead>    <tr><th style="width:24%">Farge</th><th>Betyr</th></tr></thead>
+    <tbody>
     <tr><td class="k">🟢 Grønn</td><td>Krysset seg til stede.</td></tr>
     <tr><td class="k">🔵 Mørkeblå</td><td>Meldt seg borte i natt.</td></tr>
     <tr><td class="k">🔴 Rød</td><td>Ikke registrert. Raden har lys rød bakgrunn.</td></tr>
     <tr><td class="k">🟡 Gul rad</td><td>En gjest – merket «Gjest hos <em>elevnavn</em>» med rom.</td></tr>
+    </tbody>
   </table>
 
   <h3>5.2 Sette status manuelt</h3>
   <p>Hver elevrad har tre store knapper til høyre:</p>
   <table>
-    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr>
+    <thead>    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr></thead>
+    <tbody>
     <tr><td class="k">✓ grønn</td><td>Til stede. Hold pekeren over knappen for å se klokkeslettet eleven eventuelt registrerte seg.</td></tr>
     <tr><td class="k">🏠 blå</td><td>Borte i natt.</td></tr>
     <tr><td class="k">✕ rød</td><td>Fjerner registreringen – eleven står som «ikke registrert» igjen.</td></tr>
+    </tbody>
   </table>
   <p class="note">Elevene kan bare registrere seg innenfor tidsvinduet skolen har satt (kapittel 13). Du kan sette status <strong>når som helst</strong> – også lenge etter at vinduet stengte. Det er slik du fikser eleven med tomt batteri.</p>
 
@@ -506,11 +522,13 @@
   <h3>7.1 QR-kortet</h3>
   <p>Til venstre står koden med en statusmerkelapp:</p>
   <table>
-    <tr><th style="width:34%">Merkelapp</th><th>Betyr</th></tr>
+    <thead>    <tr><th style="width:34%">Merkelapp</th><th>Betyr</th></tr></thead>
+    <tbody>
     <tr><td class="k"><span class="pill green">Gyldig nå · til kl. 08:40</span></td><td>Koden vises, og elevene kan registrere seg.</td></tr>
     <tr><td class="k"><span class="pill amber">Åpner kl. 07:40</span></td><td>For tidlig. Koden dukker opp automatisk når vinduet åpner.</td></tr>
     <tr><td class="k"><span class="pill amber">Andakten er over</span></td><td>Registreringen stengte. Klokkeslettet står i teksten.</td></tr>
     <tr><td class="k"><span class="pill grey">Ingen andakt</span></td><td>Det er helg, og «Kun ukedager» er slått på.</td></tr>
+    </tbody>
   </table>
   <p>Koden bytter seg selv ut med noen sekunders mellomrom, så et avfotografert skjermbilde slutter å virke. Knappen <strong>«Ugyldiggjør koder nå»</strong> nullstiller alle koder umiddelbart – bruk den hvis dere mistenker at noen deler et bilde av skjermen.</p>
 
@@ -525,10 +543,12 @@
   <p>Til høyre ligger to faner: <strong>Til stede</strong> og <strong>Ikke møtt</strong>, med antall i hver. Til stede-listen viser klokkeslett, og «For sent ·» foran tiden for dem som kom etter fristen.</p>
   <p>Hver rad har tre knapper, akkurat som på brannlisten:</p>
   <table>
-    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr>
+    <thead>    <tr><th style="width:24%">Knapp</th><th>Setter eleven til</th></tr></thead>
+    <tbody>
     <tr><td class="k">✓ grønn</td><td>Til stede.</td></tr>
     <tr><td class="k">! gul</td><td>For sent.</td></tr>
     <tr><td class="k">✕ rød</td><td>Fjerner registreringen – eleven står som fravær.</td></tr>
+    </tbody>
   </table>
   <p class="note">Bruk dette for eleven som glemte telefonen, eller som satt der uten å rekke å skanne. Endringen slår inn i ukesrapporten med én gang.</p>
 
@@ -589,10 +609,12 @@
   <h4>Importere turnusen fra Excel</h4>
   <p>Samme to valg som for elevlista: <strong>arket følger malen</strong> (leses lokalt) eller <strong>tolk med OpenAI</strong>. Malen:</p>
   <table>
-    <tr><th>Uke</th><th>Navn</th><th>Startdato</th></tr>
+    <thead>    <tr><th>Uke</th><th>Navn</th><th>Startdato</th></tr></thead>
+    <tbody>
     <tr><td>34</td><td>Ingrid Sæther</td><td>17.08.2026</td></tr>
     <tr><td></td><td>Ola Nordmann</td><td></td></tr>
     <tr><td>35</td><td>Kari Ås</td><td></td></tr>
+    </tbody>
   </table>
   <ul>
     <li><strong>Uke</strong> er ISO-ukenummer 1–53, skrevet som <code>34</code> eller <code>Uke 34</code>. Har flere elever tjeneste samme uke, får de hver sin rad – da kan Uke stå tom, og uken over gjelder videre.</li>
@@ -635,10 +657,12 @@
   <h3>10.2 Turnus med oppgaver</h3>
   <p>Excel-malen for internatvask har én kolonne mer enn kjøkkenets – <strong>Oppgave</strong>, der du skriver oppgavekoden:</p>
   <table>
-    <tr><th>Uke</th><th>Oppgave</th><th>Navn</th><th>Startdato</th></tr>
+    <thead>    <tr><th>Uke</th><th>Oppgave</th><th>Navn</th><th>Startdato</th></tr></thead>
+    <tbody>
     <tr><td>34</td><td>ØVEST1</td><td>Ingrid Sæther</td><td>17.08.2026</td></tr>
     <tr><td></td><td>ØVEST2</td><td>Ola Nordmann</td><td></td></tr>
     <tr><td>35</td><td>ØVEST1</td><td>Kari Ås</td><td></td></tr>
+    </tbody>
   </table>
   <ul>
     <li>Koden arves <strong>ikke</strong> nedover slik ukenummeret gjør – en tom celle betyr «vaskeuke uten bestemt oppgave».</li>
@@ -649,27 +673,33 @@
   <h3>10.3 Signaturer</h3>
   <p>Eleven kvitterer selv for at jobben er gjort. I ukelista ser du statusen, og kan gripe inn:</p>
   <table>
-    <tr><th style="width:26%">Det du ser</th><th>Hva du kan gjøre</th></tr>
+    <thead>    <tr><th style="width:26%">Det du ser</th><th>Hva du kan gjøre</th></tr></thead>
+    <tbody>
     <tr><td class="k"><span class="pill green">✓ Signert …</span></td><td>Hold pekeren over for å se hvem, når og hvordan. <strong>«Angre»</strong> fjerner signaturen.</td></tr>
     <tr><td class="k"><span class="pill grey">Ikke signert</span></td><td><strong>«Signer»</strong> signerer på vegne av eleven – for eleven uten telefon, eller som glemte det. Ditt navn lagres på signaturen.</td></tr>
+    </tbody>
   </table>
   <p>Signaturmetoden vises i klartekst:</p>
   <table>
-    <tr><th style="width:30%">Metode</th><th>Hva den er verdt</th></tr>
+    <thead>    <tr><th style="width:30%">Metode</th><th>Hva den er verdt</th></tr></thead>
+    <tbody>
     <tr><td class="k">Face ID / fingeravtrykk</td><td>Signert i mobilappen. <strong>En kvittering, ikke et bevis</strong> – låsingen skjer på elevens egen telefon, og serveren kan ikke etterprøve den. Verdien ligger i forpliktelsen i å skrive under selv.</td></tr>
     <tr><td class="k">passord</td><td>Signert i nettleseren, kontrollert mot passordet på serveren. Denne er faktisk verifisert.</td></tr>
     <tr><td class="k">lagt inn av admin</td><td>En administrator signerte på vegne av eleven. Navnet på den som gjorde det, står i oversikten.</td></tr>
+    </tbody>
   </table>
   <p class="note">Ingen kan signere en uke som ikke har begynt, og eleven kan bare signere sine egne oppgaver.</p>
 
   <h3>10.4 Oversikt uke for uke</h3>
   <p>Nederst ligger matrisen – oppgavene nedover, ukene bortover. Det er samme oppslag som henger på veggen, men med signaturene fylt inn. Trykk <strong>Utvid</strong> for full bredde, og klikk en ukekolonne for å redigere den uken.</p>
   <table>
-    <tr><th style="width:26%">Tegn i cellen</th><th>Betyr</th></tr>
+    <thead>    <tr><th style="width:26%">Tegn i cellen</th><th>Betyr</th></tr></thead>
+    <tbody>
     <tr><td class="k">✓ grønn</td><td>Signert.</td></tr>
     <tr><td class="k">○ gul</td><td>Uken har vært eller pågår, men er ikke signert.</td></tr>
     <tr><td class="k">· grå prikk</td><td>Satt opp, men uken har ikke begynt ennå.</td></tr>
     <tr><td class="k">–</td><td>Ingen satt opp.</td></tr>
+    </tbody>
   </table>
 </section>
 
@@ -680,10 +710,12 @@
 
   <h3>11.1 Sette opp konkurransen</h3>
   <table>
-    <tr><th style="width:34%">Innstilling</th><th>Hva den gjør</th></tr>
+    <thead>    <tr><th style="width:34%">Innstilling</th><th>Hva den gjør</th></tr></thead>
+    <tbody>
     <tr><td class="k">Starter / Slutter</td><td>Perioden konkurransen varer. <strong>Tom periode = ingen konkurranse</strong>, og kortet vises ikke i elevappen. Økter kan verken startes eller registreres utenfor perioden.</td></tr>
     <tr><td class="k">Obligatorisk oppvarming</td><td>Antall minutter eleven må gjennom før stoppeklokken tar over. Tiden teller med i totalen.</td></tr>
     <tr><td class="k">Andel økter som må dokumenteres</td><td>Prosenten som trekkes ut til å ta bilde. Trekkes for hver økt når eleven starter. Sett <strong>100 %</strong> mens elevene læres opp, eller <strong>0 %</strong> for å slå dokumentasjonen av.</td></tr>
+    </tbody>
   </table>
   <p class="note">Terningkastet skjer på serveren når økten starter, og lagres på økten – ellers kunne appen latt være å spørre.</p>
 
@@ -749,29 +781,35 @@
 
   <h3>13.1 Andakt</h3>
   <table>
-    <tr><th style="width:34%">Innstilling</th><th>Betydning</th></tr>
+    <thead>    <tr><th style="width:34%">Innstilling</th><th>Betydning</th></tr></thead>
+    <tbody>
     <tr><td class="k">Frist for oppmøte</td><td>Oppmøte etter dette regnes som «for sent» / fravær. Standard 08:10.</td></tr>
     <tr><td class="k">QR-koden åpner<br><span class="note">min før fristen (1–180)</span></td><td>Når koden dukker opp på storskjermen. Før dette kan ingen registrere seg. Standard 30.</td></tr>
     <tr><td class="k">QR-koden stenger<br><span class="note">min etter fristen (0–180)</span></td><td>Hvor lenge en som kommer for sent fortsatt rekker å registrere seg – de blir stående som «for sent». <strong>Sett 0</strong> for å stenge på slaget: da er alt etter fristen fravær. Standard 30.</td></tr>
     <tr><td class="k">Kun ukedager</td><td>Ingen andakt lørdag og søndag.</td></tr>
+    </tbody>
   </table>
 
   <h3>13.2 Brannliste – innsjekksvindu</h3>
   <p>Tidsrommet om kvelden der elevene kan melde seg til stede. Utenfor vinduet er registrering stengt for elevene – men <strong>du kan alltid overstyre</strong> fra Brannliste-siden.</p>
   <table>
-    <tr><th style="width:34%">Kveld</th><th>Standard</th></tr>
+    <thead>    <tr><th style="width:34%">Kveld</th><th>Standard</th></tr></thead>
+    <tbody>
     <tr><td class="k">Hverdag (søn–tor)</td><td>20:00 – 23:00 &nbsp;<span class="note">skoledag neste dag</span></td></tr>
     <tr><td class="k">Fredag</td><td>20:00 – 00:00</td></tr>
     <tr><td class="k">Lørdag</td><td>20:00 – 00:00</td></tr>
+    </tbody>
   </table>
   <p class="note">Lukketid i helgen kan settes etter midnatt, f.eks. 00:30. Da hører innsjekken fortsatt til kvelden vinduet startet.</p>
 
   <h3>13.3 E-post</h3>
   <table>
-    <tr><th style="width:28%">Utsending</th><th>Innhold og tidspunkt</th></tr>
+    <thead>    <tr><th style="width:28%">Utsending</th><th>Innhold og tidspunkt</th></tr></thead>
+    <tbody>
     <tr><td class="k">Gjesteforespørsler</td><td>Sendes <strong>umiddelbart</strong> når en elev melder gjest, med direktelenke til godkjenningen.</td></tr>
     <tr><td class="k">Brannliste</td><td>Til ansvarlig lærer, med <strong>hele listen vedlagt som PDF</strong>. Sendes daglig på tidspunktet dere setter. <em>Før kl. 18</em> sendes natten som nettopp er ferdig; <em>fra kl. 18</em> sendes kveldens kommende liste. Standard 14:15.</td></tr>
     <tr><td class="k">Middag (kjøkken)</td><td>Oversikt over hvor mange som spiser i dag. Standard 13:00. Avsendernavnet kan settes eget, f.eks. «Kongshaug Kjøkken».</td></tr>
+    </tbody>
   </table>
   <p>Alle tre har <strong>«Send test nå»</strong>. Bruk den etter hver endring – da vet dere at det virker før dere trenger det.</p>
   <div class="box warn">
@@ -782,10 +820,12 @@
   <h3>13.4 Personvern: lagringstid</h3>
   <p>Systemet rydder etter seg selv. Her styrer dere hvor lenge:</p>
   <table>
-    <tr><th style="width:32%">Innstilling</th><th>Betydning</th></tr>
+    <thead>    <tr><th style="width:32%">Innstilling</th><th>Betydning</th></tr></thead>
+    <tbody>
     <tr><td class="k">Slett gammel historikk automatisk</td><td>Av/på. Kjøres én gang i døgnet.</td></tr>
     <tr><td class="k">Lagringstid<br><span class="note">30–3650 dager</span></td><td>Oppmøte, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste, internatvask og øveøkter eldre enn dette slettes for godt. 365 dager ≈ ett skoleår.</td></tr>
     <tr><td class="k">GPS-koordinater<br><span class="note">1–168 timer</span></td><td>Etter dette nulles posisjonen, mens statusen (til stede / borte / for sent) blir stående. Brannlista trenger statusen, ikke stedet. Standard 24 timer.</td></tr>
+    </tbody>
   </table>
   <p><strong>«Kjør sletting nå»</strong> kjører begge oppryddingene umiddelbart. Sletting er endelig – dataen kan ikke hentes tilbake.</p>
   <p class="note">Endrer dere periodene, husk å oppdatere skolens personvernerklæring så den sier det samme.</p>
@@ -798,11 +838,13 @@
 
   <h3>14.1 Hver dag</h3>
   <table>
-    <tr><th style="width:26%">Når</th><th>Hva</th></tr>
+    <thead>    <tr><th style="width:26%">Når</th><th>Hva</th></tr></thead>
+    <tbody>
     <tr><td class="k">Før andakten</td><td>Sjekk at storskjermen viser QR-koden.</td></tr>
     <tr><td class="k">Etter andakten</td><td>Gå gjennom «Ikke møtt» og rett åpenbare feil.</td></tr>
     <tr><td class="k">Om kvelden</td><td>Se hvem som mangler, følg opp, og sett status manuelt for dem du får bekreftet.</td></tr>
     <tr><td class="k">Fortløpende</td><td>Behandle besøksforespørsler – det røde tallet i menyen viser om det ligger noen.</td></tr>
+    </tbody>
   </table>
 
   <h3>14.2 Hver uke</h3>
@@ -838,7 +880,8 @@
 
   <h3>15.1 Feilsøking</h3>
   <table>
-    <tr><th style="width:38%">Problem</th><th>Løsning</th></tr>
+    <thead>    <tr><th style="width:38%">Problem</th><th>Løsning</th></tr></thead>
+    <tbody>
     <tr><td class="k">En elev sier appen nekter å registrere – «ikke på skolens område»</td><td>Be eleven gå ut eller til et vindu og prøve igjen. Går det fortsatt ikke, sett status manuelt fra Brannliste. Skjer det for mange på en gang, kan skolens koordinater eller radius være feil satt opp på serveren.</td></tr>
     <tr><td class="k">QR-koden vises ikke på storskjermen</td><td>Sjekk klokkeslettet: koden vises bare i vinduet rundt fristen. Statusmerkelappen på Andakt-siden sier når den åpner. Er det helg, er «Kun ukedager» slått på.</td></tr>
     <tr><td class="k">Eleven fikk «QR-koden er ikke gyldig lenger»</td><td>Normalt – koden byttes ut med noen sekunders mellomrom. Be eleven skanne på nytt.</td></tr>
@@ -849,6 +892,7 @@
     <tr><td class="k">Sidemenyen er borte</td><td>Skjermen er for smal. Bruk PC eller nettbrett i landskap.</td></tr>
     <tr><td class="k">Du blir kastet ut til innloggingen</td><td>Innloggingen varer 12 timer. Logg inn på nytt.</td></tr>
     <tr><td class="k">Tallene ser gamle ut</td><td>Brannliste- og elevlistene lastes når du åpner siden. Last siden på nytt. Andakt-siden oppdaterer seg selv hvert femte sekund.</td></tr>
+    </tbody>
   </table>
 
   <h3>15.2 Vanlige spørsmål</h3>
@@ -881,7 +925,8 @@
   <p class="lead">Hvor du gjør hva. Heng den gjerne opp ved kontor-PC-en.</p>
 
   <table>
-    <tr><th style="width:44%">Jeg skal …</th><th>Gå til</th></tr>
+    <thead>    <tr><th style="width:44%">Jeg skal …</th><th>Gå til</th></tr></thead>
+    <tbody>
     <tr><td class="k">se hvem som mangler på brannlisten</td><td>Dashboard, eller Brannliste</td></tr>
     <tr><td class="k">krysse av en elev manuelt</td><td>Brannliste → knappene på raden</td></tr>
     <tr><td class="k">ta med brannlisten ut</td><td>Brannliste → Eksporter PDF</td></tr>
@@ -896,6 +941,7 @@
     <tr><td class="k">signere vask for en elev uten telefon</td><td>Internat → uken → Signer</td></tr>
     <tr><td class="k">sende en beskjed til alle elever</td><td>Varsler → Send til alle nå</td></tr>
     <tr><td class="k">endre fristen for andakt</td><td>Innstillinger → Andakt</td></tr>
+    </tbody>
   </table>
 
   <h3>De fire som ikke kan angres</h3>

@@ -29,6 +29,24 @@ Filnavnene er ikke valgfrie: de står i `HANDBOOKS` i
 `server/src/routes/handbooks.js`, sammen med tittelen og beskrivelsen som vises
 i admin. Endrer du et filnavn, må listen endres i samme slengen.
 
+## QR-koden i elevmanualen
+
+Kapittel 1.1 har en QR-kode til nedlastingssiden. Den ligger som **inline SVG**
+i `elevmanual.html` (ingen bildefil), og er derfor skarp i alle størrelser.
+Skal den peke et annet sted, lag en ny og bytt ut `<svg>`-en i `.qrbox .kode`:
+
+```bash
+cd server && node -e "require('qrcode').toString('https://elevapp.online/distribusjon',{type:'svg',errorCorrectionLevel:'H',margin:4,color:{dark:'#1e3a5f',light:'#ffffff00'}},(e,s)=>console.log(e||s))"
+```
+
+Husk å rette adressen som står i klartekst under koden i samme slengen – den er
+der for dem som ikke får skannet.
+
+Feilkorreksjonen er satt til `H` (tåler 30 % skade), fordi koden også skal virke
+fra et oppslag på veggen. Koden er 31 mm bred i trykk, og det er god margin: den
+lar seg lese helt ned til rundt 110 piksler bredde, altså langt under det et
+telefonkamera fanger av et A4-ark.
+
 ## Når innholdet må oppdateres
 
 Håndbøkene beskriver skjermbildene slik de er, med knappetekster og
