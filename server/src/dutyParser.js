@@ -54,23 +54,32 @@ function firstLastKey(norm) {
 
 // Bygger oppslags-maps fra elevlista. Verdi = liste (for å oppdage flertydighet).
 function buildIndex(students) {
-  const full = new Map(), fl = new Map();
+  const full = new Map(), fl = new Map(), fornavn = new Map();
   const push = (map, key, s) => { if (!key) return; (map.get(key) || map.set(key, []).get(key)).push(s); };
   for (const s of students) {
     const norm = normName(s.full_name);
     push(full, norm, s);
     push(fl, firstLastKey(norm), s);
+    push(fornavn, norm.split(' ')[0], s);
   }
-  return { full, fl };
+  return { full, fl, fornavn };
 }
 
 // Løs ett navn til én elev, eller null hvis ingen/flertydig.
+//
+// Vaskelistene på veggen skriver som regel bare fornavn («Olivia»), så et
+// fornavn godtas også – men BARE når nøyaktig én elev heter det. Er det to
+// Olivia-er, blir raden stående som «ikke funnet», og admin velger selv.
 function resolveStudent(name, index) {
   const norm = normName(name);
   const exact = index.full.get(norm);
   if (exact && exact.length === 1) return exact[0];
   const fl = index.fl.get(firstLastKey(norm));
   if (fl && fl.length === 1) return fl[0];
+  if (!norm.includes(' ')) {
+    const bare = index.fornavn.get(norm);
+    if (bare && bare.length === 1) return bare[0];
+  }
   return null; // ingen treff, eller flertydig → «unmatched»
 }
 
@@ -172,9 +181,10 @@ const DUTY_TEMPLATE_HEADERS = {
 // Kjøkkentjenesten har ingen oppgaver, og da er kolonnen en ukjent overskrift.
 const DUTY_TEMPLATE_HEADERS_TASKS = { ...DUTY_TEMPLATE_HEADERS, task: 'Oppgave' };
 
-// «34» og «Uke 34» er begge greit. Alt annet er null (og blir en feilmelding).
+// «34», «Uke 34» og «Veke 34» er alle greit – skolens egne lister er på
+// nynorsk. Alt annet er null (og blir en feilmelding med radnummer).
 function parseWeekNumber(text) {
-  const m = /^(?:uke\s*)?(\d{1,2})$/i.exec(String(text).trim());
+  const m = /^(?:uke|veke)?\s*(\d{1,2})$/i.exec(String(text).trim());
   if (!m) return null;
   const n = Number(m[1]);
   return n >= 1 && n <= 53 ? n : null;
@@ -199,10 +209,149 @@ function parseSheetDate(text) {
   return null;
 }
 
+// ── Matrisemalen: oppgavene nedover, ukene bortover ─────────
+//
+// Samme oppsett som vaskelistene som henger på internatene:
+//
+//   | Oppgave  | Beskrivelse | Uke 45 | Uke 46 | Uke 47 |
+//   | ØVEST1   | 80-gongen   | Olivia | Chandra| Signe  |
+//   | ØVEST2   | KJØKKEN     | Mari   |        | Inga   |
+//
+// «Beskrivelse» er bare til for å lese – den tolkes ikke. «Signer»-rader fra
+// de gamle listene hoppes over, for signaturen ligger i appen nå. Har en uke
+// flere elever på samme oppgave, skiller man dem med komma eller linjeskift.
+//
+// En valgfri «Startdato»-rad rett under overskriftene pinner ukene til
+// konkrete mandager – nyttig over et årsskifte.
+const MATRISE_FORSTE = 'Oppgave';
+const MATRISE_BESKRIVELSE = 'Beskrivelse';
+const MATRISE_DATORAD = 'Startdato';
+const MATRISE_SIGNERRAD = 'Signer';
+
+// Er dette et matriseark? Ja hvis overskriftsraden mangler «Navn» og har minst
+// én ukekolonne etter den første – da er ukene bortover, ikke nedover.
+function erMatrise(rows) {
+  const headerRow = (rows || []).findIndex((r) => !isBlankRow(r));
+  if (headerRow < 0) return false;
+  const celler = (rows[headerRow] || []).map((c) => String(c || '').trim());
+  if (celler.some((c) => normName(c) === normName(DUTY_TEMPLATE_HEADERS.name))) return false;
+  return celler.slice(1).some((c) => parseWeekNumber(c) != null);
+}
+
+// «Rom 81 Olivia» → «Olivia». Vaskelistene skriver rommet foran navnet.
+const utenRom = (s) => String(s).replace(/^\s*rom\.?\s*\d+\s*[-–:.]?\s*/i, '').trim();
+
+export function parseDutyMatrix(rows, students, { tasks = null } = {}) {
+  const grid = rows || [];
+  const headerRow = grid.findIndex((r) => !isBlankRow(r));
+  if (headerRow < 0) throw new Error('Regnearket er tomt.');
+  const header = grid[headerRow] || [];
+
+  if (normName(cellText(header, 0)) !== normName(MATRISE_FORSTE)) {
+    throw new Error(`Første celle må være ${q(MATRISE_FORSTE)}. Overskriftsraden er rad ${headerRow + 1}.`);
+  }
+
+  // Kolonnene: ukene bortover, pluss en valgfri beskrivelseskolonne.
+  const ukeKol = [];                      // { kol, week }
+  const feil = [];
+  for (let i = 1; i < header.length; i++) {
+    const tekst = cellText(header, i);
+    if (!tekst) continue;
+    if (normName(tekst) === normName(MATRISE_BESKRIVELSE)) continue;   // bare til å lese
+    const week = parseWeekNumber(tekst);
+    if (week == null) {
+      feil.push(`overskriften ${q(tekst)} er ikke et gyldig ukenummer (1–53)`);
+      continue;
+    }
+    if (ukeKol.some((u) => u.week === week)) { feil.push(`uke ${week} står i to kolonner`); continue; }
+    ukeKol.push({ kol: i, week });
+  }
+  throwRowErrors(feil);
+  if (!ukeKol.length) throw new Error(`Fant ingen ukekolonner. Skriv ukene bortover i rad ${headerRow + 1}: ${q('Uke 45')}, ${q('Uke 46')} …`);
+
+  const koder = new Map((tasks || []).map((t) => [normName(t.code), t]));
+  const today = todayDate();
+  const index = buildIndex(students);
+  const datoer = new Map();               // ukenummer → mandagsdato fra arket
+  const uker = new Map();                 // ukenummer → { matched, unmatched, seen }
+  const hentUke = (week) => uker.get(week)
+    || uker.set(week, { week, matched: [], unmatched: [], seen: new Set() }).get(week);
+
+  for (let r = headerRow + 1; r < grid.length; r++) {
+    const row = grid[r];
+    const radnr = r + 1;
+    if (isBlankRow(row)) continue;
+    const forste = cellText(row, 0);
+    const normForste = normName(forste);
+
+    // Signaturradene fra de gamle listene: signaturen ligger i appen nå.
+    if (!forste || normForste === normName(MATRISE_SIGNERRAD)) continue;
+
+    // Valgfri datorad: én mandagsdato per ukekolonne.
+    if (normForste === normName(MATRISE_DATORAD)) {
+      for (const { kol, week } of ukeKol) {
+        const tekst = cellText(row, kol);
+        if (!tekst) continue;
+        const iso = parseSheetDate(tekst);
+        if (!iso) { feil.push(`rad ${radnr}, uke ${week}: ${q(tekst)} er ikke en gyldig dato`); continue; }
+        if (isoWeekNumber(iso).isoWeek !== week) {
+          feil.push(`rad ${radnr}: ${q(tekst)} er i uke ${isoWeekNumber(iso).isoWeek}, men står i kolonnen for uke ${week}`);
+          continue;
+        }
+        datoer.set(week, weekStartOf(iso));
+      }
+      continue;
+    }
+
+    const task = koder.get(normForste);
+    if (!task) { feil.push(`rad ${radnr}: ${q(forste)} er ingen kjent oppgavekode`); continue; }
+    if (task.active === false) {
+      feil.push(`rad ${radnr}: oppgaven ${q(task.code)} er deaktivert – aktiver den igjen, eller ta raden ut av arket`);
+      continue;
+    }
+
+    for (const { kol, week } of ukeKol) {
+      const celle = cellText(row, kol);
+      if (!celle) continue;                       // ingen satt opp den uken
+      const uke = hentUke(week);
+      // Flere elever i samme celle skilles med komma, semikolon eller linjeskift.
+      for (const bit of celle.split(/[\n,;]+/)) {
+        const navn = utenRom(bit).replace(/\s+/g, ' ');
+        if (!navn) continue;
+        const stud = resolveStudent(navn, index);
+        if (!stud) { uke.unmatched.push(navn); continue; }
+        if (stud.dorm && task.dorm && normName(stud.dorm) !== normName(task.dorm)) {
+          feil.push(`rad ${radnr}, uke ${week}: ${q(stud.full_name)} bor på ${stud.dorm}, men ${q(task.code)} hører til ${task.dorm}`);
+          continue;
+        }
+        const nokkel = `${stud.id}:${task.id}`;
+        if (uke.seen.has(nokkel)) continue;
+        uke.seen.add(nokkel);
+        uke.matched.push({ id: stud.id, fullName: stud.full_name, taskId: task.id, taskCode: task.code, taskTitle: task.title });
+      }
+    }
+  }
+
+  throwRowErrors(feil);
+  const weeks = [...uker.values()]
+    .map(({ week, matched, unmatched }) => ({
+      week,
+      weekStart: resolveWeekStart(week, datoer.get(week) || null, null, today),
+      matched,
+      unmatched,
+    }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  if (!weeks.length) throw new Error('Fant ingen elever i arket.');
+  return { year: null, weeks };
+}
+
 // Tolker et turnusark som følger malen. Samme returformat som parseDutyXlsx,
 // så forhåndsvisningen i admin er den samme uansett hvilken vei arket kom inn.
 export function parseDutyTemplate(rows, students, { tasks = null } = {}) {
   const grid = rows || [];
+  // To oppsett: matrisen (oppgavene nedover, ukene bortover – som vaskelista
+  // på veggen) og én rad per elev. Arket sier selv hvilket det er.
+  if (tasks && erMatrise(grid)) return parseDutyMatrix(grid, students, { tasks });
   const headers = tasks ? DUTY_TEMPLATE_HEADERS_TASKS : DUTY_TEMPLATE_HEADERS;
   const { headerRow, cols } = readTemplateHeader(grid, headers, ['week', 'name']);
   // Oppgavekoder slås opp normalisert, så «øvest1» og «ØVEST1» er samme kode.

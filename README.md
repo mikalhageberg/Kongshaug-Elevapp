@@ -253,18 +253,46 @@ for det som ligger fram i tid. Klikk en ukekolonne for å redigere den uken.
 
 #### Importere turnus fra Excel
 
-Samme valg som for elevlista, og samme mal for begge tjenestene – men
-internatvasken har i tillegg en **Oppgave**-kolonne:
+Samme valg som for elevlista, men de to tjenestene har hver sin form:
+**internatvasken** bruker en matrise som ligner vaskelista på veggen, og
+**kjøkkentjenesten** én rad per elev.
 
-- **Arket følger malen** (standard) – tolkes lokalt, ingen OpenAI:
+- **Arket følger malen** (standard) – tolkes lokalt, ingen OpenAI.
 
-  | Uke | Oppgave | Navn | Startdato |
-  | --- | ------- | ---- | --------- |
-  | 34 | ØVEST1 | Ingrid Sæther | 17.08.2026 |
-  |  | ØVEST2 | Ola Nordmann |  |
-  | 35 | ØVEST1 | Kari Ås |  |
+  **Internatvask** – oppgavene nedover, ukene bortover:
 
-  (Kjøkkentjenesten har ingen oppgaver, og der er kolonnen ikke med.)
+  | Oppgave | Beskrivelse | Uke 45 | Uke 46 | Uke 47 |
+  | ------- | ----------- | ------ | ------ | ------ |
+  | Startdato |  | 03.11.2025 | 10.11.2025 | 17.11.2025 |
+  | ØVEST1 | 80-gongen | Olivia | Chandra | Signe |
+  | ØVEST2 | KJØKKEN | Mari |  | Inga |
+
+  **«Last ned mal» lager denne ferdig utfylt**: oppgavene som rader (i
+  internatrekkefølge), 20 uker som kolonner og `Startdato`-raden med
+  mandagsdatoene. Da er det bare navnene som skal skrives inn.
+
+  - Første celle må hete `Oppgave`, og første kolonne inneholder
+    **oppgavekoden**. `Beskrivelse` er valgfri og tolkes ikke – den er der
+    for at man skal se hva koden betyr.
+  - Ukekolonnene godtar `Uke 45`, `Veke 45` og `45`. `Startdato`-raden er
+    valgfri, og pinner ukene til konkrete mandager.
+  - I cellene står **navnet**. Fornavn holder så lenge bare én elev heter det;
+    ellers blir raden stående som «ikke funnet» i forhåndsvisningen. Romnummer
+    foran navnet (`Rom 81 Olivia`) strippes, og `Signer`-rader fra de gamle
+    listene hoppes over – signaturen ligger i appen nå.
+  - Flere elever på samme oppgave samme uke skilles med komma eller linjeskift.
+
+  **Kjøkkentjeneste** – én rad per elev:
+
+  | Uke | Navn | Startdato |
+  | --- | ---- | --------- |
+  | 34 | Ingrid Sæther | 17.08.2026 |
+  |  | Ola Nordmann |  |
+  | 35 | Kari Ås |  |
+
+  Internatvask leses fortsatt på denne formen også, med en `Oppgave`-kolonne
+  for koden – arket sier selv hvilket oppsett det er (mangler `Navn` i
+  overskriftsraden, og har ukenumre bortover, er det en matrise).
 
   - **Rad 1 er overskriftsraden** med postene skrevet nøyaktig som over, og én
     elev per rad nedover fra rad 2. Har flere elever tjeneste samme uke, får de
@@ -276,10 +304,10 @@ internatvasken har i tillegg en **Oppgave**-kolonne:
     **mandagen** i uken (`17.08.2026`, `2026-08-17`, eller en datoformatert
     celle) – nyttig over et årsskifte. Uten dato velges nærmeste kommende uke
     med det nummeret, som i OpenAI-veien.
-  - `Oppgave` (bare internatvask) er oppgavekoden. Hver rad har sin egen kode –
-    den arves *ikke* nedover slik `Uke` gjør, for en tom celle betyr «vaskeuke
-    uten bestemt oppgave». Koden må høre til elevens eget internat; en kode fra
-    et annet internat er nesten alltid en skrivefeil og avvises.
+  - `Oppgave` (bare internatvask, radformen) er oppgavekoden. Hver rad har sin
+    egen kode – den arves *ikke* nedover slik `Uke` gjør, for en tom celle betyr
+    «vaskeuke uten bestemt oppgave». Koden må høre til elevens eget internat; en
+    kode fra et annet internat er nesten alltid en skrivefeil og avvises.
   - Skrivefeil i uke, oppgavekode eller dato avvises med radnummer, og en dato
     som havner i en annen uke enn ukenummeret sier ifra. **Navn** som ikke
     finnes blant elevene stopper *ikke* importen – de vises som «ikke funnet» i

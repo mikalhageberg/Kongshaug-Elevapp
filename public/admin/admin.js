@@ -1296,8 +1296,22 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         <details style="font-size:12.5px;line-height:1.55;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px">
           <summary style="cursor:pointer;font-weight:800">Slik skal Excel-malen se ut</summary>
           <ol style="margin:8px 0 0;padding-left:18px">
+            ${cfg.hasTasks ? `
+            <li><b>Oppgavene nedover, ukene bortover</b> – samme oppsett som vaskelista på veggen. Rad 1 er
+                overskriftsraden: første celle er <b>Oppgave</b>, så en valgfri <b>Beskrivelse</b>, og deretter
+                én kolonne per uke (<b>Uke 45</b>, <b>Veke 46</b> eller bare <b>47</b>).</li>
+            <li><b>Første kolonne</b> er oppgavekoden (<b>ØVEST1</b>), slik den står i oppgavelista lenger ned på
+                siden. Beskrivelses-kolonnen er bare til å lese – den tolkes ikke.</li>
+            <li><b>I cellene skriver du navnet</b> på den som har oppgaven den uken. Tom celle = ingen satt opp.
+                Flere på samme oppgave samme uke skilles med komma eller linjeskift.</li>
+            <li><b>Fornavn holder</b> så lenge bare én elev heter det – ellers skriver du hele navnet. Står
+                romnummeret foran («Rom 81 Olivia»), leses navnet likevel. <b>Signer</b>-rader fra de gamle listene
+                hoppes over; signaturen ligger i appen nå.</li>
+            <li>En valgfri <b>Startdato</b>-rad rett under overskriftene gir mandagsdatoen for hver uke
+                (<b>17.08.2026</b>) – nyttig over et årsskifte. Malen du laster ned har den ferdig utfylt.</li>
+            <li>Koden må høre til <b>elevens eget internat</b>, og bare <b>den første fanen</b> i arket leses.</li>` : `
             <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
-                <b>Uke</b>, ${cfg.hasTasks ? '<b>Oppgave</b>, ' : ''}<b>Navn</b>, <b>Startdato</b>.</li>
+                <b>Uke</b>, <b>Navn</b>, <b>Startdato</b>.</li>
             <li><b>Én elev per rad</b> nedover fra rad 2. Har flere elever ${cfg.importOrd} samme uke, får de hver sin rad –
                 da kan <b>Uke</b> stå tom på radene under, og uken over gjelder videre.</li>
             <li><b>Uke</b> er ISO-ukenummer (1–53), skrevet som <b>34</b> eller <b>Uke 34</b>.
@@ -1305,18 +1319,12 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
             <li><b>Startdato</b> er valgfri, og kan sløyfes helt. Tar du den med, skal det være <b>mandagen</b> i uken
                 (<b>17.08.2026</b> eller <b>2026-08-17</b>) – nyttig over et årsskifte. Uten dato velges den nærmeste
                 kommende uken med det nummeret.</li>
-            ${cfg.hasTasks ? `
-            <li><b>Oppgave</b> er koden til oppgaven (<b>ØVEST1</b>), slik den står i oppgavelista lenger ned på siden.
-                Hver rad har sin egen kode – den arves ikke nedover slik <b>Uke</b> gjør. Lar du cellen stå tom, blir det
-                en vaskeuke uten bestemt oppgave, som før.</li>
-            <li>Koden må høre til <b>elevens eget internat</b>. En kode fra et annet internat er nesten alltid en
-                skrivefeil, og avvises med radnummer.</li>` : ''}
             <li>Rekkefølgen på kolonnene spiller ingen rolle, men en kolonne som er med må hete akkurat som over.
-                Bare <b>den første fanen</b> i arket leses.</li>
+                Bare <b>den første fanen</b> i arket leses.</li>`}
           </ol>
           <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i uke${cfg.hasTasks ? ', oppgavekode' : ''} eller dato, sier importen ifra med
             radnummer i stedet for å gjette. Navn som ikke finnes blant elevene stopper ikke importen – de vises som
-            «ikke funnet» i forhåndsvisningen under.${cfg.hasTasks ? ' <b>OpenAI-veien leser ikke oppgavekoder</b> – de radene blir vaskeuker uten oppgave.' : ''}</p>
+            «ikke funnet» i forhåndsvisningen under.${cfg.hasTasks ? ' Har du ark med <b>én rad per elev</b> (Uke, Oppgave, Navn) fra før, leses de fortsatt. <b>OpenAI-veien leser ikke oppgavekoder</b> – de radene blir vaskeuker uten oppgave.' : ''}</p>
         </details>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input type="file" id="dutyXlsx" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:14px" />
@@ -1794,14 +1802,43 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   }
 
   // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
-  card.querySelector('#dutyXlsxMal').addEventListener('click', () => {
-    const poster = cfg.hasTasks ? ['Uke', 'Oppgave', 'Navn', 'Startdato'] : ['Uke', 'Navn', 'Startdato'];
-    downloadBlob(`${kind === 'kitchen' ? 'kjokkentjeneste' : 'internatvask'}-mal.xlsx`,
-      buildXlsx({
-        rows: [poster.map((v) => ({ v, s: 1 }))],
+  card.querySelector('#dutyXlsxMal').addEventListener('click', async (e) => {
+    // Kjøkkentjenesten har ingen oppgaver: én rad per elev, som før.
+    if (!cfg.hasTasks) {
+      downloadBlob('kjokkentjeneste-mal.xlsx', buildXlsx({
+        rows: [['Uke', 'Navn', 'Startdato'].map((v) => ({ v, s: 1 }))],
         sheetName: cfg.navn,
-        cols: cfg.hasTasks ? [8, 12, 26, 14] : [8, 26, 14],
+        cols: [8, 26, 14],
       }));
+      return;
+    }
+
+    // Internatvasken får samme oppsett som vaskelista på veggen: oppgavene
+    // nedover, ukene bortover. Oppgavene og ukene fylles inn på forhånd, så
+    // det bare er navnene som skal skrives.
+    const aktive = tasks.filter((t) => t.active);
+    if (!aktive.length) { toast('Opprett oppgavene først – de blir radene i malen.'); return; }
+    const btn = e.currentTarget; btn.disabled = true; const gammelTekst = btn.textContent; btn.textContent = 'Lager…';
+    try {
+      const d = await api(`${cfg.base}?weeks=20`);
+      const uker = d.weeks;
+      const header = ['Oppgave', 'Beskrivelse', ...uker.map((w) => `Uke ${w.isoWeek}`)];
+      // Startdato-raden pinner ukene til konkrete mandager, så et årsskifte
+      // midt i turnusen ikke kan tolkes feil.
+      const datorad = ['Startdato', '', ...uker.map((w) => {
+        const [y, m, dag] = w.weekStart.split('-');
+        return `${dag}.${m}.${y}`;
+      })];
+      const rader = DORMS
+        .flatMap((dorm) => aktive.filter((t) => t.dorm === dorm))
+        .map((t) => [t.code, t.title, ...uker.map(() => '')]);
+      downloadBlob('internatvask-mal.xlsx', buildXlsx({
+        rows: [header.map((v) => ({ v, s: 1 })), datorad, ...rader],
+        sheetName: 'Internatvask',
+        cols: [14, 30, ...uker.map(() => 13)],
+      }));
+    } catch (ex) { toast(ex.message); }
+    finally { btn.disabled = false; btn.textContent = gammelTekst; }
   });
 
   card.querySelector('#dutyXlsxUpload').addEventListener('click', async () => {
