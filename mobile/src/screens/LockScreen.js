@@ -4,7 +4,9 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { C } from '../theme';
 import { Button } from '../ui';
 
-// Låser opp med Face ID / Touch ID, med telefonens egen kode som reservevalg
+// Slipper eleven inn med Face ID / fingeravtrykk, med telefonens egen kode som
+// reservevalg. For eleven er dette innloggingen – kontoen er allerede pålogget,
+// men appen er låst ved hver åpning.
 // (disableDeviceFallback: false). Vi lagrer altså ingen egen PIN – telefonens
 // innebygde lås er både sikrere og mindre kode.
 //
@@ -31,7 +33,7 @@ export async function biometriNavn() {
   }
 }
 
-export async function authenticate({ prompt = 'Lås opp Kongshaug Elevapp' } = {}) {
+export async function authenticate({ prompt = 'Logg inn i Kongshaug Elevapp' } = {}) {
   const level = await deviceLockLevel();
   if (level === LocalAuthentication.SecurityLevel.NONE) return { success: true, unprotected: true };
   try {
@@ -70,11 +72,11 @@ export default function LockScreen({ onUnlocked, onLogout }) {
       <Text style={styles.title}>Kongshaug Elevapp</Text>
       <Text style={styles.sub}>
         {failed
-          ? 'Låsingen ble avbrutt. Prøv igjen for å fortsette.'
-          : `Lås opp med ${biometri} eller koden din.`}
+          ? 'Innloggingen ble avbrutt. Prøv igjen for å fortsette.'
+          : `Logg inn med ${biometri} eller koden din.`}
       </Text>
       <View style={{ height: 22 }} />
-      <Button title="Lås opp" onPress={tryUnlock} loading={busy} style={{ alignSelf: 'stretch' }} />
+      <Button title="Logg inn" onPress={tryUnlock} loading={busy} style={{ alignSelf: 'stretch' }} />
       <View style={{ height: 10 }} />
       <Button title="Logg ut" color="#fff" textColor={C.slate} fontSize={15} onPress={onLogout}
         style={{ alignSelf: 'stretch', height: 46, borderWidth: 1.5, borderColor: '#d3dae2' }} />
