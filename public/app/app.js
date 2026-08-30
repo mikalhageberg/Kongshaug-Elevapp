@@ -315,16 +315,18 @@ const DUTY_KINDS = {
     neste: 'Din neste vaskeuke',
     get ic() { return icon.broom; },
     // Internatvasken har oppgaver med beskrivelse og signering. I nettleseren
-    // finnes ikke Face ID, så her signeres det med elevens eget passord –
+    // finnes ingen biometri, så her signeres det med elevens eget passord –
     // serveren kontrollerer det mot passord-hashen (se routes/duty.js).
     hasTasks: true,
   },
 };
 
-// Hvordan oppgaven ble kvittert ut. Face ID skjer på elevens egen telefon, så
+// Hvordan oppgaven ble kvittert ut. Biometrien skjer på elevens egen telefon, så
 // teksten sier hva som faktisk skjedde – ikke mer enn signaturen holder.
+// Navnet er generisk her: nettleseren vet ikke om eleven brukte ansikt eller
+// finger, og «Face ID» ville uansett vært feil for en Android-telefon.
 const SIGN_METHOD = {
-  biometri: 'Face ID / fingeravtrykk',
+  biometri: 'biometri (ansikt eller fingeravtrykk)',
   passord: 'passord',
   admin: 'lagt inn av administrasjonen',
 };
@@ -652,7 +654,7 @@ async function renderDutyPlan(node, kind) {
       <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">Vis hele planen</button>
       <div id="planList" style="display:none;margin-top:10px"></div>` : ''}`;
 
-  // Oppgavekortene: hele beskrivelsen, og signering med passord. Face ID finnes
+  // Oppgavekortene: hele beskrivelsen, og signering med passord. Biometri finnes
   // bare i mobilappen, så her skriver eleven under med sitt eget passord.
   if (cfg.hasTasks && minesNå.length) {
     const boks = node.querySelector('#mineOppgaver');

@@ -1223,11 +1223,11 @@ const DUTY_KINDS = {
   },
 };
 
-// Hvordan en oppgave ble kvittert ut. Face ID skjer på elevens egen telefon, så
+// Hvordan en oppgave ble kvittert ut. Biometrien skjer på elevens egen telefon, så
 // den er en kvittering – ikke et bevis. Teksten skal derfor si hva som faktisk
 // skjedde, ikke love mer enn signaturen holder.
 const SIGN_METHOD = {
-  biometri: 'Face ID / fingeravtrykk',
+  biometri: 'biometri (ansikt eller fingeravtrykk)',
   passord: 'passord',
   admin: 'lagt inn av admin',
 };
@@ -1343,7 +1343,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         </div>
         <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:12px">
           Beskriv oppgaven slik den står på vaskelista. Eleven får hele teksten opp i appen, og signerer med
-          Face ID når jobben er gjort. <b>Koden</b> er den du skriver i «Oppgave»-kolonnen i Excel-turnusen.
+          biometri når jobben er gjort. <b>Koden</b> er den du skriver i «Oppgave»-kolonnen i Excel-turnusen.
         </div>
         <div id="taskList"></div>
       </div>` : ''}
