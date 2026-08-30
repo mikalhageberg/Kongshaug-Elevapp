@@ -111,7 +111,11 @@ export const config = {
 // derfor bare http(s)-adresser – en «javascript:»-lenke ville blitt kjørt i
 // nettleseren til alle som åpner siden.
 function cleanStoreUrl(value) {
-  const url = String(value || '').trim();
+  // Blir lenken limt inn sammen med appnavnet – ofte over to linjer, slik App
+  // Store Connect kopierer den – tar vi bare første ord. Uten dette hadde
+  // resten blitt en del av adressen: URL-tolkeren fjerner linjeskiftet i
+  // stedet for å si ifra, og navnet havner rett i spørrestrengen.
+  const url = String(value || '').trim().split(/\s+/)[0];
   if (!url) return '';
   try {
     const parsed = new URL(url);
