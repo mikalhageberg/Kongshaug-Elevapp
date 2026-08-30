@@ -598,16 +598,16 @@
   <p>Knappen <strong>«Send til kjøkken nå»</strong> sender oversikten på e-post umiddelbart, til adressen som er satt under Innstillinger. Bruk den når kjøkkenet spør, eller for å teste at oppsettet virker.</p>
 
   <h3>9.2 Kjøkkentjeneste</h3>
-  <p>Tjenesten går på rundgang, én uke om gangen.</p>
+  <p>Tjenesten går på rundgang, én uke om gangen. <strong>Du trenger ikke Excel for å sette den opp</strong> – uke for uke søker du bare opp elevene og klikker dem inn. Excel-importen lenger nede er en snarvei når hele halvåret skal legges inn på én gang.</p>
   <ol class="steps">
     <li><span class="st">Bla til riktig uke</span> Pilene ‹ og › flytter deg en uke fram eller tilbake. Uken vises med nummer og datoer.</li>
-    <li><span class="st">Legg til elever</span> Søk opp eleven i feltet og klikk navnet.</li>
+    <li><span class="st">Legg til elever</span> Skriv de første bokstavene i navnet i søkefeltet nederst, og klikk eleven i trefflista. Gjenta for hver elev som skal ha tjeneste den uken.</li>
     <li><span class="st">Fjern hvis noe blir feil</span> Knappen «Fjern» på raden.</li>
   </ol>
   <p>Under ligger <strong>Kommende uker</strong> – hele rundgangen framover, slik elevene ser den i appen.</p>
 
-  <h4>Importere turnusen fra Excel</h4>
-  <p>Samme to valg som for elevlista: <strong>arket følger malen</strong> (leses lokalt) eller <strong>tolk med OpenAI</strong>. Malen:</p>
+  <h4>Importere turnusen fra Excel <span class="note" style="font-weight:600">– valgfritt</span></h4>
+  <p>Har skolen turnusen ferdig i et regneark, slipper du å legge inn uke for uke. Samme to valg som for elevlista: <strong>arket følger malen</strong> (leses lokalt) eller <strong>tolk med OpenAI</strong>. Malen:</p>
   <table>
     <thead>    <tr><th>Uke</th><th>Navn</th><th>Startdato</th></tr></thead>
     <tbody>
@@ -654,8 +654,17 @@
     <p>En oppgave som har vært satt opp på en uke kan ikke slettes – da ville historikken mistet hva som faktisk ble gjort. Systemet sier ifra med hvor mange ganger oppgaven har vært i bruk, og ber deg deaktivere i stedet. Deaktiverte oppgaver kan ikke settes på nye uker, men blir stående i historikken.</p>
   </div>
 
-  <h3>10.2 Turnus med oppgaver</h3>
-  <p>Excel-malen for internatvask har én kolonne mer enn kjøkkenets – <strong>Oppgave</strong>, der du skriver oppgavekoden:</p>
+  <h3>10.2 Sette opp vaskeuker</h3>
+  <p>Som for kjøkkentjenesten legger du elevene inn <strong>direkte i ukevisningen</strong>, uten regneark:</p>
+  <ol class="steps">
+    <li><span class="st">Bla til uken</span> Med pilene ‹ og ›.</li>
+    <li><span class="st">Velg oppgave</span> Nedtrekkslista <strong>«Legg til på oppgave»</strong> over søkefeltet. Lar du den stå tom, blir det en vaskeuke uten bestemt oppgave.</li>
+    <li><span class="st">Søk opp eleven og klikk navnet</span> Eleven legges på uken med oppgaven du valgte. Skal flere elever ha hver sin oppgave samme uke, bytter du oppgave i lista mellom hver.</li>
+  </ol>
+  <p class="note">Bruk denne veien også når noe skal endres midt i semesteret – en elev som bytter uke, eller en oppgave som må flyttes. «Fjern» på raden tar eleven av uken igjen.</p>
+
+  <h4>Importere turnusen fra Excel <span class="note" style="font-weight:600">– valgfritt</span></h4>
+  <p>Skal hele rundgangen inn på én gang, har Excel-malen for internatvask én kolonne mer enn kjøkkenets – <strong>Oppgave</strong>, der du skriver oppgavekoden:</p>
   <table>
     <thead>    <tr><th>Uke</th><th>Oppgave</th><th>Navn</th><th>Startdato</th></tr></thead>
     <tbody>
@@ -692,15 +701,7 @@
 
   <h3>10.4 Oversikt uke for uke</h3>
   <p>Nederst ligger matrisen – oppgavene nedover, ukene bortover. Det er samme oppslag som henger på veggen, men med signaturene fylt inn. Trykk <strong>Utvid</strong> for full bredde, og klikk en ukekolonne for å redigere den uken.</p>
-  <table>
-    <thead>    <tr><th style="width:26%">Tegn i cellen</th><th>Betyr</th></tr></thead>
-    <tbody>
-    <tr><td class="k">✓ grønn</td><td>Signert.</td></tr>
-    <tr><td class="k">○ gul</td><td>Uken har vært eller pågår, men er ikke signert.</td></tr>
-    <tr><td class="k">· grå prikk</td><td>Satt opp, men uken har ikke begynt ennå.</td></tr>
-    <tr><td class="k">–</td><td>Ingen satt opp.</td></tr>
-    </tbody>
-  </table>
+  <p class="note"><strong>✓ grønn</strong> = signert &nbsp;·&nbsp; <strong>○ gul</strong> = uken har vært eller pågår uten signatur &nbsp;·&nbsp; <strong>· grå prikk</strong> = satt opp, men uken har ikke begynt &nbsp;·&nbsp; <strong>–</strong> = ingen satt opp.</p>
 </section>
 
 <!-- ═══════════════ 11 ØVEKONKURRANSE ═══════════════ -->
