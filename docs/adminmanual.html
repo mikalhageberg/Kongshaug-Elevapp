@@ -413,27 +413,52 @@
 <!-- ═══════════════ 4 ADMINISTRATORER ═══════════════ -->
 <section>
   <h2><span class="num">4</span>Administratorer</h2>
-  <p class="lead">Ansattkontoer. Samme liste som for elever, men uten klasse, internat og instrument – og med full tilgang til alt i systemet.</p>
+  <p class="lead">Ansattkontoer. Samme liste som for elever, men uten klasse, internat og instrument. Administratorer finnes i to nivåer: <strong>superbruker</strong> og vanlig.</p>
 
-  <h3>4.1 Opprette en administrator</h3>
+  <h3>4.1 Superbruker eller vanlig administrator</h3>
+  <table>
+    <thead><tr><th style="width:32%">Kan</th><th style="width:34%">Superbruker</th><th>Vanlig administrator</th></tr></thead>
+    <tbody>
+    <tr><td class="k">De daglige sidene<br><span style="font-weight:normal">Brannliste, gjester, andakt, kjøkken, internat, øvekonkurranse, varsler</span></td><td>Ja</td><td>Ja</td></tr>
+    <tr><td class="k">Rette på en elev<br><span style="font-weight:normal">Rom, internat, klasse, instrument, deaktivere</span></td><td>Ja</td><td>Ja</td></tr>
+    <tr><td class="k">Opprette og slette elever</td><td>Ja</td><td>Nei</td></tr>
+    <tr><td class="k">Se og endre administratorer</td><td>Ja</td><td>Nei – siden vises ikke</td></tr>
+    <tr><td class="k">Innstillinger-siden</td><td>Ja</td><td>Nei – siden vises ikke</td></tr>
+    </tbody>
+  </table>
+  <p>Innstillinger som hører til de daglige sidene – push-bryterne under Varsler, øvekonkurransens periode og oppvarming, og hvor lenge andaktsarkivet tar vare på uker – kan vanlige administratorer fortsatt endre. Det er bare Innstillinger-siden som er stengt.</p>
+
+  <div class="box">
+    <span class="h">Hvorfor vanlige administratorer ikke får endre hverandre</span>
+    <p>Å sette et nytt passord på en konto er å kunne logge inn som den. Kunne en vanlig administrator endre en superbruker, ville hun kunne gi seg selv full tilgang på et halvt minutt. Derfor er hele administrator-siden superbruker-område, ikke bare knappen som oppretter.</p>
+  </div>
+
+  <h3>4.2 Opprette en administrator</h3>
   <ol class="steps">
     <li><span class="st">Gå til «Administratorer» → «Legg til flere»</span> Eller rediger en eksisterende med blyanten.</li>
     <li><span class="st">Fyll inn fullt navn</span> Brukernavn foreslås automatisk.</li>
+    <li><span class="st">Kryss av «Superbruker» hvis kontoen skal ha det</span> Står i kolonnen «Tilgang», ved siden av navnet. Du kan også endre det senere ved å åpne raden.</li>
     <li><span class="st">Opprett</span> Passordet vises én gang, og brukerkort kan skrives ut på samme måte som for elever.</li>
   </ol>
+  <p>I listen står det under <strong>Tilgang</strong> hvem som er hva, så du ser med én gang hvem som har utvidet tilgang.</p>
 
   <div class="box warn">
-    <span class="h">Administratorer har full tilgang</span>
-    <p>Det finnes ingen mellomnivåer – en administrator kan opprette og slette brukere, endre alle innstillinger, sende push til alle elever og nullstille øvekonkurransen. Gi rollen bare til dem som faktisk trenger den.</p>
+    <span class="h">Gi minst to personer superbruker</span>
+    <p>Den siste superbrukeren kan verken fratas tilgangen, deaktiveres eller slettes – det er en sperre mot å låse skolen ute av sine egne innstillinger. Men med bare én er dere avhengige av at akkurat den kontoen virker og at akkurat den personen er tilgjengelig.</p>
   </div>
 
-  <h3>4.2 Din egen konto</h3>
+  <div class="box">
+    <span class="h">Før den første superbrukeren er utpekt</span>
+    <p>Så lenge <em>ingen</em> er merket som superbruker, regnes alle administratorer som superbrukere, og det står en gul påminnelse øverst i admin. Det er med vilje: alternativet ville stengt skolen ute uten vei inn igjen. Så snart den første er krysset av, gjelder skillet for alle andre.</p>
+  </div>
+
+  <h3>4.3 Din egen konto</h3>
   <ul>
     <li>Du kan ikke merke eller slette deg selv – raden din er merket <em>(deg)</em>, og avkryssingsboksen er låst.</li>
     <li>Trenger du å bytte ditt eget passord: åpne din egen rad og skriv inn et nytt.</li>
   </ul>
 
-  <h3>4.3 Den aller første kontoen</h3>
+  <h3>4.4 Den aller første kontoen</h3>
   <p>Når systemet settes opp på en tom database, opprettes den første administratoren automatisk fra miljøvariablene <code>ADMIN_USERNAME</code> og <code>ADMIN_PASSWORD</code> på serveren. Finnes det allerede en administrator, gjør oppstarten ingenting. Dette er en driftsoppgave – i det daglige oppretter dere administratorer fra denne siden.</p>
 </section>
 
@@ -606,6 +631,12 @@
   </ol>
   <p>Under ligger <strong>Kommende uker</strong> – hele rundgangen framover, slik elevene ser den i appen.</p>
 
+  <div class="box">
+    <span class="h">Alt lagres med én gang</span>
+    <p>Det finnes ingen lagreknapp her. Klikker du en elev inn i en uke, eller trykker «Fjern», er endringen lagret i samme øyeblikk – og elevene ser den i appen med det samme. Det grønne merket «Lagres automatisk» over ukevelgeren minner om det.</p>
+  </div>
+
+
   <h4>Importere turnusen fra Excel <span class="note" style="font-weight:600">– valgfritt</span></h4>
   <p>Har skolen turnusen ferdig i et regneark, slipper du å legge inn uke for uke. Samme to valg som for elevlista: <strong>arket følger malen</strong> (leses lokalt) eller <strong>tolk med OpenAI</strong>. Malen:</p>
   <table>
@@ -662,6 +693,11 @@
     <li><span class="st">Søk opp eleven og klikk navnet</span> Eleven legges på uken med oppgaven du valgte. Skal flere elever ha hver sin oppgave samme uke, bytter du oppgave i lista mellom hver.</li>
   </ol>
   <p class="note">Bruk denne veien også når noe skal endres midt i semesteret – en elev som bytter uke, eller en oppgave som må flyttes. «Fjern» på raden tar eleven av uken igjen.</p>
+
+  <div class="box">
+    <span class="h">Alt lagres med én gang</span>
+    <p>Det finnes ingen lagreknapp her heller. Klikker du en elev inn i en uke, bytter oppgave eller trykker «Fjern», er endringen lagret i samme øyeblikk – og eleven ser den i appen med det samme. Det grønne merket «Lagres automatisk» over ukevelgeren minner om det.</p>
+  </div>
 
   <h4>Importere turnusen fra Excel <span class="note" style="font-weight:600">– valgfritt</span></h4>
   <p>Skal hele rundgangen inn på én gang, har Excel-malen for internatvask én kolonne mer enn kjøkkenets – <strong>Oppgave</strong>, der du skriver oppgavekoden:</p>
@@ -775,6 +811,11 @@
   <h2><span class="num">12</span>Varsler</h2>
   <p class="lead">Push-varsler til elevenes telefoner. To automatiske, og én du skriver selv. Varslene når bare elever som har appen installert og har tillatt varsler.</p>
 
+  <div class="box">
+    <span class="h">Bryterne lagres med én gang</span>
+    <p>De to av/på-bryterne på denne siden har ingen lagreknapp. Skrur du en av dem på eller av, er det lagret i samme øyeblikk, og du får en bekreftelse nederst på skjermen. Det eneste du må trykke på her, er «Send test nå» og «Send til alle».</p>
+  </div>
+
   <h3>12.1 Automatisk påminnelse: husk brannlisten</h3>
   <p>Sendes <strong>kl. 20:00 hver dag</strong> til elevene som ikke har krysset seg av for kvelden ennå. Tidspunktet er fast, og uavhengig av åpningstidene for innsjekksvinduet.</p>
   <div class="box">
@@ -833,11 +874,24 @@
     <thead>    <tr><th style="width:28%">Utsending</th><th>Innhold og tidspunkt</th></tr></thead>
     <tbody>
     <tr><td class="k">Gjesteforespørsler</td><td>Sendes <strong>umiddelbart</strong> når en elev melder gjest, med direktelenke til godkjenningen.</td></tr>
-    <tr><td class="k">Brannliste</td><td>Til ansvarlig lærer, med <strong>hele listen vedlagt som PDF</strong>. Sendes daglig på tidspunktet dere setter. <em>Før kl. 18</em> sendes natten som nettopp er ferdig; <em>fra kl. 18</em> sendes kveldens kommende liste. Standard 14:15.</td></tr>
+    <tr><td class="k">Brannliste</td><td>Til ansvarlig lærer, med <strong>hele listen vedlagt som PDF</strong> og en stor grønn nedlastingsknapp. Sendes et gitt <strong>antall minutter etter at innsjekksvinduet stengte</strong> – ikke på et fast klokkeslett. Standard 15 minutter.</td></tr>
     <tr><td class="k">Middag (kjøkken)</td><td>Oversikt over hvor mange som spiser i dag. Standard 13:00. Avsendernavnet kan settes eget, f.eks. «Kongshaug Kjøkken».</td></tr>
     </tbody>
   </table>
   <p>Alle tre har <strong>«Send test nå»</strong>. Bruk den etter hver endring – da vet dere at det virker før dere trenger det.</p>
+
+  <div class="box">
+    <span class="h">Hvorfor brannlisten følger stengetiden og ikke klokka</span>
+    <p>Innsjekksvinduet stenger til ulik tid: 23:00 på hverdager, men gjerne 00:30 i helgen. Et fast klokkeslett ville derfor truffet feil to dager i uken – enten før alle hadde rukket å krysse seg av, eller lenge etter. Med «15 minutter etter stengetid» går e-posten 23:15 på en onsdag og 00:45 natt til lørdag, uten at noen må endre noe.</p>
+    <p>Endrer dere lukketiden under «Brannliste – innsjekksvindu», flytter e-posten seg av seg selv.</p>
+  </div>
+
+  <div class="box warn">
+    <span class="h">Den grønne knappen i e-posten – be læreren bruke den</span>
+    <p>E-posten har en stor grønn knapp: <strong>«Last ned brannlisten»</strong>. Den laster PDF-en rett ned på enheten, og på iPad havner den i mappen <strong>Nedlastinger</strong>.</p>
+    <p>Poenget er beredskap. Ved brann kan både nett og strøm være borte, og da hjelper det ikke at listen ligger i en e-post eller på en nettside. En nedlastet fil ligger på iPaden og virker uansett. <strong>Gjør det til rutine at listen lastes ned hver kveld, ikke først når det brenner.</strong></p>
+    <p>Lenken virker i 72 timer og krever ikke innlogging – den skal fungere midt på natten uten at noen må huske et passord. Den viser de samme opplysningene som PDF-en vedlagt i samme e-post.</p>
+  </div>
   <div class="box warn">
     <span class="h">Krever Brevo</span>
     <p>E-post går gjennom tjenesten Brevo. Er den ikke satt opp, står det et gult varsel på siden om at <code>BREVO_API_KEY</code> og <code>MAIL_FROM</code> mangler i serverens oppsett. Det er en driftsoppgave – kontakt den som drifter systemet.</p>
