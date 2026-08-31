@@ -98,12 +98,23 @@ export function buildFireEmailHtml(overview, link = fireListLink(overview.nightD
           <div style="font-size:15px;font-weight:bold;color:#a12a1f">Last den ned nå – ikke vent til det brenner.</div>
           <div style="font-size:14px;color:#55607a;line-height:1.55;margin-top:6px">
             Ved brann kan både nett og strøm være borte. En nedlastet fil ligger på iPaden og virker uansett.
-            Etter nedlasting finner du den i <b>Filer → Nedlastinger</b>.
           </div>
-          <div style="font-size:13.5px;color:#55607a;line-height:1.55;margin-top:10px;padding-top:10px;border-top:1px solid #f5d6d2">
-            <b>Åpner listen seg i stedet for å lastes ned?</b> Da er den åpnet inne i e-postappen.
-            Trykk dele-ikonet <b>&#x1F5D2;</b> øverst og velg <b>«Lagre i Filer»</b> – eller hold fingeren på den grønne
-            knappen og velg <b>«Last ned lenket fil»</b>.
+          <div style="font-size:14px;color:#55607a;line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid #f5d6d2">
+            <b>Slik gjør du det:</b>
+            <table cellspacing="0" cellpadding="0" style="margin-top:8px">
+              <tr>
+                <td valign="top" style="padding:0 8px 6px 0;font-weight:bold;color:#a12a1f">1.</td>
+                <td style="padding:0 0 6px">Trykk den grønne knappen. Listen lastes ned.</td>
+              </tr>
+              <tr>
+                <td valign="top" style="padding:0 8px 6px 0;font-weight:bold;color:#a12a1f">2.</td>
+                <td style="padding:0 0 6px">Trykk <b>«Åpne i forhåndsvisning»</b> for å se den.</td>
+              </tr>
+              <tr>
+                <td valign="top" style="padding:0 8px 0 0;font-weight:bold;color:#a12a1f">3.</td>
+                <td>Filen ligger nå i <b>Filer → Nedlastinger</b> og virker uten nett.</td>
+              </tr>
+            </table>
           </div>
         </div>
         <p style="margin:18px 0 0;font-size:13px;color:#8a93a3">
