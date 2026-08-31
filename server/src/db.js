@@ -302,6 +302,10 @@ ensureColumn('fire_away_periods', 'no_dinner', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'auth_provider', "TEXT NOT NULL DEFAULT 'local'");
 ensureColumn('users', 'feide_id', 'TEXT');
+// Superbruker: administrator som i tillegg kan endre innstillinger og
+// opprette/slette brukere. Vanlige administratorer driver de daglige sidene.
+// Se permissions.js for hva flagget faktisk åpner.
+ensureColumn('users', 'superadmin', 'INTEGER NOT NULL DEFAULT 0');
 // Hovedinstrument – brukes til gruppering i øvekonkurransen.
 ensureColumn('users', 'instrument', 'TEXT');
 // Når dokumentasjonsbildet ble tatt. Bildet tas på slutten av økten, så

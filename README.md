@@ -327,6 +327,39 @@ og signeringen ligger på `POST {base}/duties/:id/sign` (admin angrer med
 `DELETE` på samme sti). Malen deler kode med elevlista
 (`server/src/sheetTemplate.js`), så feilmeldingene er de samme begge steder.
 
+### Superbrukere og vanlige administratorer
+
+Administratorer er delt i to. **Superbrukere** kan i tillegg endre
+innstillingene og opprette, redigere og slette brukere. **Vanlige
+administratorer** driver de daglige sidene – brannliste, andakt, gjester,
+kjøkken, internat, øvekonkurransen og varsler – og kan rette opplysninger på
+elever som allerede finnes, men ikke opprette eller slette dem.
+
+Skillet håndheves på serveren (`server/src/permissions.js`), ikke bare ved å
+skjule knapper. Flagget slås opp i databasen ved hvert kall, ikke i tokenet: en
+sesjon varer opptil 90 dager i mobilappen, og tas rettigheten fra noen skal det
+gjelde med én gang.
+
+At en vanlig administrator ikke kan **endre** en administratorkonto er en del av
+det samme: å sette et nytt passord på en superbruker ville vært å overta kontoen
+hennes.
+
+Innstillinger som hører til andre sider – push-bryterne på Varsler,
+øvekonkurransens periode og andakts-arkivet – kan vanlige administratorer
+fortsatt endre. Lista over hvilke ligger i `ADMIN_EDITABLE_SETTINGS`
+(`settings.js`) og er en **ja-liste**: en ny innstilling er beskyttet fra første
+stund, uten at noen må huske det.
+
+**Komme i gang:** sett `SUPERADMIN_USERNAMES` i miljøet til brukernavnene på de
+første superbrukerne, start serveren, og fjern variabelen igjen. Deretter styres
+flagget fra admin → Administratorer.
+
+Så lenge ingen er utpekt, regnes **alle** administratorer som superbrukere.
+Alternativet – å låse alt til ingen har tilgang – ville stengt skolen ute av
+sine egne innstillinger uten vei inn igjen. Serveren varsler om tilstanden ved
+oppstart, og admin viser en påminnelse. Den siste superbrukeren kan verken
+fratas flagget, deaktiveres eller slettes.
+
 ### Juksesikring (GPS)
 
 Både brannliste- og andaktsregistrering sender elevens GPS-posisjon. Serveren
@@ -386,6 +419,7 @@ Kongshaug/
 │  │  ├─ andaktReport.js   # fravær/for sent per dag og uke
 │  │  ├─ andaktArchive.js  # arkivet over ferdige ukesrapporter
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
+│  │  ├─ permissions.js    # superbrukere vs. vanlige administratorer
 │  │  ├─ practice.js       # øvekonkurransen
 │  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata

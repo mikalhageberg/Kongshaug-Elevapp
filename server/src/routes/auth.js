@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import db from '../db.js';
 import { verifyPassword, hashPassword, issueSession, signToken, clearSession, requireAuth, isAppReviewUser, normalizeUsername } from '../auth.js';
+import { isSuperAdmin, superadminCount } from '../permissions.js';
 
 const router = Router();
 
@@ -56,6 +57,12 @@ router.post('/login', loginLimiter, async (req, res) => {
       room: user.room,
       mustChangePassword: !!user.must_change_password,
       authProvider: user.auth_provider || 'local',
+      // Superbruker-tilgang leses fra databasen, ikke fra tokenet – se
+      // permissions.js. superadminSetUp forteller om noen i det hele tatt er
+      // utpekt; er svaret nei, har alle administratorer full tilgang inntil
+      // videre, og admin viser en påminnelse om å utpeke noen.
+      superadmin: user.role === 'admin' && isSuperAdmin(user.id),
+      superadminSetUp: superadminCount() > 0,
       // true kun for App/Play Store-reviewer-kontoen: appen tilbyr da
       // registrering uten QR-skanning (reviewer har ingen storskjerm å skanne).
       appReviewBypass: isAppReviewUser(user.username),
@@ -103,6 +110,8 @@ router.get('/me', requireAuth, (req, res) => {
       room: user.room,
       mustChangePassword: !!user.must_change_password,
       authProvider: user.auth_provider || 'local',
+      superadmin: user.role === 'admin' && isSuperAdmin(user.id),
+      superadminSetUp: superadminCount() > 0,
       // true kun for App/Play Store-reviewer-kontoen: appen tilbyr da
       // registrering uten QR-skanning (reviewer har ingen storskjerm å skanne).
       appReviewBypass: isAppReviewUser(user.username),

@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import db from '../db.js';
 import { config } from '../config.js';
 import { hashPassword, requireAuth, requireAdmin, normalizeUsername } from '../auth.js';
+import { requireSuperAdmin, isSuperAdmin, isAdminAccount, erSisteSuperbruker } from '../permissions.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import { parseStudentsXlsx, parseStudentsTemplate } from '../studentParser.js';
 import { removeUsersFromArchive } from '../andaktArchive.js';
@@ -20,6 +21,7 @@ function publicUser(u) {
     dorm: u.dorm,
     room: u.room,
     instrument: u.instrument,
+    superadmin: !!u.superadmin,
     active: !!u.active,
     mustChangePassword: !!u.must_change_password,
     authProvider: u.auth_provider || 'local',
@@ -70,8 +72,8 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/users  – opprett bruker. Kun admin. Elever kan ikke registrere seg selv.
-router.post('/', async (req, res) => {
-  let { username, password, fullName, role, className, dorm, room, instrument } = req.body || {};
+router.post('/', requireSuperAdmin, async (req, res) => {
+  let { username, password, fullName, role, className, dorm, room, instrument, superadmin } = req.body || {};
   username = normalizeUsername(username);
   fullName = String(fullName || '').trim();
   role = role === 'admin' ? 'admin' : 'student';
@@ -93,10 +95,11 @@ router.post('/', async (req, res) => {
   // Nye kontoer får et midlertidig passord som må byttes ved første innlogging.
   const info = db
     .prepare(
-      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`
+      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, superadmin, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
     )
-    .run(username, password_hash, fullName, role, className || null, dorm || null, room || null, instrument || null);
+    .run(username, password_hash, fullName, role, className || null, dorm || null, room || null, instrument || null,
+      role === 'admin' && superadmin ? 1 : 0);
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json({
@@ -119,7 +122,7 @@ router.post('/', async (req, res) => {
 //
 // Tillatte klasser/internat sendes som query-parametre fra frontend, slik at
 // CLASSES/DORMS i admin.js forblir eneste fasit.
-router.post('/parse-xlsx', express.raw({ type: () => true, limit: '5mb' }), async (req, res) => {
+router.post('/parse-xlsx', requireSuperAdmin, express.raw({ type: () => true, limit: '5mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Tom fil.' });
   const useAi = req.query.mode === 'ai';
   if (useAi && !config.openai.enabled) return res.status(400).json({ error: 'OpenAI er ikke satt opp (mangler OPENAI_API_KEY). Bruk malen i stedet.' });
@@ -146,7 +149,7 @@ router.post('/parse-xlsx', express.raw({ type: () => true, limit: '5mb' }), asyn
 // og returnerer passordene i klartekst ÉN gang (til utskrift av brukerkort).
 // Feltet heter fortsatt «students» av bakoverkompatibilitet; role styrer om det
 // blir elever eller administratorer. Administratorer får ikke klasse/internat/rom.
-router.post('/bulk', async (req, res) => {
+router.post('/bulk', requireSuperAdmin, async (req, res) => {
   const list = Array.isArray(req.body?.students) ? req.body.students : [];
   if (!list.length) return res.status(400).json({ error: 'Ingen brukere å opprette' });
   if (list.length > 500) return res.status(400).json({ error: 'For mange på én gang (maks 500)' });
@@ -194,7 +197,16 @@ router.patch('/:id', async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   if (!user) return res.status(404).json({ error: 'Fant ikke brukeren' });
 
-  const { fullName, className, dorm, room, instrument, active, password } = req.body || {};
+  const { fullName, className, dorm, room, instrument, active, password, superadmin } = req.body || {};
+
+  // Å endre en administrator – ikke minst passordet hennes – er å kunne overta
+  // kontoen. Vanlige administratorer kan derfor rette på elever, men ikke på
+  // hverandre. Uten denne sperren ville begrensningen på å OPPRETTE
+  // administratorer ikke vært verdt noe.
+  if (isAdminAccount(id) && !isSuperAdmin(req.auth.sub)) {
+    return res.status(403).json({ error: 'Bare superbrukere kan endre administratorkontoer' });
+  }
+
   const fields = [];
   const vals = [];
   if (fullName !== undefined) { fields.push('full_name = ?'); vals.push(String(fullName).trim()); }
@@ -202,7 +214,19 @@ router.patch('/:id', async (req, res) => {
   if (dorm !== undefined) { fields.push('dorm = ?'); vals.push(dorm || null); }
   if (room !== undefined) { fields.push('room = ?'); vals.push(room || null); }
   if (instrument !== undefined) { fields.push('instrument = ?'); vals.push(instrument || null); }
-  if (active !== undefined) { fields.push('active = ?'); vals.push(active ? 1 : 0); }
+  if (active !== undefined) {
+    if (!active && erSisteSuperbruker(id)) {
+      return res.status(400).json({ error: 'Kan ikke deaktivere den siste superbrukeren.' });
+    }
+    fields.push('active = ?'); vals.push(active ? 1 : 0);
+  }
+  if (superadmin !== undefined) {
+    if (!isSuperAdmin(req.auth.sub)) return res.status(403).json({ error: 'Krever superbruker-tilgang' });
+    if (!superadmin && erSisteSuperbruker(id)) {
+      return res.status(400).json({ error: 'Kan ikke fjerne den siste superbrukeren. Gi en annen administrator tilgang først.' });
+    }
+    fields.push('superadmin = ?'); vals.push(superadmin ? 1 : 0);
+  }
   if (password) {
     if (String(password).length < 6) return res.status(400).json({ error: 'Passord må ha minst 6 tegn' });
     fields.push('password_hash = ?');
@@ -219,8 +243,11 @@ router.patch('/:id', async (req, res) => {
 });
 
 // DELETE /api/users/:id  – slett en bruker (og deres registreringer via cascade).
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireSuperAdmin, (req, res) => {
   const id = Number(req.params.id);
+  if (erSisteSuperbruker(id)) {
+    return res.status(400).json({ error: 'Kan ikke slette den siste superbrukeren. Gi en annen administrator tilgang først.' });
+  }
   if (Number(req.auth.sub) === id) {
     return res.status(400).json({ error: 'Du kan ikke slette din egen konto' });
   }
@@ -242,7 +269,7 @@ router.delete('/:id', (req, res) => {
 
 // POST /api/users/bulk-delete  – slett flere brukere på én gang.
 // body: { ids: [1,2,3] }. Hopper over egen konto; verner den siste administratoren.
-router.post('/bulk-delete', (req, res) => {
+router.post('/bulk-delete', requireSuperAdmin, (req, res) => {
   const raw = Array.isArray(req.body?.ids) ? req.body.ids : [];
   const selfId = Number(req.auth.sub);
   const ids = [...new Set(raw.map(Number).filter((n) => Number.isInteger(n) && n > 0 && n !== selfId))];

@@ -6,7 +6,9 @@ import {
   ARCHIVE_WEEKS_MIN, ARCHIVE_WEEKS_MAX,
   QR_BEFORE_MIN, QR_BEFORE_MAX, QR_AFTER_MIN, QR_AFTER_MAX,
   WARMUP_MIN, WARMUP_MAX, PHOTO_PERCENT_MIN, PHOTO_PERCENT_MAX,
+  ADMIN_EDITABLE_SETTINGS,
 } from '../settings.js';
+import { requireSuperAdmin, isSuperAdmin } from '../permissions.js';
 import { isDateString } from '../isoWeek.js';
 import { runRetentionNow } from '../retention.js';
 import { config } from '../config.js';
@@ -89,11 +91,19 @@ router.put('/', (req, res) => {
     return res.status(400).json({ error: 'Sluttdato kan ikke være før startdato.' });
   }
 
+  // Innstillingene på Innstillinger-siden krever superbruker. De som hører til
+  // andre sider slipper gjennom, slik at en vanlig administrator kan drifte
+  // varsler og øvekonkurransen uten å ha nøkkelen til alt.
+  const beskyttet = Object.keys(patch).filter((k) => !ADMIN_EDITABLE_SETTINGS.has(k));
+  if (beskyttet.length && !isSuperAdmin(req.auth.sub)) {
+    return res.status(403).json({ error: 'Krever superbruker-tilgang for å endre disse innstillingene.' });
+  }
+
   res.json(setSettings(patch));
 });
 
 // Send brannlisten på e-post nå (for å teste oppsettet).
-router.post('/test-email', async (req, res) => {
+router.post('/test-email', requireSuperAdmin, async (req, res) => {
   try {
     const result = await sendFireListEmail();
     res.json({ ok: true, ...result });
@@ -134,7 +144,7 @@ router.post('/test-duty-push', async (req, res) => {
 
 // Kjør sletting/nulling med én gang, i stedet for å vente på neste døgn.
 // Ignorerer av/på-bryteren: admin har trykket bevisst.
-router.post('/run-retention', (req, res) => {
+router.post('/run-retention', requireSuperAdmin, (req, res) => {
   try {
     res.json({ ok: true, ...runRetentionNow() });
   } catch (ex) {

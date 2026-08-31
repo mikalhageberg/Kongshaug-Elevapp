@@ -102,6 +102,25 @@ function intOrZero(value, fallback) {
   return Number.isInteger(n) && n >= 0 ? n : fallback;
 }
 
+// Innstillinger en VANLIG administrator får endre. Alt annet krever superbruker.
+//
+// Bevisst en ja-liste og ikke en nei-liste: legges en ny innstilling til på
+// Innstillinger-siden senere, er den beskyttet fra første stund. En nei-liste
+// ville sluppet den gjennom til noen husket å oppdatere den.
+//
+// Disse hører hjemme på andre sider, som vanlige administratorer drifter selv:
+// Varsler (push-bryterne), Øvekonkurranse (periode og oppvarming) og Andakt
+// (hvor mange ukesrapporter arkivet tar vare på).
+export const ADMIN_EDITABLE_SETTINGS = new Set([
+  'fireReminderPushEnabled',
+  'dutyPushEnabled',
+  'practiceStartDate',
+  'practiceEndDate',
+  'practiceWarmupMinutes',
+  'practicePhotoPercent',
+  'andaktArchiveWeeks',
+]);
+
 export function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));

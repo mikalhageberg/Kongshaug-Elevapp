@@ -20,11 +20,13 @@ import practiceRoutes from './routes/practice.js';
 import handbookRoutes from './routes/handbooks.js';
 import distributionRoutes from './routes/distribution.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
+import { bootstrapSuperadmins } from './permissions.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 import { startRetentionScheduler } from './retention.js';
 import { startAndaktArchiveScheduler } from './andaktArchive.js';
 
 await ensureBootstrapAdmin();
+bootstrapSuperadmins();
 
 const app = express();
 app.disable('x-powered-by');

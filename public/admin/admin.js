@@ -100,10 +100,19 @@ async function init() {
   render();
 }
 
+// Sider bare superbrukere ser: innstillingene og administrator-registeret.
+// Å kunne endre en annen administrator er å kunne overta kontoen hennes, så de
+// to hører sammen.
+const SUPERADMIN_SIDER = new Set(['innstillinger', 'administratorer']);
+
 function render() {
   if (!user) return renderLogin();
   if (user.mustChangePassword) return renderChangePassword();
   const route = (location.hash || '#/').slice(2);
+  // Serveren avviser uansett, men en adresse skrevet inn for hånd skal ikke
+  // gi en halvtegnet side full av feilmeldinger.
+  const side = route.split('/')[0];
+  if (SUPERADMIN_SIDER.has(side) && !user.superadmin) return page('dashboard', renderIngenTilgang);
   if (route.startsWith('storskjerm')) return renderStorskjerm();
   if (route.startsWith('brukere')) return page('brukere', renderBrukere);
   if (route.startsWith('administratorer')) return page('administratorer', renderAdmins);
@@ -231,7 +240,7 @@ function page(active, renderMain) {
     ['varsler', 'Varsler', nav.bell, '/varsler'],
     ['handboker', 'Håndbøker', nav.book, '/handboker'],
     ['innstillinger', 'Innstillinger', nav.gear, '/innstillinger'],
-  ];
+  ].filter(([id]) => user.superadmin || !SUPERADMIN_SIDER.has(id));
   root.innerHTML = '';
   const layout = el(`
     <div class="layout">
@@ -247,7 +256,14 @@ function page(active, renderMain) {
           <button id="logout" title="Logg ut" style="background:none;border:none;color:#9fb0c6;padding:4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
         </div>
       </aside>
-      <main class="content"><div id="main" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></main>
+      <main class="content">
+        ${user.superadmin && !user.superadminSetUp ? `
+        <div style="background:var(--amber-bg);border-bottom:1px solid #f0dca0;color:var(--amber-ink);padding:11px 26px;font-size:13.5px;font-weight:600;line-height:1.5">
+          ⚠ Ingen superbrukere er utpekt ennå, så <b>alle administratorer</b> har full tilgang til innstillinger og brukeradministrasjon.
+          Kryss av «Superbruker» på de kontoene som skal ha det, under <a href="#/administratorer" style="color:inherit">Administratorer</a>.
+        </div>` : ''}
+        <div id="main" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
+      </main>
     </div>`);
   root.appendChild(layout);
   layout.querySelector('#logout').addEventListener('click', async () => { await api('/api/auth/logout', { method: 'POST' }); user = null; go('/'); render(); });
@@ -328,6 +344,15 @@ function renderBrukere(main) {
   });
 }
 
+function renderIngenTilgang(main) {
+  header(main, 'Ingen tilgang', 'Denne siden er forbeholdt superbrukere');
+  main.appendChild(el(`<div class="page" style="max-width:560px">
+    <div class="kpi" style="padding:26px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px">Du har ikke tilgang til denne siden</div>
+      <div style="font-size:14px;color:var(--muted-2);line-height:1.55">Innstillinger og administratorkontoer styres av superbrukere. Ta kontakt med en av dem hvis du trenger noe endret her.</div>
+    </div></div>`));
+}
+
 // ── Administratorer (ansatte) ────────────────────────────────
 function renderAdmins(main) {
   return renderUserList(main, {
@@ -338,7 +363,11 @@ function renderAdmins(main) {
 
 async function renderUserList(main, cfg) {
   const isStudent = cfg.role === 'student';
-  header(main, cfg.title, 'Laster…',
+  // Vanlige administratorer kan rette på elever som allerede finnes, men ikke
+  // opprette eller slette dem. Knappene skjules i stedet for å feile i møtet
+  // med serveren.
+  const kanOpprette = user.superadmin;
+  header(main, cfg.title, 'Laster…', !kanOpprette ? '' :
     `<button class="btn btn-primary" id="bulk" style="height:44px;padding:0 18px;font-size:14.5px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Legg til flere</button>`);
   const searchBar = cfg.search
     ? `<div style="margin-bottom:16px"><input id="search" class="field" placeholder="Søk navn eller brukernavn…" style="max-width:340px;height:42px;border-radius:12px" /></div>`
@@ -348,7 +377,7 @@ async function renderUserList(main, cfg) {
       <span id="bulkcount" style="font-weight:700"></span>
       <div style="flex:1"></div>
       <button id="bulkclear" class="btn btn-ghost" style="height:38px;padding:0 14px;font-size:13.5px">Fjern valg</button>
-      <button id="bulkdel" class="btn" style="height:38px;padding:0 16px;font-size:13.5px;background:var(--red);color:#fff">Slett valgte</button>
+      ${kanOpprette ? '<button id="bulkdel" class="btn" style="height:38px;padding:0 16px;font-size:13.5px;background:var(--red);color:#fff">Slett valgte</button>' : ''}
     </div>
     <div id="table" style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden"></div></div>`);
   main.appendChild(page);
@@ -410,10 +439,10 @@ async function renderUserList(main, cfg) {
       .filter((u) => !q || u.fullName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q));
     if (sort.key && sorters[sort.key]) rows.sort((a, b) => sorters[sort.key](a, b, sort.dir));
     lastRows = rows;
-    const cols = isStudent ? '42px 1.6fr 1.4fr .8fr 1.2fr .9fr 60px' : '42px 1.8fr 1.6fr 1fr 60px';
+    const cols = isStudent ? '42px 1.6fr 1.4fr .8fr 1.2fr .9fr 60px' : '42px 1.6fr 1.4fr 1.1fr .9fr 60px';
     const headCells = '<div><input type="checkbox" id="selAll" style="width:18px;height:18px;cursor:pointer" /></div>' + (isStudent
       ? th('name', 'Navn') + th('username', 'Brukernavn') + th('class', 'Klasse') + th('dorm', 'Internat / rom') + th('status', 'Status') + '<div></div>'
-      : th('name', 'Navn') + th('username', 'Brukernavn') + th('status', 'Status') + '<div></div>');
+      : th('name', 'Navn') + th('username', 'Brukernavn') + '<div>Tilgang</div>' + th('status', 'Status') + '<div></div>');
     page.querySelector('#table').innerHTML = `
       <div class="th" style="grid-template-columns:${cols};gap:12px">${headCells}</div>
       ${rows.map((u) => `
@@ -422,7 +451,10 @@ async function renderUserList(main, cfg) {
           <div style="font-size:14.5px;font-weight:700">${u.fullName}${u.id === user.id ? ' <span style="font-size:11px;font-weight:700;color:var(--muted-2)">(deg)</span>' : ''}</div>
           <div style="font-size:14px;color:var(--slate)">${u.username}</div>
           ${isStudent ? `<div style="font-size:14px;color:var(--slate)">${u.className || '–'}</div>
-          <div style="font-size:14px;color:var(--slate)">${u.dorm || '–'}${u.room ? ' · ' + u.room : ''}</div>` : ''}
+          <div style="font-size:14px;color:var(--slate)">${u.dorm || '–'}${u.room ? ' · ' + u.room : ''}</div>`
+          : `<div>${u.superadmin
+              ? '<span class="pill" style="background:#e7edf5;color:var(--navy)">Superbruker</span>'
+              : '<span style="font-size:13px;color:var(--muted-2);font-weight:600">Administrator</span>'}</div>`}
           <div>${u.active ? '<span class="pill pill-green">Aktiv</span>' : '<span class="pill pill-grey">Deaktivert</span>'}</div>
           <div style="text-align:right"><button data-edit="${u.id}" title="Rediger" style="background:none;border:none;color:var(--muted-2);cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button></div>
         </div>`).join('') || '<div style="padding:26px;color:var(--muted-2)">Ingen treff.</div>'}`;
@@ -452,7 +484,7 @@ async function renderUserList(main, cfg) {
   }
 
   page.querySelector('#bulkclear').addEventListener('click', () => { selected.clear(); draw(); });
-  page.querySelector('#bulkdel').addEventListener('click', async () => {
+  page.querySelector('#bulkdel')?.addEventListener('click', async () => {
     if (!selected.size) return;
     if (!confirm(`Slette ${selected.size} ${selected.size === 1 ? 'bruker' : 'brukere'}? Dette kan ikke angres, og fjerner alle registreringer for dem.`)) return;
     const btn = page.querySelector('#bulkdel'); btn.disabled = true;
@@ -479,7 +511,8 @@ function userModal(existing, onSaved, cfg) {
   const role = existing?.role || cfg.role;
   const isStudent = role === 'student';
   const noun = isStudent ? 'elev' : 'administrator';
-  const canDelete = isEdit && existing.id !== user.id;
+  // Sletting er superbruker-område, og ingen sletter seg selv.
+  const canDelete = isEdit && existing.id !== user.id && user.superadmin;
   const dormOptions = optionsHTML(DORMS, 'Velg internat…', existing?.dorm);
   const classOptions = optionsHTML(CLASSES, 'Velg klasse…', existing?.className);
   const instrumentOptions = optionsHTML(INSTRUMENTS, 'Velg instrument…', existing?.instrument);
@@ -493,6 +526,16 @@ function userModal(existing, onSaved, cfg) {
           <label class="field-label">Hovedinstrument</label>
           <select class="field field-sm" name="instrument" style="background:#f7f8fa">${instrumentOptions}</select>
         </div>` : '';
+  // Superbruker gjelder bare administratorer. Vises til superbrukere; en vanlig
+  // administrator kommer uansett ikke inn på denne siden.
+  const adminFields = !isStudent && user.superadmin ? `
+        <label style="display:flex;align-items:flex-start;gap:11px;margin-top:18px;padding:14px 16px;background:#f7f8fa;border-radius:12px;cursor:pointer">
+          <input type="checkbox" name="superadmin" ${existing?.superadmin ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" />
+          <span>
+            <span style="display:block;font-size:14.5px;font-weight:700;color:var(--slate)">Superbruker</span>
+            <span style="display:block;font-size:13px;color:var(--muted-2);margin-top:2px;line-height:1.5">Kan endre innstillingene, og opprette, redigere og slette både elever og administratorer. Uten dette får kontoen de daglige sidene – brannliste, andakt, gjester, kjøkken, internat og øvekonkurransen.</span>
+          </span>
+        </label>` : '';
   const bg = el(`
     <div class="modal-bg"><div class="modal">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
@@ -508,6 +551,7 @@ function userModal(existing, onSaved, cfg) {
           <div><label class="field-label">Passord</label><div style="display:flex;gap:8px"><input class="field field-sm" name="password" type="text" placeholder="${isEdit ? 'La stå tomt for uendret' : 'Auto hvis tomt'}" style="flex:1;min-width:0" /><button type="button" id="gen" class="btn btn-ghost" style="height:46px;padding:0 12px;font-size:13px">Generer</button></div></div>
         </div>
         ${studentFields}
+        ${adminFields}
         ${isEdit ? `<label style="display:flex;align-items:center;gap:9px;margin-top:18px;font-size:14px;font-weight:600;color:var(--slate)"><input type="checkbox" name="active" ${existing.active ? 'checked' : ''} style="width:18px;height:18px" />Aktiv konto</label>` : ''}
         <p id="uerr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
       </form>
@@ -555,6 +599,7 @@ function userModal(existing, onSaved, cfg) {
       body.className = f.className.value; body.dorm = f.dorm.value; body.room = f.room.value;
       body.instrument = f.instrument.value;
     }
+    if (!isStudent && f.superadmin) body.superadmin = f.superadmin.checked;
     if (f.password.value) body.password = f.password.value;
     const btn = bg.querySelector('#save'); btn.disabled = true;
     try {
