@@ -20,7 +20,7 @@
 import { config } from './config.js';
 import { getSettings, getLastSent, setLastSent, hhmmToMinutes } from './settings.js';
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
-import { sendFireListReminder } from './fireReminder.js';
+import { sendFireListReminder, sendWatchMissingPush } from './fireReminder.js';
 import { sendDutyReminders, isSunday } from './dutyReminder.js';
 import { sinceLastClose } from './fireWindow.js';
 
@@ -97,6 +97,25 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
       cfg: { enabled: s.fireReminderPushEnabled, recipient: true, time: '20:00' },
       send: sendFireListReminder,
       beskriv: (r) => `sendt til ${r.sent} av ${r.targeted} elever (natt ${r.nightDate})`,
+    },
+    {
+      navn: 'Vaktvarsel',
+      key: 'watchPushLastSent',
+      // Følger innsjekksvinduet, ikke klokka – som brannliste-e-posten, og av
+      // samme grunn. «Sist sendt» lagres derfor som natten, ikke som datoen.
+      due: () => {
+        if (!s.watchPushEnabled) return null;
+        const sist = sinceLastClose(now);
+        if (!sist) return null;
+        const etter = sist.minutesSince - s.watchPushDelayMinutes;
+        if (etter < 0 || etter > grace) return null;
+        if (getLastSent('watchPushLastSent') === sist.nightDate) return null;
+        return sist.nightDate;
+      },
+      send: (nightDate) => sendWatchMissingPush(nightDate),
+      beskriv: (r) => (r.watchers
+        ? `${r.missing} mangler · sendt til ${r.sent} av ${r.watchers} vakt(er) (natt ${r.nightDate})`
+        : `ingen hadde tatt vakten (natt ${r.nightDate})`),
     },
     {
       navn: 'Tjenestevarsel',

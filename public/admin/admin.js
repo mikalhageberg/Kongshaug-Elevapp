@@ -2716,6 +2716,21 @@ async function renderVarsler(main) {
         </div>
       </div>
       <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+        <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Varsel til brannvakten: hvem mangler</div>
+        <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender navnene på dem som ikke er gjort rede for, til den som har tatt kveldens vakt i mobilappen. Går et gitt antall minutter etter at innsjekksvinduet stengte – ikke på et fast klokkeslett, siden vinduet lukker til ulik tid hverdag, fredag og lørdag. Er alle registrert, kommer det et varsel om nettopp det.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
+          <div><div style="font-size:15px;font-weight:700">Varsle vakten</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Bare til dem som har skannet vakt-koden. Av/på lagres med én gang.</div></div>
+          <input type="checkbox" id="watchPushEnabled" ${s?.watchPushEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 0 2px;border-top:1px solid #f2f4f6">
+          <div style="padding-top:14px"><div style="font-size:15px;font-weight:700">Sendes etter stengetid</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Minutter etter at innsjekksvinduet stengte. 0 = med én gang.</div></div>
+          <input class="field field-sm" id="watchPushDelay" type="number" min="0" max="720" value="${s?.watchPushDelayMinutes ?? 15}" style="width:90px;text-align:center;flex:0 0 auto;margin-top:14px" />
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button class="btn btn-ghost" id="testWatchPush" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
+        </div>
+      </div>
+      <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
         <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Varsel om ukestjeneste</div>
         <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender et push-varsel søndag kl. 18:00 til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
@@ -2751,6 +2766,44 @@ async function renderVarsler(main) {
     } finally {
       checkbox.disabled = false;
     }
+  });
+
+  page.querySelector('#watchPushEnabled').addEventListener('change', async (e) => {
+    const checkbox = e.target;
+    checkbox.disabled = true;
+    try {
+      await api('/api/settings', { method: 'PUT', body: { watchPushEnabled: checkbox.checked } });
+      toast(checkbox.checked ? 'Vaktvarsel slått på' : 'Vaktvarsel slått av');
+    } catch (ex) {
+      checkbox.checked = !checkbox.checked;
+      toast(ex.message);
+    } finally {
+      checkbox.disabled = false;
+    }
+  });
+
+  // Forsinkelsen lagres når feltet forlates, ikke på hvert tastetrykk – ellers
+  // ville «120» blitt lagret som 1, så 12, på veien.
+  page.querySelector('#watchPushDelay').addEventListener('change', async (e) => {
+    const felt = e.target;
+    felt.disabled = true;
+    try {
+      const s2 = await api('/api/settings', { method: 'PUT', body: { watchPushDelayMinutes: Number(felt.value) } });
+      felt.value = s2.watchPushDelayMinutes;
+      toast('Lagret');
+    } catch (ex) { toast(ex.message); }
+    finally { felt.disabled = false; }
+  });
+
+  page.querySelector('#testWatchPush').addEventListener('click', async (e) => {
+    const b = e.target; b.disabled = true;
+    try {
+      const r = await api('/api/settings/test-watch-push', { method: 'POST' });
+      toast(r.watchers
+        ? `Sendt til ${r.sent} av ${r.watchers} vakt(er) · ${r.missing} mangler`
+        : 'Ingen har tatt vakten i kveld – varselet har ingen mottaker');
+    } catch (ex) { toast(ex.message); }
+    finally { b.disabled = false; }
   });
 
   page.querySelector('#dutyPushEnabled').addEventListener('change', async (e) => {
@@ -3246,6 +3299,73 @@ async function renderGuests(main) {
   load();
 }
 
+// ── Vakt-koden ───────────────────────────────────────────────
+// Koden den som har kveldsvakten skanner med mobilappen for å ta vakten. Den
+// skifter hver natt, og er nettopp derfor verdt noe: en skjermdump fra i går
+// åpner ingenting. Se server/src/fireWatch.js.
+function vaktQrModal() {
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="max-width:520px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Vakt-kode</div>
+          <div id="vqNatt" style="font-size:13px;color:var(--muted-2);font-weight:600">Henter…</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:22px 26px">
+        <p style="font-size:14px;line-height:1.6;color:var(--slate,#33415a);margin:0 0 18px">
+          Den som har vakten skanner denne med mobilappen for å ta kveldens vakt.
+          Da får telefonen brannlisten og oppropsmodus, og varselet om hvem som
+          mangler går til henne. Koden gjelder bare i natt.
+        </p>
+        <div style="display:flex;justify-content:center">
+          <div style="width:260px;height:260px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-sizing:border-box">
+            <img id="vqBilde" alt="Vakt-kode" style="width:100%;height:100%;image-rendering:pixelated" />
+          </div>
+        </div>
+        <div id="vqVakter" style="margin-top:20px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:0 26px 22px">
+        <button class="btn btn-ghost" id="vqNy" style="height:46px;padding:0 18px">Lag ny kode</button>
+        <button class="btn btn-primary" id="vqLukk" style="height:46px;padding:0 20px">Lukk</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+
+  const lukk = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', lukk);
+  bg.querySelector('#vqLukk').addEventListener('click', lukk);
+  bg.addEventListener('click', (e) => { if (e.target === bg) lukk(); });
+
+  async function last() {
+    try {
+      const d = await api('/api/firelist/watch/qr');
+      bg.querySelector('#vqBilde').src = d.qr;
+      bg.querySelector('#vqNatt').textContent = `Gjelder natt til ${formatDateLong(shiftDate(d.nightDate, 1))}`;
+      const v = d.watchers || [];
+      bg.querySelector('#vqVakter').innerHTML = v.length
+        ? `<div style="font-size:13px;font-weight:800;color:var(--muted-2);margin-bottom:8px">HAR TATT VAKTEN</div>`
+          + v.map((w) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f2f4f6">
+              <span class="dot" style="background:var(--green)"></span>
+              <span style="flex:1;font-size:15px;font-weight:700">${esc(w.fullName)}</span>
+              <span style="font-size:13px;color:var(--muted-2);font-weight:600">${formatTime(w.registeredAt)}</span>
+            </div>`).join('')
+        : `<div style="font-size:14px;color:var(--muted-2);text-align:center;padding:12px 0">Ingen har tatt vakten ennå i kveld.</div>`;
+    } catch (ex) { toast(ex.message); }
+  }
+  last();
+  // Vaktlista fylles ut mens koden henger på skjermen, så den holdes fersk.
+  const timer = setInterval(last, 5000);
+  new MutationObserver((_, obs) => {
+    if (!document.body.contains(bg)) { clearInterval(timer); obs.disconnect(); }
+  }).observe(document.body, { childList: true });
+
+  bg.querySelector('#vqNy').addEventListener('click', async () => {
+    if (!confirm('Lag en ny kode? Den gamle slutter å virke med én gang. De som allerede har tatt vakten beholder den.')) return;
+    try { await api('/api/firelist/watch/rotate', { method: 'POST' }); toast('Ny kode laget'); last(); }
+    catch (ex) { toast(ex.message); }
+  });
+}
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
@@ -3254,11 +3374,13 @@ async function renderBrannliste(main) {
         <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px;white-space:nowrap">${d.away} borte</span>
         <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${d.missing} mangler</span>
         <button class="btn btn-ghost" id="exportPdf" style="height:40px;padding:0 16px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter PDF</button>
+        <button class="btn btn-ghost" id="vaktQr" style="height:40px;padding:0 16px;font-size:14px"><span style="width:16px;height:16px;display:block">${nav.qr}</span>Vakt-kode</button>
       </div>` : '');
   const page = el(`<div class="page"></div>`);
   main.appendChild(page);
   if (!d) { page.innerHTML = '<p>Kunne ikke laste brannlisten.</p>'; return; }
   main.querySelector('#exportPdf')?.addEventListener('click', () => exportFireListPdf(d));
+  main.querySelector('#vaktQr')?.addEventListener('click', vaktQrModal);
 
   const filters = ['Alle', ...d.dorms.map((x) => x.dorm)];
   let activeFilter = 'Alle';

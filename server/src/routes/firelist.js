@@ -9,6 +9,11 @@ import { buildFireListPdf } from '../pdf.js';
 import { verifyFireListLink } from '../fireLink.js';
 import { getSettings } from '../settings.js';
 import { sendGuestRequestEmail } from '../mail.js';
+import QRCode from 'qrcode';
+import {
+  watchNightDate, currentWatchToken, rotateWatchSecret, verifyWatchToken,
+  takeWatch, releaseWatch, hasActiveWatch, watchers,
+} from '../fireWatch.js';
 
 // Lagre koordinat kun når det faktisk er et tall – ellers NULL. Hindrer at
 // NaN havner i databasen når klienten sender manglende/ugyldig posisjon.
@@ -186,9 +191,81 @@ router.delete('/away-period/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── BRANNVAKT ────────────────────────────────────────────────
+// Administratoren som har vakten skanner kveldens QR-kode fra adminsiden. Da –
+// og bare da – får mobilappen brannlisten, og varselet om hvem som mangler vet
+// hvem det skal gå til. Se fireWatch.js for hvorfor koden skifter hver natt.
+
+// Mobilappen krever gyldig vakt; nettleseren gjør ikke det. Skillet ligger i
+// `native`-merket i tokenet (auth.js), ikke i noe klienten sender selv:
+// adminsiden er en arbeidsplass man er logget inn på, mens telefonen er noe man
+// går rundt med. Uten dette ville en app-innlogging fra i forrige uke gitt hele
+// elevlista uten at noen hadde tatt vakten.
+function requireWatchOnNative(req, res, next) {
+  if (!req.auth?.native) return next();
+  if (hasActiveWatch(req.auth.sub)) return next();
+  return res.status(403).json({
+    error: 'no-watch',
+    message: 'Du har ikke tatt vakten i kveld. Skann vakt-koden på adminsiden under Brannliste.',
+  });
+}
+
+// ADMIN (nettleser): kveldens vakt-QR + hvem som har tatt vakten.
+router.get('/watch/qr', requireAdmin, async (req, res) => {
+  const nightDate = watchNightDate();
+  const token = currentWatchToken(nightDate);
+  res.json({
+    nightDate,
+    token,
+    qr: await QRCode.toDataURL(token, { margin: 1, width: 512, errorCorrectionLevel: 'M' }),
+    watchers: watchers(nightDate),
+  });
+});
+
+// ADMIN (nettleser): lag en ny kode for natten. Alle tidligere koder slutter å
+// virke med én gang – for koden som er blitt avfotografert eller delt videre.
+// De som allerede har tatt vakten beholder den; de har jo møtt opp.
+router.post('/watch/rotate', requireAdmin, (req, res) => {
+  const nightDate = watchNightDate();
+  rotateWatchSecret(nightDate);
+  res.json({ ok: true, nightDate });
+});
+
+// ADMIN (appen): ta vakten ved å skanne koden.
+router.post('/watch/register', requireAdmin, (req, res) => {
+  const v = verifyWatchToken(req.body?.token);
+  if (!v.ok) {
+    return res.status(400).json({
+      error: v.reason,
+      message: v.reason === 'expired'
+        ? 'Denne koden gjaldt en annen natt. Hent kveldens kode på adminsiden.'
+        : 'Ugyldig kode. Skann vakt-koden på adminsiden under Brannliste.',
+    });
+  }
+  takeWatch(req.auth.sub, v.nightDate);
+  res.status(201).json({ ok: true, nightDate: v.nightDate, watchers: watchers(v.nightDate) });
+});
+
+// ADMIN: har jeg vakten nå? Appen spør ved hver oppstart.
+router.get('/watch/status', requireAdmin, (req, res) => {
+  const nightDate = watchNightDate();
+  const list = watchers(nightDate);
+  res.json({
+    nightDate,
+    active: list.some((w) => w.id === req.auth.sub),
+    watchers: list,
+  });
+});
+
+// ADMIN: gi fra deg vakten (f.eks. ved vaktbytte midt på kvelden).
+router.delete('/watch', requireAdmin, (req, res) => {
+  releaseWatch(req.auth.sub);
+  res.json({ ok: true, nightDate: watchNightDate() });
+});
+
 // ── ADMIN: sett en elevs status manuelt (f.eks. mistet telefon) ──
 // body: { userId, status: 'present' | 'away' | 'clear' }. Ingen GPS-krav.
-router.post('/admin-checkin', requireAdmin, (req, res) => {
+router.post('/admin-checkin', requireAdmin, requireWatchOnNative, (req, res) => {
   const uid = Number(req.body?.userId);
   const status = req.body?.status;
   const u = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student'").get(uid);
@@ -213,7 +290,7 @@ router.post('/admin-checkin', requireAdmin, (req, res) => {
 });
 
 // ── ADMIN: oversikt over kveldens brannliste, gruppert på internat ──
-router.get('/overview', requireAdmin, (req, res) => {
+router.get('/overview', requireAdmin, requireWatchOnNative, (req, res) => {
   res.json(getFireOverview(currentNightDate()));
 });
 

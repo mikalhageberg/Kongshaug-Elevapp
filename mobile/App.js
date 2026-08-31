@@ -14,6 +14,7 @@ import BrannlisteScreen from './src/screens/BrannlisteScreen';
 import AndaktScreen from './src/screens/AndaktScreen';
 import MiddagScreen from './src/screens/MiddagScreen';
 import InternatScreen from './src/screens/InternatScreen';
+import AdminApp from './src/AdminApp';
 
 const TABS = [
   { key: 'home', label: 'Hjem', icon: '🏠' },
@@ -55,8 +56,12 @@ function AppInner() {
       await loadCachedCampus(); // skolens område fra forrige økt – før noe vises
       try {
         const d = await api('/api/auth/me');
-        if (d.user.role === 'admin') { await setToken(null); }
-        else { setUser(d.user); setLocked(true); registerForPushNotifications(); } // krev opplåsing før innhold vises
+        // Både elever og administratorer bruker appen nå. Låsen gjelder begge:
+        // for administratoren er brannlisten hele skolens elevliste, og
+        // telefonens egen lås er det eneste som står foran den.
+        setUser(d.user);
+        setLocked(true);
+        registerForPushNotifications();
       } catch { /* ikke innlogget */ }
       setBooting(false);
     })();
@@ -64,7 +69,7 @@ function AppInner() {
 
   // Skolens område hentes én gang per innlogging og caches lokalt, slik at
   // posisjonssjekken kan regnes ut på telefonen (se src/campus.js).
-  useEffect(() => { if (user) refreshCampus(); }, [user]);
+  useEffect(() => { if (user?.role === 'student') refreshCampus(); }, [user]);
 
   // Lås igjen når appen har vært i bakgrunnen en stund.
   useEffect(() => {
@@ -125,6 +130,16 @@ function AppInner() {
       <View style={[styles.safe, screenPad]}>
         <ExpoStatusBar style="dark" />
         <ChangePasswordScreen onDone={() => setUser({ ...user, mustChangePassword: false })} />
+      </View>
+    );
+  }
+
+  // Administratoren får sin egen, mye smalere app: brannlisten og vakten.
+  if (user.role === 'admin') {
+    return (
+      <View style={[styles.safe, { paddingTop: insets.top }]}>
+        <ExpoStatusBar style="dark" />
+        <AdminApp user={user} onLogout={logout} insets={insets} />
       </View>
     );
   }

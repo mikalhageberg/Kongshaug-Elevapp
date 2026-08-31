@@ -37,6 +37,7 @@ const EXPIRING = [
   ['kitchen_duties', 'week_start', 'kjøkkentjeneste'],
   ['dorm_duties', 'week_start', 'internatvask'],
   ['practice_sessions', 'session_date', 'øveøkter'],
+  ['fire_watch_shifts', 'night_date', 'brannvakter'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
   // Arkiverte ukesrapporter har sin egen periode (antall uker, se
   // andaktArchive.js). Den generelle lagringstiden gjelder likevel som ytre
@@ -82,6 +83,12 @@ export function deleteExpired(days) {
   const resultat = db.transaction(() => {
     const perTabell = {};
     let total = 0;
+    // Vakt-QR-ens hemmeligheter lever bare den ene natten. De ryddes med en
+    // egen, kort frist i stedet for den generelle lagringstiden: en brukt
+    // nøkkel er ingen historikk, bare en nøkkel som ikke låser opp noe lenger.
+    const nøkler = db.prepare(`DELETE FROM fire_watch_days WHERE night_date < date('now', '-7 days')`).run().changes;
+    if (nøkler) perTabell['vaktkoder'] = nøkler;
+    total += nøkler;
     for (const [table, column, label] of EXPIRING) {
       const n = db.prepare(`DELETE FROM ${table} WHERE ${column} < date('now', ?)`).run(cutoff).changes;
       if (n) perTabell[label] = n;

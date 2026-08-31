@@ -92,6 +92,11 @@ export const config = {
   // Gjelder KUN native app – aldri nettleser eller admin.
   nativeSessionDays: Number(process.env.NATIVE_SESSION_DAYS ?? 90),
 
+  // Administratorens app-sesjon. Kortere enn elevens, fordi kontoen ser hele
+  // skolens brannliste og kan sette status på hvem som helst. Vakten skanner
+  // uansett en ny QR-kode hver kveld, så en kort sesjon merkes lite i praksis.
+  nativeAdminSessionDays: Number(process.env.NATIVE_ADMIN_SESSION_DAYS ?? 7),
+
   // App Store/Play Store-reviewere kan ikke fysisk være på skolen, så de kan
   // ikke bestå GPS-sjekken (brannliste/andakt) eller skanne en ekte QR-kode
   // (andakt). Med APPLE_REVIEW_USERNAME satt, hopper KUN den ene, eksakte

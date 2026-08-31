@@ -43,6 +43,11 @@ const DEFAULTS = {
   kitchenEmailFromName: 'Kongshaug Kjøkken', // avsendernavn for middags-e-posten
   kitchenEmailFrom: '',            // valgfri egen avsender-e-post (må være verifisert i Brevo)
   fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
+  // Varsel til brannvakten om hvem som mangler, sendt et gitt antall minutter
+  // etter at innsjekksvinduet stengte – samme prinsipp som e-posten over, og av
+  // samme grunn: lukketiden er ulik hverdag, fredag og lørdag.
+  watchPushEnabled: false,         // varsle vakten om hvem som mangler
+  watchPushDelayMinutes: 15,       // minutter etter at vinduet stengte
   dutyPushEnabled: false,          // varsle om kjøkkentjeneste/internatvask søndag kl 18:00
   // Øvekonkurransen. Tom periode = ingen konkurranse satt opp.
   practiceStartDate: '',           // 'YYYY-MM-DD', første dag
@@ -89,6 +94,9 @@ export const QR_AFTER_MAX = 180;
 // stenger); taket hindrer at den havner et helt døgn på etterskudd.
 export const FIRE_DELAY_MIN = 0;
 export const FIRE_DELAY_MAX = 720;
+// Samme for vaktvarselet: 0 = send i det vinduet stenger.
+export const WATCH_DELAY_MIN = 0;
+export const WATCH_DELAY_MAX = 720;
 export const WARMUP_MIN = 1;
 export const WARMUP_MAX = 60;
 // Andelen økter som må dokumenteres. 0 = aldri, 100 = alltid – begge er gyldige
@@ -120,6 +128,8 @@ function intOrZero(value, fallback) {
 // (hvor mange ukesrapporter arkivet tar vare på).
 export const ADMIN_EDITABLE_SETTINGS = new Set([
   'fireReminderPushEnabled',
+  'watchPushEnabled',
+  'watchPushDelayMinutes',
   'dutyPushEnabled',
   'practiceStartDate',
   'practiceEndDate',
@@ -157,6 +167,12 @@ export function getSettings() {
     kitchenEmailFromName: s.kitchenEmailFromName ?? DEFAULTS.kitchenEmailFromName,
     kitchenEmailFrom: s.kitchenEmailFrom ?? DEFAULTS.kitchenEmailFrom,
     fireReminderPushEnabled: s.fireReminderPushEnabled != null ? s.fireReminderPushEnabled === 'true' : DEFAULTS.fireReminderPushEnabled,
+    watchPushEnabled: s.watchPushEnabled != null ? s.watchPushEnabled === 'true' : DEFAULTS.watchPushEnabled,
+    // Egen lesing som for fireEmailDelayMinutes: intOr forkaster 0, og «send med
+    // én gang vinduet stenger» er et gyldig valg.
+    watchPushDelayMinutes: Number.isInteger(Number(s.watchPushDelayMinutes))
+      ? Number(s.watchPushDelayMinutes)
+      : DEFAULTS.watchPushDelayMinutes,
     dutyPushEnabled: s.dutyPushEnabled != null ? s.dutyPushEnabled === 'true' : DEFAULTS.dutyPushEnabled,
     guestEmailEnabled: s.guestEmailEnabled != null ? s.guestEmailEnabled === 'true' : DEFAULTS.guestEmailEnabled,
     guestEmailRecipient: s.guestEmailRecipient ?? DEFAULTS.guestEmailRecipient,

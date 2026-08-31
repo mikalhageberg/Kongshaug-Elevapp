@@ -245,7 +245,7 @@
     <div class="row"><span class="n">9</span><span class="d"><span class="t">Kjøkken</span> <span class="desc">– middagstall, kjøkkentjeneste, ukemeny</span></span></div>
     <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus og signaturer</span></span></div>
     <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, frysing, stilling, dokumentasjon</span></span></div>
-    <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes telefoner</span></span></div>
+    <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes og vaktens telefoner</span></span></div>
     <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
     <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, ved skolestart</span></span></div>
     <div class="row"><span class="n">15</span><span class="d"><span class="t">Feilsøking og vanlige spørsmål</span></span></div>
@@ -499,6 +499,22 @@
 
   <h3>5.3 Eksportere listen</h3>
   <p><strong>«Eksporter PDF»</strong> lager en utskriftsvennlig liste for natten som vises. Skal den komme av seg selv hver dag, sett opp automatisk e-post under Innstillinger (13.3).</p>
+
+  <h3>5.4 Brannvakt på telefonen</h3>
+  <p>Den som har kveldsvakten kan ha brannlisten i lomma. Logger en administrator inn i <strong>mobilappen</strong> med sin egen adminbruker, får hun en egen, mye smalere app: brannlisten, oppropsmodus og vakten. Alt annet hører hjemme her på adminsiden.</p>
+  <p><strong>Innloggingen alene gir ingenting.</strong> Vakten må i tillegg skanne kveldens <strong>vakt-kode</strong>, som du finner på denne siden under knappen <strong>«Vakt-kode»</strong>. Koden skifter fra natt til natt, så en skjermdump fra i går åpner ingenting.</p>
+  <ol class="steps">
+    <li><span class="st">Trykk «Vakt-kode»</span> Koden vises på skjermen, sammen med hvem som har tatt vakten i natt.</li>
+    <li><span class="st">Vakten skanner den med appen</span> Under fanen «Vakt» → «Skann vakt-koden».</li>
+    <li><span class="st">Navnet dukker opp i lista under koden</span> Nå har hun brannlisten, oppropsmodus og varselet.</li>
+  </ol>
+  <p>Flere kan ha vakt sammen – alle som skanner står i lista, og alle får varselet. Vakten varer til kl. 06 neste morgen, slik at ingen mister lista midt i et opprop etter midnatt. Neste kveld må koden skannes på nytt.</p>
+  <div class="box">
+    <span class="h">«Lag ny kode»</span>
+    <p>Er koden blitt avfotografert eller delt videre, lager du en ny. Alle tidligere koder slutter å virke med én gang. De som allerede har tatt vakten beholder den – de har jo møtt opp.</p>
+  </div>
+  <p><strong>Oppropsmodus.</strong> Knappen «Start opprop» i appen går gjennom elevene én av gangen, i samme rekkefølge som listen – internat for internat, rom for rom. Du velger først om oppropet skal gå gjennom alle eller bare dem som mangler. Hver elev har to knapper: den store <strong>«Til stede»</strong> registrerer og går videre, og den lille <strong>«Gå til neste»</strong> går videre uten å ta stilling. Det finnes med vilje ingen «borte»-knapp i oppropet: den som ikke er på rommet skal ikke bli borteregistrert av et raskt trykk, men bli stående på restlista til noen har funnet ut hvor hun er. Til slutt vises de som ikke ble gjort rede for, med internat og rom.</p>
+  <p class="note">Varselet om hvem som mangler etter stengetid slås på under Varsler (12.3).</p>
 
   <div class="box stop">
     <span class="h">Ved brann eller evakuering</span>
@@ -809,11 +825,11 @@
 <!-- ═══════════════ 12 VARSLER ═══════════════ -->
 <section>
   <h2><span class="num">12</span>Varsler</h2>
-  <p class="lead">Push-varsler til elevenes telefoner. To automatiske, og én du skriver selv. Varslene når bare elever som har appen installert og har tillatt varsler.</p>
+  <p class="lead">Push-varsler til telefonene. Tre automatiske, og én du skriver selv. Varslene når bare dem som har appen installert og har tillatt varsler.</p>
 
   <div class="box">
     <span class="h">Bryterne lagres med én gang</span>
-    <p>De to av/på-bryterne på denne siden har ingen lagreknapp. Skrur du en av dem på eller av, er det lagret i samme øyeblikk, og du får en bekreftelse nederst på skjermen. Det eneste du må trykke på her, er «Send test nå» og «Send til alle».</p>
+    <p>Av/på-bryterne på denne siden har ingen lagreknapp. Skrur du en av dem på eller av, er det lagret i samme øyeblikk, og du får en bekreftelse nederst på skjermen. Det eneste du må trykke på her, er «Send test nå» og «Send til alle».</p>
   </div>
 
   <h3>12.1 Automatisk påminnelse: husk brannlisten</h3>
@@ -826,10 +842,20 @@
 
   <h3>12.2 Varsel om ukestjeneste</h3>
   <p>Sendes <strong>søndag kl. 18:00</strong> til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</p>
-  <p>Begge de automatiske varslene har en <strong>«Send test nå»</strong>-knapp, som sender akkurat det varselet med én gang – nyttig for å bekrefte at oppsettet virker.</p>
 
-  <h3>12.3 Send til alle nå</h3>
-  <p>Til beskjeder som ikke passer noe annet sted: «Brannøvelse i morgen tidlig», «Middagen er flyttet til 16:30».</p>
+
+  <h3>12.3 Varsel til brannvakten: hvem mangler</h3>
+  <p>Går <strong>bare til den som har tatt kveldens vakt</strong> i mobilappen (se 5.4). Har ingen skannet vakt-koden, sendes ingenting – varselet spres ikke til alle som tilfeldigvis har appen.</p>
+  <p>Sendes et innstillbart antall minutter etter at <strong>innsjekksvinduet stengte</strong> – ikke på et fast klokkeslett, siden vinduet lukker til ulik tid hverdag, fredag og lørdag. Standard er 15 minutter. Sett 0 for å sende i samme øyeblikk vinduet stenger.</p>
+  <div class="box">
+    <strong>3 mangler på brannlisten</strong><br>
+    <span class="note">Ola Nordmann, Kari Ås, Per Hansen. Åpne appen for opprop (natt til fredag 4. september 2026).</span>
+  </div>
+  <p>Navnene står i selve varselet med vilje: et varsel som bare sa «3 mangler» ville tvunget vakten til å låse opp telefonen for å finne ut hvem – og det er nettopp de navnene hun trenger for å begynne å lete. Er alle registrert, kommer det et varsel om nettopp <em>det</em>, slik at vakten vet at kvelden er over uten å åpne noe.</p>
+  <p>Alle de tre automatiske varslene har en <strong>«Send test nå»</strong>-knapp, som sender akkurat det varselet med én gang.</p>
+
+  <h3>12.4 Send til alle nå</h3>
+  <p>Til beskjeder som ikke passer noe annet sted: «Brannøvelse i morgen tidlig», «Middagen er flyttet til 16:30». Går til alle som har appen installert, også ansatte som bruker den som brannvakt.</p>
   <ol class="steps">
     <li><span class="st">Skriv en tittel</span> Maks 80 tegn. Dette er linjen elevene ser først.</li>
     <li><span class="st">Skriv teksten</span> Maks 240 tegn.</li>
@@ -837,7 +863,7 @@
   </ol>
   <div class="box warn">
     <span class="h">⚠ Det finnes ingen angreknapp</span>
-    <p>Varselet går ut til alle elever med én gang, og kan ikke trekkes tilbake. Les korrektur før du sender – og hold det til beskjeder som faktisk haster. Varsler som kommer for ofte, blir skrudd av av elevene, og da mister også brannliste-påminnelsen effekten sin.</p>
+    <p>Varselet går ut med én gang til alle som har appen – elevene, og ansatte som har den installert som brannvakt – og kan ikke trekkes tilbake. Les korrektur før du sender – og hold det til beskjeder som faktisk haster. Varsler som kommer for ofte, blir skrudd av av elevene, og da mister også brannliste-påminnelsen effekten sin.</p>
   </div>
 </section>
 
@@ -968,6 +994,8 @@
     <tr><td class="k">QR-koden vises ikke på storskjermen</td><td>Sjekk klokkeslettet: koden vises bare i vinduet rundt fristen. Statusmerkelappen på Andakt-siden sier når den åpner. Er det helg, er «Kun ukedager» slått på.</td></tr>
     <tr><td class="k">Eleven fikk «QR-koden er ikke gyldig lenger»</td><td>Normalt – koden byttes ut med noen sekunders mellomrom. Be eleven skanne på nytt.</td></tr>
     <tr><td class="k">Elever får ikke push-varsler</td><td>Varsler må være tillatt på telefonen, og eleven må ha logget inn i appen. Bruk «Send test nå» for å bekrefte at utsendingen fra serveren virker.</td></tr>
+    <tr><td class="k">Vakten ser «Du har ikke vakten» i appen</td><td>Vakt-koden er ikke skannet i kveld, eller den ble skannet i går. Åpne Brannliste → «Vakt-kode» og la henne skanne på nytt.</td></tr>
+    <tr><td class="k">Vakt-koden virker ikke</td><td>Koden gjelder bare natten den ble laget for. Er den fra i går, hent den nye. Er det nettopp trykket «Lag ny kode», er det den nye på skjermen som gjelder.</td></tr>
     <tr><td class="k">E-posten kommer ikke fram</td><td>Trykk «Send test nå». Kommer det et gult Brevo-varsel på Innstillinger, mangler nøklene på serveren. Ellers: sjekk mottakeradressen og søppelpostmappen.</td></tr>
     <tr><td class="k">Excel-importen avvises</td><td>Feilmeldingen sier radnummer og hvilken celle. Vanligste årsak: en overskrift som ikke er skrevet nøyaktig som i malen, eller en klasse/internat/instrument som ikke finnes i listene. Last ned malen og lim inn dataene der.</td></tr>
     <tr><td class="k">En oppgave lar seg ikke slette</td><td>Den har vært satt opp på minst én uke. Deaktiver den i stedet – da beholdes historikken.</td></tr>
@@ -1012,6 +1040,8 @@
     <tr><td class="k">se hvem som mangler på brannlisten</td><td>Dashboard, eller Brannliste</td></tr>
     <tr><td class="k">krysse av en elev manuelt</td><td>Brannliste → knappene på raden</td></tr>
     <tr><td class="k">ta med brannlisten ut</td><td>Brannliste → Eksporter PDF</td></tr>
+    <tr><td class="k">gi kveldsvakten brannlisten på telefonen</td><td>Brannliste → Vakt-kode → vakten skanner den i appen</td></tr>
+    <tr><td class="k">gå opprop rom for rom</td><td>Mobilappen → Brannliste → Start opprop</td></tr>
     <tr><td class="k">godkjenne et overnattingsbesøk</td><td>Gjester → velg internat og rom → Godkjenn</td></tr>
     <tr><td class="k">vise QR-koden før andakten</td><td>Dashboard → Vis QR på storskjerm</td></tr>
     <tr><td class="k">rette oppmøte på andakt</td><td>Andakt / QR → «Ikke møtt» → knappene på raden</td></tr>

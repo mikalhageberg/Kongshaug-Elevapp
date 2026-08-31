@@ -6,7 +6,7 @@ import {
   ARCHIVE_WEEKS_MIN, ARCHIVE_WEEKS_MAX,
   QR_BEFORE_MIN, QR_BEFORE_MAX, QR_AFTER_MIN, QR_AFTER_MAX,
   WARMUP_MIN, WARMUP_MAX, PHOTO_PERCENT_MIN, PHOTO_PERCENT_MAX,
-  FIRE_DELAY_MIN, FIRE_DELAY_MAX,
+  FIRE_DELAY_MIN, FIRE_DELAY_MAX, WATCH_DELAY_MIN, WATCH_DELAY_MAX,
   ADMIN_EDITABLE_SETTINGS,
 } from '../settings.js';
 import { requireSuperAdmin, isSuperAdmin } from '../permissions.js';
@@ -14,7 +14,7 @@ import { isDateString } from '../isoWeek.js';
 import { runRetentionNow } from '../retention.js';
 import { config } from '../config.js';
 import { sendFireListEmail, sendKitchenEmail } from '../mail.js';
-import { sendFireListReminder } from '../fireReminder.js';
+import { sendFireListReminder, sendWatchMissingPush } from '../fireReminder.js';
 import { sendDutyReminders } from '../dutyReminder.js';
 
 const router = Router();
@@ -48,6 +48,7 @@ router.put('/', (req, res) => {
   if (b.kitchenEmailEnabled !== undefined) patch.kitchenEmailEnabled = b.kitchenEmailEnabled ? 'true' : 'false';
   if (b.fireReminderPushEnabled !== undefined) patch.fireReminderPushEnabled = b.fireReminderPushEnabled ? 'true' : 'false';
   if (b.dutyPushEnabled !== undefined) patch.dutyPushEnabled = b.dutyPushEnabled ? 'true' : 'false';
+  if (b.watchPushEnabled !== undefined) patch.watchPushEnabled = b.watchPushEnabled ? 'true' : 'false';
   if (b.guestEmailEnabled !== undefined) patch.guestEmailEnabled = b.guestEmailEnabled ? 'true' : 'false';
   for (const k of ['fireEmailRecipient', 'kitchenEmailRecipient', 'kitchenEmailFrom', 'guestEmailRecipient']) {
     if (b[k] === undefined) continue;
@@ -68,6 +69,7 @@ router.put('/', (req, res) => {
     andaktQrCloseAfter: { v: b.andaktQrCloseAfter, min: QR_AFTER_MIN, max: QR_AFTER_MAX, navn: 'QR-koden stenger (minutter etter fristen)' },
     practiceWarmupMinutes: { v: b.practiceWarmupMinutes, min: WARMUP_MIN, max: WARMUP_MAX, navn: 'Oppvarming (minutter)' },
     fireEmailDelayMinutes: { v: b.fireEmailDelayMinutes, min: FIRE_DELAY_MIN, max: FIRE_DELAY_MAX, navn: 'Forsinkelse på brannliste-e-post (minutter)' },
+    watchPushDelayMinutes: { v: b.watchPushDelayMinutes, min: WATCH_DELAY_MIN, max: WATCH_DELAY_MAX, navn: 'Forsinkelse på vaktvarselet (minutter)' },
     practicePhotoPercent: { v: b.practicePhotoPercent, min: PHOTO_PERCENT_MIN, max: PHOTO_PERCENT_MAX, navn: 'Andel økter med bilde (%)' },
   };
   for (const [k, { v, min, max, navn }] of Object.entries(ints)) {
@@ -129,6 +131,16 @@ router.post('/test-push-reminder', async (req, res) => {
   try {
     const result = await sendFireListReminder();
     res.json({ ok: true, ...result });
+  } catch (ex) {
+    res.status(400).json({ error: ex.message });
+  }
+});
+
+// Send vaktvarselet nå (for å teste oppsettet). Går til dem som har tatt
+// vakten i kveld – har ingen skannet koden, sier svaret nettopp det.
+router.post('/test-watch-push', async (req, res) => {
+  try {
+    res.json({ ok: true, ...(await sendWatchMissingPush()) });
   } catch (ex) {
     res.status(400).json({ error: ex.message });
   }

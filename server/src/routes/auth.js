@@ -37,11 +37,12 @@ router.post('/login', loginLimiter, async (req, res) => {
   // Mobilappen sender client:'native' og får et langlevet Bearer-token (den er
   // låst bak Face ID/kode ved hver åpning). Nettleseren får en 12-timers cookie.
   //
-  // client-feltet kommer fra klienten og kan forfalskes, så rollen avgjør her:
-  // KUN elever kan få lang sesjon. Admin har tilgang til alle elevers data og
-  // bruker nettleser (som ikke kan låses bak Face ID) – de skal alltid ha 12
-  // timer, uansett hva som sendes inn.
-  const isNative = String(req.body?.client || '') === 'native' && user.role === 'student';
+  // Også administratorer kan logge inn i appen nå – brannvakten trenger
+  // brannlisten i lomma. Men de får en kortere sesjon enn elevene, og appen gir
+  // dem ingenting før de har skannet kveldens vakt-QR (se fireWatch.js).
+  // Levetiden settes av signToken ut fra rollen, ikke av client-feltet, som
+  // kommer fra klienten og kan forfalskes.
+  const isNative = String(req.body?.client || '') === 'native';
   const token = isNative ? signToken(user, { native: true }) : issueSession(res, user);
 
   res.json({

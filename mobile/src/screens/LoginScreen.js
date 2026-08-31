@@ -19,11 +19,6 @@ export default function LoginScreen({ onLoggedIn }) {
       // Face ID/kode), i stedet for nettleserens 12-timers cookie.
       const data = await api('/api/auth/login', { method: 'POST', body: { username, password, client: 'native' } });
       await setToken(data.token);
-      if (data.user.role === 'admin') {
-        setErr('Denne appen er for elever. Administratorer bruker nettsiden.');
-        await setToken(null);
-        return;
-      }
       registerForPushNotifications();
       onLoggedIn(data.user);
     } catch (ex) {
@@ -50,7 +45,7 @@ export default function LoginScreen({ onLoggedIn }) {
       </View>
 
       <Text style={styles.h1}>Logg inn</Text>
-      <Text style={styles.sub}>Elevapp · brannliste og andakt</Text>
+      <Text style={styles.sub}>Brannliste og andakt · elever og brannvakt</Text>
 
       <Text style={styles.label}>Brukernavn</Text>
       <TextInput
@@ -75,7 +70,8 @@ export default function LoginScreen({ onLoggedIn }) {
 
       <Button title="Logg inn" onPress={submit} loading={loading} style={{ marginTop: 22 }} />
       <Text style={styles.foot}>
-        Elever får utdelt bruker av administrasjonen.
+        Elever får utdelt bruker av administrasjonen. Har du vakten, logger du
+        inn med adminbrukeren din og skanner vakt-koden.
       </Text>
       <Pressable onPress={() => Linking.openURL(`${BASE_URL}/personvern/`)} hitSlop={8}>
         <Text style={styles.privacyLink}>Personvernerklæring</Text>

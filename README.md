@@ -9,7 +9,9 @@ To deler som deler samme backend:
   QR-kode. Både brannliste og andakt krever at eleven er fysisk på skolen (GPS).
 - **Elevapp (native)** (`mobile/`) – samme elevapp som en ekte Expo/React
   Native-app, kjørt i **Expo Go** på telefonen. Bedre kamera/GPS enn PWA-en, og
-  trenger ikke HTTPS for å teste. Se `mobile/README.md`.
+  trenger ikke HTTPS for å teste. Se `mobile/README.md`. Logger en
+  **administrator** inn i den samme appen, får hun i stedet brannvakt-appen:
+  brannlisten, oppropsmodus og varsel om hvem som mangler (se under).
 - **Administrasjon** (`/admin/`) – nettside for ansatte: opprette/administrere
   brukere, se kveldens brannliste, vise dagens QR-kode på storskjerm og følge
   oppmøtet i sanntid.
@@ -74,6 +76,76 @@ Oppsett:
 
 Standard sendetidspunkt er **14:15**, som sender den siste ferdige natten
 (gårsdagens liste). Vil du ha den midt på natten, sett f.eks. 02:15.
+
+### Brannvakt i mobilappen
+
+Den som har kveldsvakten trenger brannlisten der hun er – i gangen, ikke på et
+kontor. Logger en **administrator** inn i mobilappen, får hun derfor en egen,
+mye smalere app: brannlisten og vakten, ingenting annet. Alt det andre hører
+hjemme på adminsiden, der man sitter ned og har tastatur.
+
+**Innloggingen alene gir ingenting.** Vakten må i tillegg skanne kveldens
+**vakt-kode**, som ligger på adminsiden under **Brannliste → «Vakt-kode»**.
+Koden er en HMAC-signatur over natten den gjelder (`server/src/fireWatch.js`),
+og skifter fra natt til natt – en skjermdump fra i går åpner ingenting. Først
+når koden er skannet vet systemet hvem som faktisk har vakten, og da har
+varselet under en adressat.
+
+Tre ting følger av at vakten er knyttet til *natten* og ikke til klokka:
+
+- **Vakten varer til kl. 06.** Ikke til midnatt, og ikke til innsjekksvinduet
+  stenger. Vakten skal ikke miste lista midt i et opprop kl. 00:30 – og natten
+  er uansett over lenge før noen tar den neste kveld.
+- **Flere kan ha vakt sammen.** Alle som har skannet står i lista under koden,
+  og alle får varselet.
+- **Kravet gjelder bare appen.** Adminsiden i nettleseren er urørt: der er
+  innloggingen selve tilgangen. Skillet ligger i et `native`-merke i tokenet
+  (`auth.js`), ikke i noe klienten sender selv. Administratorens app-sesjon er
+  også kortere enn elevens – 7 dager mot 90 (`NATIVE_ADMIN_SESSION_DAYS`) –
+  fordi kontoen ser hele skolens elevliste.
+
+**«Lag ny kode»** ugyldiggjør alle tidligere koder for natten med én gang, for
+koden som er blitt avfotografert eller delt videre. De som allerede har tatt
+vakten beholder den; de har jo møtt opp.
+
+#### Oppropsmodus
+
+Knappen **«Start opprop»** i appen går gjennom elevene én av gangen, i samme
+rekkefølge som brannlisten – internat for internat, rom for rom. Det er den
+rekkefølgen man faktisk går i når man banker på dørene. Man velger først om
+oppropet skal gå gjennom **alle** eller **bare de som mangler**.
+
+Hver elev har to knapper, og forskjellen mellom dem er hele poenget:
+
+| Knapp | Hva den gjør |
+| ----- | ------------ |
+| **Til stede** (stor, grønn) | Registrerer eleven med én gang, og går videre. Dette er knappen som skal treffes i mørket med én hånd. |
+| **Gå til neste** (liten) | Går videre uten å ta stilling. Eleven blir stående uregistrert og dukker opp igjen i restlista på slutten. |
+
+Det finnes med vilje **ingen «borte»-knapp i oppropet**. Den som ikke er på
+rommet skal ikke bli borteregistrert av et raskt trykk – hun skal bli stående
+igjen på lista til noen har funnet ut hvor hun er. Til slutt vises de som ikke
+ble gjort rede for, med internat og rom, og en knapp for å gå gjennom dem igjen.
+
+Feiler et kall, blir oppropet stående på samme elev. Et opprop som hoppet videre
+etter en feil ville sagt at eleven var registrert uten at hun var det.
+
+#### Varsel om hvem som mangler
+
+Slås på under admin → **Varsler → «Varsel til brannvakten: hvem mangler»**.
+Varselet går **bare til dem som har tatt kveldens vakt**, et innstillbart antall
+minutter etter at innsjekksvinduet stengte – ikke på et fast klokkeslett, av
+samme grunn som brannliste-e-posten: vinduet lukker til ulik tid hverdag, fredag
+og lørdag.
+
+Navnene står i selve varselet. Et varsel som bare sa «3 mangler» ville tvunget
+vakten til å låse opp telefonen for å finne ut hvem – og det er nettopp de tre
+navnene hun trenger for å begynne å lete. Er alle registrert, kommer det et
+varsel om nettopp det, slik at vakten vet at kvelden er over uten å åpne noe.
+
+Har ingen skannet koden, sendes varselet ikke videre til alle som tilfeldigvis
+har appen installert. Det er hele meningen med skanningen. «Send test nå» sier
+ifra om det er tilfellet.
 
 ### Lagringstid og automatisk sletting
 
@@ -418,6 +490,7 @@ Kongshaug/
 │  │  ├─ andaktToken.js    # roterende QR-token
 │  │  ├─ andaktReport.js   # fravær/for sent per dag og uke
 │  │  ├─ andaktArchive.js  # arkivet over ferdige ukesrapporter
+│  │  ├─ fireWatch.js      # brannvakten: vakt-kode og vaktliste per natt
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
 │  │  ├─ permissions.js    # superbrukere vs. vanlige administratorer
 │  │  ├─ practice.js       # øvekonkurransen

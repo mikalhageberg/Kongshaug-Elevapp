@@ -231,6 +231,27 @@ db.exec(`
     updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id);
+
+  -- Brannvakten. Én hemmelighet per natt ligger bak vakt-QR-koden på
+  -- adminsiden; det er den som gjør at gårsdagens kode ikke virker i dag.
+  CREATE TABLE IF NOT EXISTS fire_watch_days (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    night_date TEXT    NOT NULL UNIQUE,   -- 'YYYY-MM-DD' natten koden gjelder
+    secret     TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Én rad per administrator som har tatt vakten en gitt natt. Raden er både
+  -- tilgangen til brannlisten i mobilappen og adresselista for varselet om
+  -- hvem som mangler. Flere kan ha vakt sammen.
+  CREATE TABLE IF NOT EXISTS fire_watch_shifts (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    night_date    TEXT    NOT NULL,
+    registered_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, night_date)
+  );
+  CREATE INDEX IF NOT EXISTS idx_fire_watch_night ON fire_watch_shifts(night_date);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

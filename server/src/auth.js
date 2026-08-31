@@ -34,12 +34,19 @@ export function isAppReviewUser(username) {
 }
 
 // native = mobilappen (Bearer-token, låst bak Face ID/kode ved hver åpning) og
-// får derfor lang levetid. Alt annet (nettleser, admin) får 12 timer.
+// får derfor lang levetid. Nettleseren får 12 timer – den kan ikke låses.
+//
+// Administratorer får en kortere app-sesjon enn elevene: kontoen ser hele
+// skolens brannliste, og telefonens lås er det eneste som står mellom en
+// mistet telefon og den. `native` bæres med i tokenet, slik at serveren kan
+// kreve gyldig vakt av nettopp appen uten å røre adminsiden i nettleseren
+// (se requireWatchOnNative i routes/firelist.js).
 export function signToken(user, { native = false } = {}) {
+  const days = user.role === 'admin' ? config.nativeAdminSessionDays : config.nativeSessionDays;
   return jwt.sign(
-    { sub: user.id, role: user.role, username: user.username },
+    { sub: user.id, role: user.role, username: user.username, ...(native ? { native: true } : {}) },
     config.jwtSecret,
-    { expiresIn: native ? `${config.nativeSessionDays}d` : '12h' }
+    { expiresIn: native ? `${days}d` : '12h' }
   );
 }
 
