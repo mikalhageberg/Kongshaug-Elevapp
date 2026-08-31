@@ -249,6 +249,11 @@ export default function OvingModal({ visible, onClose }) {
         <StatusBar hidden />
         <View style={[styles.full, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
           {feil ? <View style={{ marginBottom: 16, alignSelf: 'stretch' }}><Banner tone="red" text={feil} /></View> : null}
+          {!feil && comp?.frozen ? (
+            <View style={{ marginBottom: 16, alignSelf: 'stretch' }}>
+              <Banner tone="amber" text={'🧊 Skolen har fryst konkurransen. Økten kan ikke registreres før den åpnes igjen.'} />
+            </View>
+          ) : null}
 
           <View style={styles.fullMidt}>
             <Text style={styles.fase}>
@@ -335,9 +340,11 @@ export default function OvingModal({ visible, onClose }) {
           {feil ? <View style={{ marginBottom: 14 }}><Banner tone="red" text={feil} /></View> : null}
 
           {status && !comp.active ? (
-            <Banner text={comp.configured
-              ? '🎻 Konkurransen er ikke åpen akkurat nå.'
-              : '🎻 Ingen øvekonkurranse er satt opp for øyeblikket.'} />
+            <Banner text={comp.frozen
+              ? '🧊 Konkurransen er fryst av skolen. Du kan ikke øve før den åpnes igjen.'
+              : comp.configured
+                ? '🎻 Konkurransen er ikke åpen akkurat nå.'
+                : '🎻 Ingen øvekonkurranse er satt opp for øyeblikket.'} />
           ) : null}
 
           {/* Bildet er tatt: vis det med stempel før det sendes. */}

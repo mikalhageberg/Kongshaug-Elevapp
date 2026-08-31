@@ -1882,8 +1882,13 @@ function formatDuration(sec) {
 // Datoen et UTC-tidsstempel fra databasen faller på i norsk tid, som
 // 'YYYY-MM-DD'. Å klippe de ti første tegnene av tidsstempelet ville gitt
 // UTC-datoen, og bommet med en dag på alt som skjer sent på kvelden.
+//
+// SQLite gir «2026-08-31 15:26:44» uten sone, og da må Z-en på for at det ikke
+// skal leses som lokal tid. Innstillingene lagrer derimot ekte ISO («…Z»), og
+// der ville en ekstra Z gitt Invalid Date – så den legges bare på når den mangler.
 function localDate(iso) {
-  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  const s = String(iso).replace(' ', 'T');
+  const d = new Date(/[Z+]|-\d\d:\d\d$/.test(s.slice(10)) ? s : `${s}Z`);
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
@@ -2030,6 +2035,67 @@ function resetPracticeModal(onDone) {
   });
 }
 
+// Hele dager igjen av perioden, siste dag medregnet. null hvis datoen mangler.
+function dagerIgjen(endDate) {
+  if (!endDate) return null;
+  const ms = new Date(`${endDate}T00:00:00`) - new Date(`${todayStr()}T00:00:00`);
+  return Math.max(0, Math.round(ms / 86400000));
+}
+
+// Frysing stopper elever som står midt i en økt, så antallet vises før det
+// bekreftes. Ingen skriveoppgave her – frysingen kan angres med ett trykk.
+function frysModal(onDone) {
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="max-width:460px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Frys konkurransen</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Kan låses opp igjen når som helst.</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:22px 26px">
+        <p style="font-size:14px;line-height:1.55;color:var(--slate,#33415a);margin:0">
+          Ingen elever kan starte nye økter eller registrere dem de holder på med.
+          Stillingen står stille fra du trykker, uansett hva datoene i perioden sier.
+        </p>
+        <div id="pågår" style="color:var(--muted-2);font-size:14px;margin-top:14px">Teller opp…</div>
+        <p id="ferr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding:0 26px 22px">
+        <button class="btn btn-ghost" id="avbryt" style="height:46px;padding:0 18px">Avbryt</button>
+        <button class="btn btn-primary" id="frys" style="height:46px;padding:0 20px">Frys</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+
+  const lukk = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', lukk);
+  bg.querySelector('#avbryt').addEventListener('click', lukk);
+  bg.addEventListener('click', (e) => { if (e.target === bg) lukk(); });
+
+  api('/api/practice/stats')
+    .then((st) => {
+      bg.querySelector('#pågår').innerHTML = st.running
+        ? `<b>${st.running} økt${st.running === 1 ? '' : 'er'}</b> pågår akkurat nå. ${st.running === 1 ? 'Den' : 'De'} kan ikke registreres så lenge konkurransen er fryst.`
+        : 'Ingen økter pågår akkurat nå.';
+    })
+    .catch(() => { bg.querySelector('#pågår').textContent = ''; });
+
+  const knapp = bg.querySelector('#frys');
+  knapp.addEventListener('click', async () => {
+    knapp.disabled = true; knapp.textContent = 'Fryser…';
+    try {
+      await api('/api/practice/freeze', { method: 'POST', body: { frozen: true } });
+      lukk();
+      toast('Konkurransen er fryst');
+      onDone();
+    } catch (ex) {
+      const feil = bg.querySelector('#ferr');
+      feil.textContent = ex.message; feil.style.display = 'block';
+      knapp.disabled = false; knapp.textContent = 'Frys';
+    }
+  });
+}
+
 const PRACTICE_SORTS = [
   ['time', 'Total tid'],
   ['class', 'Klasse'],
@@ -2074,6 +2140,8 @@ async function renderPractice(main) {
       </div>
     </div>
 
+    <div id="frys" style="margin-bottom:22px"></div>
+
     <div id="summary" style="margin-bottom:24px"></div>
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px">
@@ -2100,6 +2168,55 @@ async function renderPractice(main) {
     visDatoPåNorsk(page.querySelector(`[name=${navn}]`), page.querySelector(`[data-vist="${navn}"]`));
   }
 
+  // Fryskortet. Frysing er en manuell stopp som gjelder uansett hva datoene
+  // sier – den brukes når konkurransen skal avsluttes eller settes på vent uten
+  // at noen skal måtte flytte på sluttdatoen og dermed endre stillingen.
+  function tegnFrys(c) {
+    const frysEl = page.querySelector('#frys');
+    if (!c.configured) { frysEl.innerHTML = ''; return; }
+
+    const igjen = dagerIgjen(c.endDate);
+    const tittel = c.frozen ? '🧊 Konkurransen er fryst' : c.inPeriod ? 'Konkurransen er åpen' : 'Konkurransen er ikke i gang';
+    const tekst = c.frozen
+      ? `Fryst${c.frozenBy ? ` av <b>${esc(c.frozenBy)}</b>` : ''}${c.frozenAt ? ` ${formatDateLong(localDate(c.frozenAt))}` : ''}. Ingen kan starte eller registrere økter, og stillingen står stille. Perioden og resultatene er urørt – lås opp for å fortsette der dere slapp.`
+      : c.inPeriod
+        ? `Siste dag er ${formatDateLong(c.endDate)}${igjen === null ? '' : ` · ${igjen === 0 ? 'i dag' : `${igjen} dag${igjen === 1 ? '' : 'er'} igjen`}`}. Frys for å stoppe all øving med én gang, uten å flytte på datoene.`
+        : `Datoen er utenfor perioden, så ingen kan øve nå. Frys hvis konkurransen skal holdes stengt selv om datoene skulle bli endret.`;
+
+    frysEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 22px;border-radius:16px;
+                  background:${c.frozen ? '#eef3fb' : '#fff'};border:1px solid ${c.frozen ? '#c9d8ef' : 'var(--line)'}">
+        <div style="flex:1;min-width:240px">
+          <div style="font-size:15px;font-weight:800;${c.frozen ? 'color:var(--navy)' : ''}">${tittel}</div>
+          <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">${tekst}</div>
+        </div>
+        <button class="btn" id="frysKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto;
+                ${c.frozen ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--slate);border:1.5px solid #d3dae2'}">
+          ${c.frozen ? 'Lås opp' : 'Frys konkurransen…'}
+        </button>
+      </div>`;
+
+    frysEl.querySelector('#frysKnapp').addEventListener('click', () => {
+      // Opptining åpner bare igjen og kan angres med ett trykk, så den går rett
+      // gjennom. Frysing avbryter elever midt i økten, og spør først.
+      if (c.frozen) settFryst(false);
+      else frysModal(() => loadBoard());
+    });
+  }
+
+  async function settFryst(frozen) {
+    const knapp = page.querySelector('#frysKnapp');
+    if (knapp) { knapp.disabled = true; knapp.textContent = frozen ? 'Fryser…' : 'Låser opp…'; }
+    try {
+      await api('/api/practice/freeze', { method: 'POST', body: { frozen } });
+      toast(frozen ? 'Konkurransen er fryst' : 'Konkurransen er åpen igjen');
+      await loadBoard();
+    } catch (ex) {
+      toast(ex.message);
+      await loadBoard();
+    }
+  }
+
   function markerSort() {
     page.querySelectorAll('[data-sort]').forEach((b) => {
       const aktiv = b.dataset.sort === sort;
@@ -2115,9 +2232,11 @@ async function renderPractice(main) {
     if (!d) { boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2)">Kunne ikke laste stillingen.</div>'; return; }
 
     const c = d.competition;
+    tegnFrys(c);
+    const tilstand = c.frozen ? 'fryst' : c.active ? 'pågår nå' : 'ikke aktiv';
     stateEl.textContent = !c.configured
       ? 'Ingen periode satt opp ennå'
-      : `${formatDateLong(c.startDate)} – ${formatDateLong(c.endDate)} · ${c.active ? 'pågår nå' : 'ikke aktiv'} · ${formatDuration(d.totalSeconds)} øvd til sammen`;
+      : `${formatDateLong(c.startDate)} – ${formatDateLong(c.endDate)} · ${tilstand} · ${formatDuration(d.totalSeconds)} øvd til sammen`;
 
     if (!c.configured) {
       summaryEl.innerHTML = '';

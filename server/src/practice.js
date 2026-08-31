@@ -9,14 +9,15 @@
 //  2. Om økten skal dokumenteres med bilde. Terningkastet skjer her, når økten
 //     starter, og lagres på raden. Ellers kunne appen bare latt være å spørre.
 //  3. Om konkurransen er åpen. Perioden ligger i innstillingene, og økter kan
-//     verken startes eller fullføres utenfor den.
+//     verken startes eller fullføres utenfor den. Det samme gjelder frysingen:
+//     er konkurransen fryst, står stillingen stille uansett hva datoene sier.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import db from './db.js';
 import { paths } from './config.js';
 import { todayDate } from './andaktToken.js';
-import { getSettings } from './settings.js';
+import { getSettings, setSettings } from './settings.js';
 
 export const photoDir = path.join(paths.data, 'practice');
 fs.mkdirSync(photoDir, { recursive: true });
@@ -30,17 +31,51 @@ export const MAX_SESSION_SECONDS = 6 * 60 * 60;
 export const MAX_WALL_SECONDS = 24 * 60 * 60;
 
 // Konkurransens tilstand akkurat nå.
+//
+// «Åpen» krever to ting: at datoen er innenfor perioden, OG at ingen har fryst
+// konkurransen. De to holdes fra hverandre i svaret, slik at appen og admin kan
+// si hvorfor den er stengt – «ikke i perioden» og «stanset av skolen» er to
+// forskjellige beskjeder til eleven.
 export function competitionState(today = todayDate(), s = getSettings()) {
   const { practiceStartDate: start, practiceEndDate: end } = s;
   const configured = !!(start && end);
+  // Periodens datoer er inklusive – siste dag teller med.
+  const inPeriod = configured && today >= start && today <= end;
+  const frozen = !!s.practiceFrozen;
   return {
     configured,
     startDate: start || null,
     endDate: end || null,
-    // Periodens datoer er inklusive – siste dag teller med.
-    active: configured && today >= start && today <= end,
+    inPeriod,
+    frozen,
+    frozenAt: frozen ? s.practiceFrozenAt || null : null,
+    frozenBy: frozen ? s.practiceFrozenBy || null : null,
+    active: inPeriod && !frozen,
     warmupSeconds: s.practiceWarmupMinutes * 60,
   };
+}
+
+// Frys eller tin konkurransen. Hvem og når lagres ved frysing og tømmes ved
+// opptining – står det et navn igjen fra sist, ville admin trodd at den var
+// fryst nå.
+export function setFrozen(frozen, byUsername = '') {
+  setSettings(frozen
+    ? { practiceFrozen: true, practiceFrozenAt: new Date().toISOString(), practiceFrozenBy: byUsername }
+    : { practiceFrozen: false, practiceFrozenAt: '', practiceFrozenBy: '' });
+  return competitionState();
+}
+
+// Hvor mange økter som står og går akkurat nå. Frysing stopper dem, så admin
+// skal få vite hvor mange elever hun avbryter før hun trykker.
+export function runningSessions() {
+  return db.prepare('SELECT COUNT(*) AS n FROM practice_sessions WHERE ended_at IS NULL').get().n;
+}
+
+// Beskjeden eleven får når hun prøver å øve mens konkurransen er stengt.
+export function closedReason(comp) {
+  if (!comp.configured) return 'Ingen øvekonkurranse er satt opp.';
+  if (comp.frozen) return 'Konkurransen er fryst av skolen akkurat nå.';
+  return 'Konkurransen er ikke åpen nå.';
 }
 
 // Faktisk øvetid, regnet på serveren: fra start til det tidligste av «stoppet»,

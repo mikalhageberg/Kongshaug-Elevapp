@@ -165,19 +165,24 @@ export default function DashboardScreen({ user, onLogout, goTo }) {
 
       {/* Øvekonkurranse: bare synlig mens en konkurranse faktisk pågår. Den
           arrangeres av og til, og et kort som står tomt resten av året ville
-          bare vært støy på hjemskjermen. */}
-      {practice?.competition?.active ? (
+          bare vært støy på hjemskjermen.
+          Er konkurransen fryst, blir kortet stående ut perioden – forsvant det,
+          ville elevene trodd at konkurransen var avlyst. inPeriod er ny; || active
+          holder kortet på plass mot en server som ikke sender feltet ennå. */}
+      {practice?.competition?.active || practice?.competition?.inPeriod ? (
         <Card style={styles.ovingCard} onPress={() => setOvingOpen(true)}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={[styles.cardIcon, { backgroundColor: C.navy }]}><Text style={{ fontSize: 24 }}>🎻</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>Øvekonkurranse</Text>
               <Text style={styles.ovingSub}>
-                {practice.pending
-                  ? 'Du har en økt som pågår – trykk for å fortsette'
-                  : practice.totalSeconds
-                    ? `Du har øvd ${practiceTotal(practice.totalSeconds)} så langt`
-                    : 'Start en økt og få tiden registrert'}
+                {practice.competition.frozen
+                  ? '🧊 Fryst av skolen – stillingen står stille'
+                  : practice.pending
+                    ? 'Du har en økt som pågår – trykk for å fortsette'
+                    : practice.totalSeconds
+                      ? `Du har øvd ${practiceTotal(practice.totalSeconds)} så langt`
+                      : 'Start en økt og få tiden registrert'}
               </Text>
             </View>
           </View>

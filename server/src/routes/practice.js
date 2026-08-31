@@ -10,6 +10,7 @@ import {
   finishSession, discardSession, savePhoto,
   pendingSession, mySessions, myTotalSeconds, leaderboard, sessionsFor,
   competitionStats, resetCompetition, photoDir, SORTS,
+  setFrozen, runningSessions, closedReason,
 } from '../practice.js';
 
 const router = Router();
@@ -21,7 +22,10 @@ router.use(requireAuth);
 router.get('/status', (req, res) => {
   const comp = competitionState();
   res.json({
-    competition: { configured: comp.configured, active: comp.active, startDate: comp.startDate, endDate: comp.endDate },
+    competition: {
+      configured: comp.configured, active: comp.active, inPeriod: comp.inPeriod,
+      frozen: comp.frozen, startDate: comp.startDate, endDate: comp.endDate,
+    },
     warmupSeconds: comp.warmupSeconds,
     pending: pendingSession(req.auth.sub),
     totalSeconds: myTotalSeconds(req.auth.sub, comp),
@@ -32,9 +36,7 @@ router.get('/status', (req, res) => {
 // Start en økt (eller hent fram den som allerede pågår).
 router.post('/start', (req, res) => {
   const comp = competitionState();
-  if (!comp.active) {
-    return res.status(403).json({ error: comp.configured ? 'Konkurransen er ikke åpen nå.' : 'Ingen øvekonkurranse er satt opp.' });
-  }
+  if (!comp.active) return res.status(403).json({ error: closedReason(comp) });
   res.status(201).json({ session: startSession(req.auth.sub) });
 });
 
@@ -77,7 +79,9 @@ router.post('/:id/photo', express.raw({ type: 'application/base64', limit: '8mb'
 // Registrer økten.
 router.post('/:id/finish', (req, res) => {
   const comp = competitionState();
-  if (!comp.active) return res.status(403).json({ error: 'Konkurransen er ikke åpen nå.' });
+  // Frysing stopper også registreringen av økter som allerede er i gang. Det er
+  // hele poenget: stillingen skal stå stille fra det øyeblikket admin fryser.
+  if (!comp.active) return res.status(403).json({ error: closedReason(comp) });
   try {
     res.json({ session: finishSession(req.auth.sub, Number(req.params.id)) });
   } catch (ex) {
@@ -135,7 +139,19 @@ router.get('/sessions/:userId', requireAdmin, (req, res) => {
 });
 
 // Hvor mange økter og bilder som finnes – til bekreftelsen før nullstilling.
-router.get('/stats', requireAdmin, (req, res) => res.json(competitionStats()));
+// running er økter som pågår akkurat nå, og vises i frys-bekreftelsen.
+router.get('/stats', requireAdmin, (req, res) =>
+  res.json({ ...competitionStats(), running: runningSessions() }));
+
+// Frys eller tin konkurransen. En fryst konkurranse er stengt uansett hva
+// datoene sier: ingen nye økter kan startes, og ingen kan registreres. Perioden
+// og resultatene røres ikke, så opptining setter alt tilbake slik det var.
+router.post('/freeze', requireAdmin, (req, res) => {
+  const frozen = !!req.body?.frozen;
+  const comp = setFrozen(frozen, req.auth.username || '');
+  console.warn(`[øvekonkurranse] ${req.auth.username} ${frozen ? 'frøs' : 'tinte'} konkurransen`);
+  res.json({ competition: comp });
+});
 
 // Nullstill konkurransen: sletter ALLE øveøkter og alle dokumentasjonsbilder,
 // for alle elever. Perioden og innstillingene beholdes. Kan ikke angres.

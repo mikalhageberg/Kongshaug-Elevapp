@@ -46,6 +46,11 @@ const DEFAULTS = {
   practiceEndDate: '',             // 'YYYY-MM-DD', siste dag (inklusiv)
   practiceWarmupMinutes: 10,       // obligatorisk oppvarming før øvingen
   practicePhotoPercent: 50,        // hvor stor andel av øktene som må dokumenteres
+  // Frysing: en manuell stopp som gjelder uansett hva datoene sier. Hvem og når
+  // lagres sammen med bryteren, slik at admin ser hvem som stanset konkurransen.
+  practiceFrozen: false,           // konkurransen er stanset manuelt
+  practiceFrozenAt: '',            // ISO-tidspunkt for frysingen
+  practiceFrozenBy: '',            // brukernavnet som frøs den
   guestEmailEnabled: false,        // varsle på e-post når en elev melder gjest
   guestEmailRecipient: '',         // e-post som mottar gjesteforespørsler
   // Lagringstid (se retention.js). Standard: historikk slettes etter ett år,
@@ -136,6 +141,9 @@ export function getSettings() {
     practicePhotoPercent: Number.isInteger(Number(s.practicePhotoPercent))
       ? Number(s.practicePhotoPercent)
       : DEFAULTS.practicePhotoPercent,
+    practiceFrozen: s.practiceFrozen != null ? s.practiceFrozen === 'true' : DEFAULTS.practiceFrozen,
+    practiceFrozenAt: s.practiceFrozenAt ?? DEFAULTS.practiceFrozenAt,
+    practiceFrozenBy: s.practiceFrozenBy ?? DEFAULTS.practiceFrozenBy,
   };
 }
 
