@@ -244,7 +244,7 @@
     <div class="row"><span class="n">8</span><span class="d"><span class="t">Andaktsarkiv</span> <span class="desc">– ukesrapporter over fravær</span></span></div>
     <div class="row"><span class="n">9</span><span class="d"><span class="t">Kjøkken</span> <span class="desc">– middagstall, kjøkkentjeneste, ukemeny</span></span></div>
     <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus og signaturer</span></span></div>
-    <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, stilling, dokumentasjon</span></span></div>
+    <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, frysing, stilling, dokumentasjon</span></span></div>
     <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes telefoner</span></span></div>
     <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
     <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, ved skolestart</span></span></div>
@@ -713,14 +713,38 @@
   <table>
     <thead>    <tr><th style="width:34%">Innstilling</th><th>Hva den gjør</th></tr></thead>
     <tbody>
-    <tr><td class="k">Starter / Slutter</td><td>Perioden konkurransen varer. <strong>Tom periode = ingen konkurranse</strong>, og kortet vises ikke i elevappen. Økter kan verken startes eller registreres utenfor perioden.</td></tr>
+    <tr><td class="k">Starter / Slutter</td><td>Perioden konkurransen varer, begge dager inkludert. <strong>Tom periode = ingen konkurranse.</strong> Økter kan verken startes eller registreres utenfor perioden.</td></tr>
     <tr><td class="k">Obligatorisk oppvarming</td><td>Antall minutter eleven må gjennom før stoppeklokken tar over. Tiden teller med i totalen.</td></tr>
     <tr><td class="k">Andel økter som må dokumenteres</td><td>Prosenten som trekkes ut til å ta bilde. Trekkes for hver økt når eleven starter. Sett <strong>100 %</strong> mens elevene læres opp, eller <strong>0 %</strong> for å slå dokumentasjonen av.</td></tr>
     </tbody>
   </table>
   <p class="note">Terningkastet skjer på serveren når økten starter, og lagres på økten – ellers kunne appen latt være å spørre.</p>
 
-  <h3>11.2 Stillingen</h3>
+  <div class="box ok">
+    <span class="h">Datoene styrer hva elevene i det hele tatt ser</span>
+    <p>Er dagen i dag <strong>utenfor</strong> perioden – eller er ingen periode satt opp – dukker øvekonkurransen ikke opp i elevappen i det hele tatt. Kortet er borte fra hjemskjermen, og det finnes ingen annen vei inn til stoppeklokken. Dere trenger altså ikke gjøre noe for å rydde den bort når konkurransen er over: den forsvinner av seg selv dagen etter sluttdatoen.</p>
+    <p>Serveren sjekker det samme en gang til når en økt startes og når den registreres, så en app som skulle finne på å spørre likevel, får nei.</p>
+  </div>
+
+  <h3>11.2 Fryse konkurransen</h3>
+  <p>Kortet under periodefeltene viser om konkurransen er åpen, og har en knapp for å <strong>fryse</strong> den. Frysing er en manuell stopp som gjelder <strong>uansett hva datoene sier</strong>.</p>
+  <table>
+    <thead>    <tr><th style="width:34%">Tilstand</th><th>Hva den betyr</th></tr></thead>
+    <tbody>
+    <tr><td class="k">Konkurransen er åpen</td><td>Datoen er innenfor perioden, og ingen har fryst. Kortet viser siste dag og hvor mange dager det er igjen.</td></tr>
+    <tr><td class="k">🧊 Konkurransen er fryst</td><td>Stanset manuelt. Kortet viser hvem som frøs den, og når.</td></tr>
+    <tr><td class="k">Konkurransen er ikke i gang</td><td>Datoen er utenfor perioden. Frysing er fortsatt mulig, hvis dere vil at den skal holdes stengt selv om datoene senere blir endret.</td></tr>
+    </tbody>
+  </table>
+  <p>Mens konkurransen er fryst kan ingen elev starte nye økter, og heller ikke registrere den de holder på med. <strong>Stillingen står stille fra det øyeblikket dere trykker.</strong> Bekreftelsen sier hvor mange økter som pågår akkurat nå – det er elever dere avbryter midt i øvingen.</p>
+  <div class="box tip">
+    <span class="h">Frys i stedet for å flytte sluttdatoen</span>
+    <p>Skal konkurransen avsluttes før tiden, eller settes på vent, er frysing det riktige verktøyet. Datoene bestemmer nemlig også <strong>hvilke økter som teller med i stillingen</strong> – flytter dere sluttdatoen bakover, forsvinner øktene etter den nye datoen ut av resultatet. Frysing rører verken perioden eller resultatene.</p>
+  </div>
+  <p><strong>«Lås opp»</strong> åpner igjen med én gang, uten bekreftelse. En økt som sto og gikk da dere frøs, kan registreres etterpå – så lenge det er innenfor det vanlige døgnet en økt får leve. Både frysing og opptining logges på serveren med hvem som gjorde det.</p>
+  <p class="note">Elevene ser konkurransen på hjemskjermen mens den er fryst, med teksten «Fryst av skolen – stillingen står stille». Den blir stående ut perioden med vilje: forsvant kortet, ville elevene trodd konkurransen var avlyst.</p>
+
+  <h3>11.3 Stillingen</h3>
   <p>Under innstillingene ligger samlet øvetid, og oppsummeringer <strong>per klasse</strong> og <strong>per instrument</strong>. Deretter kommer selve stillingen, elev for elev.</p>
   <p>Klikk en elev for å folde ut øktene: dato, lengde og eventuelt dokumentasjonsbilde. Klikk bildet for å se det stort.</p>
   <div class="box tip">
@@ -729,15 +753,16 @@
   </div>
   <p>Søppelbøtta på en økt sletter den: tiden forsvinner fra stillingen, og dokumentasjonsbildet slettes.</p>
 
-  <h3>11.3 Grenser som gjelder uansett</h3>
+  <h3>11.4 Grenser som gjelder uansett</h3>
   <ul>
     <li>Selve øvetiden regnes ut <strong>på serveren</strong>, ikke i appen. Appen sender aldri hvor lenge det ble øvd.</li>
     <li>«Stopp» fryser tiden, slik at minuttene det tar å ta dokumentasjonsbildet ikke teller som øving.</li>
     <li>Pauser holdes utenfor øvetiden – de kan verken legge til eller trekke fra tid.</li>
     <li>En økt forkastes når den passerer <strong>seks timer</strong> faktisk øvetid, eller et døgn i klokketid.</li>
+    <li>Både perioden og frysingen sjekkes på serveren, både når en økt startes og når den registreres.</li>
   </ul>
 
-  <h3>11.4 Nullstille konkurransen</h3>
+  <h3>11.5 Nullstille konkurransen</h3>
   <div class="box stop">
     <span class="h">⚠ Sletter alle økter og alle bilder, for alle elever</span>
     <p>Knappen <strong>«Nullstill…»</strong> nederst på siden fjerner alle øveøkter og dokumentasjonsbilder. Perioden og innstillingene beholdes – det er resultatene som nullstilles. Bekreftelsen viser hvor mange økter og bilder som forsvinner, og krever at du skriver <strong>NULLSTILL</strong> for hånd. Handlingen logges på serveren med hvem som utførte den.</p>
@@ -871,6 +896,7 @@
   <ul>
     <li>Last ned det skolen trenger å ta vare på: andaktsrapportene fra arkivet, og eventuelle brannliste-PDF-er.</li>
     <li>Deaktiver avgangselevene.</li>
+    <li>Er en øvekonkurranse i gang, frys den når siste øvedag er over – da står stillingen fast mens dere kårer vinneren.</li>
     <li>Vurder om øvekonkurransen skal nullstilles før neste år.</li>
   </ul>
 </section>
