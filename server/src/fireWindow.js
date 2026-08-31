@@ -80,6 +80,35 @@ export function fireWindowNow(now = new Date(), s = getSettings()) {
   return { isOpen: false, nightDate: null, state, opensAt: wToday.open, closesAt: wToday.close };
 }
 
+// Hvor lenge er det siden innsjekksvinduet sist stengte, og hvilken natt gjaldt
+// det? Brukes til å sende brannliste-e-posten et gitt antall minutter etter
+// stengetid, i stedet for på et fast klokkeslett – lukketiden er ulik hverdag,
+// fredag og lørdag, og et fast klokkeslett ville truffet feil i helgen.
+//
+// Returnerer null bare mens gårsdagens vindu fortsatt står åpent i etter-
+// midnatt-halen; da er ingen natt avsluttet ennå.
+export function sinceLastClose(now = new Date(), s = getSettings()) {
+  const t = osloParts(now);
+  const y = dayBefore(t);
+  const wY = windowForDow(y.dow, s);
+  const wT = windowForDow(t.dow, s);
+
+  // a) Gårsdagens vindu krysset midnatt og stengte tidligere i natt.
+  if (crossesMidnight(wY) && t.minutes >= toMin(wY.close)) {
+    return { nightDate: y.dateKey, minutesSince: t.minutes - toMin(wY.close) };
+  }
+  // b) Dagens vindu stengte tidligere i kveld.
+  if (!crossesMidnight(wT) && t.minutes > toMin(wT.close)) {
+    return { nightDate: t.dateKey, minutesSince: t.minutes - toMin(wT.close) };
+  }
+  // c) Ellers var siste stenging i går kveld, før midnatt.
+  if (!crossesMidnight(wY)) {
+    return { nightDate: y.dateKey, minutesSince: t.minutes + (1440 - toMin(wY.close)) };
+  }
+  // d) Vi er i etter-midnatt-halen av gårsdagens vindu – natten pågår ennå.
+  return null;
+}
+
 // Natten «nå» hører til for registrering – brukes også når vinduet er stengt
 // (f.eks. melde seg borte på dagtid), så til stede/borte alltid lander på samme
 // natt. Lik dagens dato bortsett fra i helgens etter-midnatt-hale.

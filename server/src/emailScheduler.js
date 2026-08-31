@@ -22,6 +22,7 @@ import { getSettings, getLastSent, setLastSent, hhmmToMinutes } from './settings
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
 import { sendFireListReminder } from './fireReminder.js';
 import { sendDutyReminders, isSunday } from './dutyReminder.js';
+import { sinceLastClose } from './fireWindow.js';
 
 // Hvor lenge etter oppsatt tidspunkt vi fortsatt sender. Dekker drift og korte
 // nedetider, men hindrer at en e-post fra i formiddag plutselig går ut om
@@ -56,7 +57,7 @@ export function isDue({ enabled, recipient, time, lastSent }, now, grace = GRACE
 }
 
 // Ett gjennomløp. Eksportert slik at testene kan kalle den direkte.
-export async function runOnce(now = zonedNow(), log = console) {
+export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MINUTES) {
   let s;
   try { s = getSettings(); } catch { return []; }
   const sent = [];
@@ -65,8 +66,20 @@ export async function runOnce(now = zonedNow(), log = console) {
     {
       navn: 'Brannliste',
       key: 'fireEmailLastSent',
-      cfg: { enabled: s.fireEmailEnabled, recipient: s.fireEmailRecipient, time: s.fireEmailTime },
-      send: sendFireListEmail,
+      // Denne følger ikke klokka, men innsjekksvinduet: den går et gitt antall
+      // minutter etter at vinduet stengte. «Sist sendt» lagres derfor som
+      // NATTEN og ikke som datoen – i helgen stenger vinduet etter midnatt, og
+      // en dato-nøkkel ville sperret for natten som nettopp ble avsluttet.
+      due: () => {
+        if (!s.fireEmailEnabled || !s.fireEmailRecipient) return null;
+        const sist = sinceLastClose(now);
+        if (!sist) return null;
+        const etter = sist.minutesSince - s.fireEmailDelayMinutes;
+        if (etter < 0 || etter > grace) return null;
+        if (getLastSent('fireEmailLastSent') === sist.nightDate) return null;
+        return sist.nightDate;
+      },
+      send: (nightDate) => sendFireListEmail({ nightDate }),
       beskriv: (r) => `sendt til ${r.recipient} (natt ${r.nightDate})`,
     },
     {
@@ -98,12 +111,15 @@ export async function runOnce(now = zonedNow(), log = console) {
   ];
 
   for (const job of jobs) {
-    if (!isDue({ ...job.cfg, lastSent: getLastSent(job.key) }, now)) continue;
+    // Jobber med egen due() bestemmer selv når de er klare, og hva «sist sendt»
+    // skal settes til. De øvrige følger et klokkeslett og merkes med dagens dato.
+    const merke = job.due ? job.due() : (isDue({ ...job.cfg, lastSent: getLastSent(job.key) }, now) ? now.dateKey : null);
+    if (!merke) continue;
     // Merk som sendt FØR utsending: feiler sendingen, vil vi ikke at neste tick
     // 30 sekunder senere skal prøve igjen og igjen resten av vinduet.
-    setLastSent(job.key, now.dateKey);
+    setLastSent(job.key, merke);
     try {
-      const r = await job.send();
+      const r = await job.send(merke);
       sent.push(job.navn);
       log.log(`  ✉  ${job.navn} ${job.beskriv(r)}`);
     } catch (ex) {

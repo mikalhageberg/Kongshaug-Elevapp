@@ -5,6 +5,8 @@ import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
 import { fireWindowNow, currentNightDate } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
+import { buildFireListPdf } from '../pdf.js';
+import { verifyFireListLink } from '../fireLink.js';
 import { getSettings } from '../settings.js';
 import { sendGuestRequestEmail } from '../mail.js';
 
@@ -13,6 +15,29 @@ import { sendGuestRequestEmail } from '../mail.js';
 const coordOrNull = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
 const router = Router();
+
+// ── Nedlasting av brannlisten via signert lenke (uten innlogging) ──
+// Ligger FØR requireAuth med vilje: lenken går i e-posten til ansvarlig lærer,
+// og skal virke på en iPad midt på natten uten at noen må huske et passord.
+// Signaturen står for tilgangskontrollen, se fireLink.js.
+router.get('/pdf', async (req, res) => {
+  const { natt, exp, sig } = req.query;
+  if (!isValidDate(String(natt || '')) || !verifyFireListLink(natt, exp, sig)) {
+    return res.status(403).type('text/plain; charset=utf-8')
+      .send('Lenken er ugyldig eller utløpt. Åpne den nyeste e-posten med brannlisten, eller logg inn i adminsiden.');
+  }
+  try {
+    const pdf = await buildFireListPdf(getFireOverview(natt));
+    res.setHeader('Content-Type', 'application/pdf');
+    // «attachment» gjør at iPaden legger den i Nedlastinger i stedet for å
+    // vise den i en fane som forsvinner når nettleseren lukkes.
+    res.setHeader('Content-Disposition', `attachment; filename="brannliste-${natt}.pdf"`);
+    res.send(pdf);
+  } catch {
+    res.status(500).type('text/plain; charset=utf-8').send('Kunne ikke lage brannlisten.');
+  }
+});
+
 router.use(requireAuth);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -33,7 +33,10 @@ const DEFAULTS = {
   fireCloseSaturday: '00:00',
   fireEmailEnabled: false,         // send brannlisten på e-post automatisk
   fireEmailRecipient: '',          // e-post til ansvarlig lærer
-  fireEmailTime: '14:15',          // klokkeslett for automatisk utsending
+  // Brannlisten sendes et gitt antall minutter ETTER at innsjekksvinduet stengte,
+  // ikke på et fast klokkeslett. Vinduet lukker til ulik tid hverdag, fredag og
+  // lørdag, og et fast klokkeslett ville truffet feil i helgen.
+  fireEmailDelayMinutes: 15,       // minutter etter at vinduet stengte
   kitchenEmailEnabled: false,      // send middagsoversikt til kjøkkenet automatisk
   kitchenEmailRecipient: '',       // e-post til kjøkkenet
   kitchenEmailTime: '13:00',       // klokkeslett for utsending til kjøkkenet
@@ -82,6 +85,10 @@ export const QR_AFTER_MIN = 0;
 export const QR_AFTER_MAX = 180;
 // Oppvarmingen. Null ville gjort den obligatoriske oppvarmingen valgfri i
 // praksis; taket hindrer at et feiltrykk låser elevene ute av å øve.
+// Forsinkelsen på brannliste-e-posten. Null er gyldig (send med én gang vinduet
+// stenger); taket hindrer at den havner et helt døgn på etterskudd.
+export const FIRE_DELAY_MIN = 0;
+export const FIRE_DELAY_MAX = 720;
 export const WARMUP_MIN = 1;
 export const WARMUP_MAX = 60;
 // Andelen økter som må dokumenteres. 0 = aldri, 100 = alltid – begge er gyldige
@@ -140,7 +147,10 @@ export function getSettings() {
     fireCloseSaturday: s.fireCloseSaturday ?? s.fireDeadlineSaturday ?? DEFAULTS.fireCloseSaturday,
     fireEmailEnabled: s.fireEmailEnabled != null ? s.fireEmailEnabled === 'true' : DEFAULTS.fireEmailEnabled,
     fireEmailRecipient: s.fireEmailRecipient ?? DEFAULTS.fireEmailRecipient,
-    fireEmailTime: s.fireEmailTime ?? DEFAULTS.fireEmailTime,
+    // Egen lesing: intOr forkaster 0, og «send med én gang» er et gyldig valg.
+    fireEmailDelayMinutes: Number.isInteger(Number(s.fireEmailDelayMinutes))
+      ? Number(s.fireEmailDelayMinutes)
+      : DEFAULTS.fireEmailDelayMinutes,
     kitchenEmailEnabled: s.kitchenEmailEnabled != null ? s.kitchenEmailEnabled === 'true' : DEFAULTS.kitchenEmailEnabled,
     kitchenEmailRecipient: s.kitchenEmailRecipient ?? DEFAULTS.kitchenEmailRecipient,
     kitchenEmailTime: s.kitchenEmailTime ?? DEFAULTS.kitchenEmailTime,

@@ -6,6 +6,7 @@ import {
   ARCHIVE_WEEKS_MIN, ARCHIVE_WEEKS_MAX,
   QR_BEFORE_MIN, QR_BEFORE_MAX, QR_AFTER_MIN, QR_AFTER_MAX,
   WARMUP_MIN, WARMUP_MAX, PHOTO_PERCENT_MIN, PHOTO_PERCENT_MAX,
+  FIRE_DELAY_MIN, FIRE_DELAY_MAX,
   ADMIN_EDITABLE_SETTINGS,
 } from '../settings.js';
 import { requireSuperAdmin, isSuperAdmin } from '../permissions.js';
@@ -35,7 +36,7 @@ router.put('/', (req, res) => {
     fireOpenWeekday: b.fireOpenWeekday, fireCloseWeekday: b.fireCloseWeekday,
     fireOpenFriday: b.fireOpenFriday, fireCloseFriday: b.fireCloseFriday,
     fireOpenSaturday: b.fireOpenSaturday, fireCloseSaturday: b.fireCloseSaturday,
-    fireEmailTime: b.fireEmailTime, kitchenEmailTime: b.kitchenEmailTime,
+    kitchenEmailTime: b.kitchenEmailTime,
   };
   for (const [k, v] of Object.entries(times)) {
     if (v === undefined) continue;
@@ -66,6 +67,7 @@ router.put('/', (req, res) => {
     andaktQrOpenBefore: { v: b.andaktQrOpenBefore, min: QR_BEFORE_MIN, max: QR_BEFORE_MAX, navn: 'QR-koden åpner (minutter før fristen)' },
     andaktQrCloseAfter: { v: b.andaktQrCloseAfter, min: QR_AFTER_MIN, max: QR_AFTER_MAX, navn: 'QR-koden stenger (minutter etter fristen)' },
     practiceWarmupMinutes: { v: b.practiceWarmupMinutes, min: WARMUP_MIN, max: WARMUP_MAX, navn: 'Oppvarming (minutter)' },
+    fireEmailDelayMinutes: { v: b.fireEmailDelayMinutes, min: FIRE_DELAY_MIN, max: FIRE_DELAY_MAX, navn: 'Forsinkelse på brannliste-e-post (minutter)' },
     practicePhotoPercent: { v: b.practicePhotoPercent, min: PHOTO_PERCENT_MIN, max: PHOTO_PERCENT_MAX, navn: 'Andel økter med bilde (%)' },
   };
   for (const [k, { v, min, max, navn }] of Object.entries(ints)) {

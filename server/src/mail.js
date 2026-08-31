@@ -3,6 +3,7 @@ import { getSettings } from './settings.js';
 import { getFireOverview, reportNightDate, nightLabel } from './fireReport.js';
 import { getDinnerReport } from './kitchenReport.js';
 import { buildFireListPdf } from './pdf.js';
+import { fireListLink, LINK_TTL_HOURS } from './fireLink.js';
 import { todayDate } from './andaktToken.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -49,7 +50,7 @@ async function sendViaBrevo({ recipient, subject, htmlContent, attachment, sende
 }
 
 // Ren, lettlest HTML-e-post med sammendrag og hvem som mangler.
-export function buildFireEmailHtml(overview) {
+export function buildFireEmailHtml(overview, link = fireListLink(overview.nightDate)) {
   const label = nightLabel(overview.nightDate);
   const missing = [];
   for (const d of overview.dorms) for (const s of d.students) if (s.status === 'missing') missing.push({ ...s, dorm: d.dorm });
@@ -82,7 +83,25 @@ export function buildFireEmailHtml(overview) {
           ${stat(overview.missing, 'Mangler', '#d64545')}
         </tr></table>
         ${missingBlock}
-        <p style="margin:22px 0 0;font-size:14px;color:#55607a">Full brannliste, gruppert på internat, ligger vedlagt som PDF.</p>
+
+        <!-- Nedlastingsknapp. Bygget som tabell og ikke som en stylet <a>, fordi
+             flere e-postklienter (Outlook i særdeleshet) ikke gir padding til
+             lenker – knappen ville blitt en tynn tekststrek. -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 0">
+          <tr><td align="center" bgcolor="#1f8a5b" style="border-radius:10px">
+            <a href="${esc(link)}" style="display:block;padding:18px 24px;font-size:19px;font-weight:bold;color:#ffffff;text-decoration:none">
+              ⬇ Last ned brannlisten
+            </a>
+          </td></tr>
+        </table>
+        <div style="margin:14px 0 0;padding:14px 16px;background:#fdf0ef;border:1px solid #f0c4c0;border-radius:10px">
+          <div style="font-size:15px;font-weight:bold;color:#a12a1f">Last den ned nå – ikke vent til det brenner.</div>
+          <div style="font-size:14px;color:#55607a;line-height:1.55;margin-top:6px">
+            Ved brann kan både nett og strøm være borte. En nedlastet fil ligger på iPaden og virker uansett.
+            Etter nedlasting finner du den i mappen <b>Nedlastinger</b>.
+          </div>
+        </div>
+        <p style="margin:18px 0 0;font-size:13px;color:#8a93a3">Listen ligger også vedlagt denne e-posten som PDF. Nedlastingslenken virker i ${LINK_TTL_HOURS} timer.</p>
         <p style="margin:18px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Elevapp.</p>
       </div>
     </div></body></html>`;

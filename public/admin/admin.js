@@ -1324,7 +1324,10 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   const card = el(`
     <div style="margin-top:${standalone ? 0 : 26}px">
       <div style="font-size:17px;font-weight:800;margin-bottom:2px">${cfg.navn}</div>
-      <div style="font-size:13px;color:var(--muted-2);margin-bottom:14px">${cfg.hjelp}</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:10px">${cfg.hjelp}</div>
+      <div style="display:inline-flex;align-items:center;gap:7px;background:var(--green-bg);color:var(--green-ink,#166534);border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:700;margin-bottom:14px">
+        <span style="width:14px;height:14px;display:block">${icon.check}</span>Lagres automatisk – ingen lagreknapp
+      </div>
       <div style="background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden">
         <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f7f8fa;border-bottom:1px solid var(--line)">
           <button class="btn btn-ghost" id="prevWeek" title="Forrige uke" style="height:38px;width:38px;padding:0;font-size:16px">‹</button>
@@ -2697,7 +2700,7 @@ async function renderHandbooks(main) {
 // ── Innstillinger ────────────────────────────────────────────
 // ── Varsler: push-varsel til alle i mobilappen ───────────────
 async function renderVarsler(main) {
-  header(main, 'Varsler', 'Send push-varsel til alle i appen');
+  header(main, 'Varsler', 'Send push-varsel til alle i appen · bryterne lagres automatisk');
   const s = await api('/api/settings').catch(() => null);
   const page = el(`
     <div class="page" style="max-width:560px">
@@ -2705,7 +2708,7 @@ async function renderVarsler(main) {
         <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Automatisk påminnelse: husk brannlisten</div>
         <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender et push-varsel i mobilappen kl. 20:00 til elever som ikke har krysset seg av for kvelden. Tidspunktet er fast og uavhengig av åpningstidene for innsjekksvinduet i Innstillinger.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
-          <div><div style="font-size:15px;font-weight:700">Automatisk påminnelse</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Kl. 20:00 hver dag.</div></div>
+          <div><div style="font-size:15px;font-weight:700">Automatisk påminnelse</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Kl. 20:00 hver dag. Av/på lagres med én gang.</div></div>
           <input type="checkbox" id="reminderEnabled" ${s?.fireReminderPushEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:14px">
@@ -2716,7 +2719,7 @@ async function renderVarsler(main) {
         <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Varsel om ukestjeneste</div>
         <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Sender et push-varsel søndag kl. 18:00 til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
-          <div><div style="font-size:15px;font-weight:700">Varsle om tjenesteuke</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Søndag kl. 18:00, uken før.</div></div>
+          <div><div style="font-size:15px;font-weight:700">Varsle om tjenesteuke</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Søndag kl. 18:00, uken før. Av/på lagres med én gang.</div></div>
           <input type="checkbox" id="dutyPushEnabled" ${s?.dutyPushEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:14px">
@@ -2881,7 +2884,7 @@ async function renderSettings(main) {
         <div style="font-size:15px;font-weight:700;margin-bottom:6px">Mottaker (e-post)</div>
         <input type="email" name="fireEmailRecipient" value="${s.fireEmailRecipient || ''}" placeholder="larer@kongshaug.no" class="field" style="height:46px" autocapitalize="none" spellcheck="false" />
       </div>
-      ${timeRow('fireEmailTime', 'Sendetidspunkt', s.fireEmailTime, 'Før kl. 18 sendes natt til i dag (natten som nettopp er ferdig). Fra kl. 18 sendes natt til i morgen (kveldens kommende liste).')}
+      ${numRow('fireEmailDelayMinutes', 'Sendes etter stengetid', s.fireEmailDelayMinutes, 'minutter', 0, 720, 'Regnes fra da innsjekksvinduet stengte, ikke fra et fast klokkeslett – lukketiden er ulik hverdag, fredag og lørdag. Med 15 minutter og stengetid 23:00 går e-posten 23:15; stenger vinduet 00:30 i helgen, går den 00:45.')}
       <div style="display:flex;justify-content:flex-end;margin-top:14px">
         <button class="btn btn-ghost" id="testEmail" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
       </div>
@@ -2940,7 +2943,7 @@ async function renderSettings(main) {
       fireCloseSaturday: val('fireCloseSaturday').value,
       fireEmailEnabled: val('fireEmailEnabled').checked,
       fireEmailRecipient: val('fireEmailRecipient').value.trim(),
-      fireEmailTime: val('fireEmailTime').value,
+      fireEmailDelayMinutes: Number(val('fireEmailDelayMinutes').value),
       kitchenEmailEnabled: val('kitchenEmailEnabled').checked,
       kitchenEmailRecipient: val('kitchenEmailRecipient').value.trim(),
       kitchenEmailTime: val('kitchenEmailTime').value,
