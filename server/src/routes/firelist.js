@@ -28,10 +28,22 @@ router.get('/pdf', async (req, res) => {
   }
   try {
     const pdf = await buildFireListPdf(getFireOverview(natt));
-    res.setHeader('Content-Type', 'application/pdf');
-    // «attachment» gjør at iPaden legger den i Nedlastinger i stedet for å
-    // vise den i en fane som forsvinner når nettleseren lukkes.
-    res.setHeader('Content-Disposition', `attachment; filename="brannliste-${natt}.pdf"`);
+    const filnavn = `brannliste-${natt}.pdf`;
+
+    if (req.query.vis) {
+      // «Bare se på listen»: vanlig PDF som åpnes i leseren.
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filnavn}"`);
+    } else {
+      // Nedlasting. Content-Disposition: attachment er ikke nok på iPad – iOS
+      // og e-postklientenes innebygde nettlesere forhåndsviser alt de kjenner
+      // igjen som PDF, og filen havner aldri i Filer. Sendes den derimot som
+      // en ukjent filtype, har de ingenting å vise, og må lagre den i stedet.
+      // Filnavnet beholder .pdf, så den åpnes riktig etterpå.
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filnavn}"`);
+    }
+    res.setHeader('Content-Length', pdf.length);
     res.send(pdf);
   } catch {
     res.status(500).type('text/plain; charset=utf-8').send('Kunne ikke lage brannlisten.');

@@ -98,10 +98,18 @@ export function buildFireEmailHtml(overview, link = fireListLink(overview.nightD
           <div style="font-size:15px;font-weight:bold;color:#a12a1f">Last den ned nå – ikke vent til det brenner.</div>
           <div style="font-size:14px;color:#55607a;line-height:1.55;margin-top:6px">
             Ved brann kan både nett og strøm være borte. En nedlastet fil ligger på iPaden og virker uansett.
-            Etter nedlasting finner du den i mappen <b>Nedlastinger</b>.
+            Etter nedlasting finner du den i <b>Filer → Nedlastinger</b>.
+          </div>
+          <div style="font-size:13.5px;color:#55607a;line-height:1.55;margin-top:10px;padding-top:10px;border-top:1px solid #f5d6d2">
+            <b>Åpner listen seg i stedet for å lastes ned?</b> Da er den åpnet inne i e-postappen.
+            Trykk dele-ikonet <b>&#x1F5D2;</b> øverst og velg <b>«Lagre i Filer»</b> – eller hold fingeren på den grønne
+            knappen og velg <b>«Last ned lenket fil»</b>.
           </div>
         </div>
-        <p style="margin:18px 0 0;font-size:13px;color:#8a93a3">Listen ligger også vedlagt denne e-posten som PDF. Nedlastingslenken virker i ${LINK_TTL_HOURS} timer.</p>
+        <p style="margin:18px 0 0;font-size:13px;color:#8a93a3">
+          <a href="${esc(link)}&amp;vis=1" style="color:#55607a">Bare se på listen uten å laste ned</a>
+          &nbsp;·&nbsp; Listen ligger også vedlagt denne e-posten. Lenkene virker i ${LINK_TTL_HOURS} timer.
+        </p>
         <p style="margin:18px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Elevapp.</p>
       </div>
     </div></body></html>`;
