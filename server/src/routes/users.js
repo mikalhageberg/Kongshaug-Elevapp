@@ -161,8 +161,8 @@ router.post('/bulk', requireSuperAdmin, async (req, res) => {
   const errors = [];
 
   const insert = db.prepare(
-    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, must_change_password)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`
+    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, superadmin, must_change_password)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
   );
 
   for (let i = 0; i < list.length; i++) {
@@ -179,7 +179,9 @@ router.post('/bulk', requireSuperAdmin, async (req, res) => {
         isStudent ? (row.className || null) : null,
         isStudent ? (row.dorm || null) : null,
         isStudent ? (row.room || null) : null,
-        isStudent ? (row.instrument || null) : null
+        isStudent ? (row.instrument || null) : null,
+        // Superbruker gjelder bare administratorer, og bare når det er huket av.
+        !isStudent && row.superadmin ? 1 : 0
       );
       const u = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
       created.push({ ...publicUser(u), password });

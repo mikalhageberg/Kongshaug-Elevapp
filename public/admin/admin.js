@@ -625,7 +625,7 @@ function userModal(existing, onSaved, cfg) {
 // Navnekolonnen får en nedre grense: uten den spiser de faste kolonnene hele
 // bredden, og «Fullt navn» kollapser til et par tegn.
 const BULK_COLS_STUDENT = 'minmax(170px, 1fr) 96px 132px 68px 140px 30px';
-const BULK_COLS_ADMIN = '1fr 32px';
+const BULK_COLS_ADMIN = 'minmax(200px, 1fr) 150px 30px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
 function bulkRowHTML(isStudent) {
@@ -635,10 +635,17 @@ function bulkRowHTML(isStudent) {
       <select class="field field-sm" name="dorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Internat', '')}</select>
       <input class="field field-sm" name="room" placeholder="Rom" />
       <select class="field field-sm" name="instrument" style="background:#f7f8fa">${optionsHTML(INSTRUMENTS, 'Instrument', '')}</select>` : '';
+  // Administratorer velges som superbruker allerede ved opprettelsen, så man
+  // slipper å opprette først og gi tilgang etterpå.
+  const adminFields = isStudent ? '' : `
+      <label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:var(--slate);cursor:pointer">
+        <input type="checkbox" name="superadmin" style="width:18px;height:18px;flex:0 0 auto" />Superbruker
+      </label>`;
   return `
     <div class="brow" style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:8px">
       <input class="field field-sm" name="fullName" placeholder="Fullt navn" />
       ${studentFields}
+      ${adminFields}
       ${rmBtn}
     </div>`;
 }
@@ -646,6 +653,7 @@ function bulkRowHTML(isStudent) {
 function parseBulkRows(rowsEl, isStudent) {
   return Array.from(rowsEl.querySelectorAll('.brow')).map((row) => {
     const base = { fullName: row.querySelector('[name="fullName"]').value.trim() };
+    if (!isStudent) base.superadmin = row.querySelector('[name="superadmin"]').checked;
     if (isStudent) {
       base.className = row.querySelector('[name="className"]').value;
       base.dorm = row.querySelector('[name="dorm"]').value;
@@ -667,7 +675,9 @@ function bulkAddModal(cfg, onSaved) {
        <label class="field-label" style="margin:0">Rom</label>
        <label class="field-label" style="margin:0">Instrument</label>
        <span></span>`
-    : `<label class="field-label" style="margin:0">Navn</label><span></span>`;
+    : `<label class="field-label" style="margin:0">Navn</label>
+       <label class="field-label" style="margin:0">Tilgang</label>
+       <span></span>`;
   const bg = el(`
     <div class="modal-bg"><div class="modal" style="width:${isStudent ? 780 : 520}px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
