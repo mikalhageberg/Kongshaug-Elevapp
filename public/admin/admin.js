@@ -127,9 +127,13 @@ function renderLogin() {
   root.innerHTML = '';
   const wrap = el(`
     <div style="display:flex;min-height:100dvh">
-      <div style="width:46%;background:var(--navy-dark);display:none;flex-direction:column;justify-content:space-between;padding:44px;color:#fff" class="loginside">
-        <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:var(--navy-2);display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px">${icon.home}</div></div><div style="font-size:16px;font-weight:700">Kongshaug Elevapp</div></div>
-        <div style="color:#9fb0c6;font-size:15px;line-height:1.6;max-width:340px">Brannliste og andaktsregistrering for internatet. Kun for ansatte.</div>
+      <div style="width:46%;background:var(--navy-dark);display:none;flex-direction:column;justify-content:space-between;padding:44px;color:#fff;position:relative;overflow:hidden" class="loginside">
+        <img id="loginphoto" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center" />
+        <!-- Marineblå slør over bildet: uten det drukner den hvite logoen og
+             teksten i den lyse fasaden og himmelen. -->
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,41,63,.82) 0%,rgba(22,41,63,.42) 42%,rgba(22,41,63,.88) 100%)"></div>
+        <div style="position:relative;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:var(--navy-2);display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px">${icon.home}</div></div><div style="font-size:16px;font-weight:700">Kongshaug Elevapp</div></div>
+        <div style="position:relative;color:#cdd8e6;font-size:15px;line-height:1.6;max-width:340px;text-shadow:0 1px 8px rgba(11,20,32,.55)">Brannliste og andaktsregistrering for internatet. Kun for ansatte.</div>
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px">
         <div style="max-width:360px;width:100%">
@@ -149,7 +153,13 @@ function renderLogin() {
         </div>
       </div>
     </div>`);
-  if (window.innerWidth > 820) wrap.querySelector('.loginside').style.display = 'flex';
+  // Bildet får src først her: panelet er skjult under 820 px, og et <img> med
+  // src lastes ned selv om forelderen er display:none – halvmegabyten skal
+  // ikke belaste en mobil som aldri ser bildet.
+  if (window.innerWidth > 820) {
+    wrap.querySelector('.loginside').style.display = 'flex';
+    wrap.querySelector('#loginphoto').src = '/shared/villaen.jpg';
+  }
   root.appendChild(wrap);
   const f = wrap.querySelector('#f'); const err = wrap.querySelector('#err');
 
