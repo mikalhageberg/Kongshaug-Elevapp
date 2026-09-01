@@ -138,7 +138,7 @@ function ElevRad({ elev, venter, onSett }) {
     <View style={[styles.rad, { backgroundColor: bg, opacity: venter ? 0.5 : 1 }]}>
       <View style={[styles.prikk, { backgroundColor: farge }]} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.navn} numberOfLines={1}>{elev.fullName}</Text>
+        <Text style={styles.navn} numberOfLines={2}>{elev.fullName}</Text>
         <Text style={styles.under}>
           Rom {elev.room ?? '–'}
           {elev.status === 'present' && elev.checkedAt ? ` · ${formatTime(elev.checkedAt)}` : ''}
@@ -170,7 +170,7 @@ function GjestRad({ gjest, sammeInternat }) {
     <View style={[styles.rad, { backgroundColor: '#fbf6ee' }]}>
       <View style={[styles.prikk, { backgroundColor: C.amber }]} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.navn} numberOfLines={1}>{gjest.name}</Text>
+        <Text style={styles.navn} numberOfLines={2}>{gjest.name}</Text>
         <Text style={[styles.under, { color: C.amberInk }]}>
           Rom {gjest.room ?? '–'} · Gjest hos {gjest.hostName}{sammeInternat ? '' : ` (${gjest.hostDorm || '–'})`}
         </Text>
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     paddingLeft: 15, paddingRight: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f2f4f6',
   },
   prikk: { width: 9, height: 9, borderRadius: 5 },
-  navn: { fontSize: 17, fontWeight: '700', color: C.ink },
+  navn: { fontSize: 17, fontWeight: '700', color: C.ink, lineHeight: 22 },
   under: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 2 },
   knapper: { flexDirection: 'row', gap: 7 },
   knapp: {
