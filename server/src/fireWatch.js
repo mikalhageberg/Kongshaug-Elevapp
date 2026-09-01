@@ -13,10 +13,20 @@ import crypto from 'node:crypto';
 import db from './db.js';
 import { osloParts } from './fireWindow.js';
 
-// Klokkeslettet vakten går over til neste natt. Vakten skal ikke miste
-// brannlisten midt i et opprop kl. 00:30, så natten «varer» til det lysner –
-// den er uansett over lenge før noen tar den neste kveld.
-export const WATCH_HANDOVER_HOUR = 6;
+// Klokkeslettet vakten går over til neste natt.
+//
+// Dette er en brannsikkerhetsgrense, ikke en praktisk avrunding. Så lenge
+// vakten står, har hun brannlisten – hvem som sover hvor i kveld – i lomma.
+// Går vakten over mens elevene fortsatt ligger og sover, står den som faktisk
+// er på jobb uten listen i nettopp de minuttene den betyr mest, og veien
+// tilbake går gjennom en QR-kode på en skjerm hun ikke kommer til hvis det
+// brenner.
+//
+// 07:30 er derfor satt etter når elevene er oppe og ute av internatene, ikke
+// etter når det lysner. Vakten dekker hele natten den har ansvar for, og litt
+// til. Den nye vakten tas først om kvelden, så et sent skifte tar ingenting
+// fra noen.
+export const WATCH_HANDOVER_MINUTES = 7 * 60 + 30;   // 07:30
 
 // Dagen før, som 'YYYY-MM-DD'. Regnes i UTC fra dato-delene, så en
 // sommertidsovergang ikke flytter datoen.
@@ -24,15 +34,16 @@ function dayBefore({ y, m, d }) {
   return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
 }
 
-// Hvilken natt har vakten akkurat nå? Fram til kl. 06 hører man fortsatt til
+// Hvilken natt har vakten akkurat nå? Fram til 07:30 hører man fortsatt til
 // natten som gikk.
 //
 // Bevisst uavhengig av innsjekksvinduet i fireWindow.js: vinduet styrer når
 // ELEVENE kan melde seg til stede, mens vakten har natten hel – også timene
-// etter at vinduet stengte, som er nettopp når hun leter etter dem som mangler.
+// etter at vinduet stengte, som er nettopp når hun leter etter dem som mangler,
+// og timene mot morgenen, som er når huset er fullt av sovende elever.
 export function watchNightDate(now = new Date()) {
   const t = osloParts(now);
-  return t.minutes < WATCH_HANDOVER_HOUR * 60 ? dayBefore(t) : t.dateKey;
+  return t.minutes < WATCH_HANDOVER_MINUTES ? dayBefore(t) : t.dateKey;
 }
 
 // ── Dagens kode ──────────────────────────────────────────────

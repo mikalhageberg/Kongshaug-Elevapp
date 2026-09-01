@@ -121,7 +121,7 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
             Du ser brannlisten og kan kjøre opprop. Etter at innsjekken stenger får du
             et varsel med navnene på dem som ikke er gjort rede for.
           </Text>
-          <Text style={styles.kortSmått}>Vakten gjelder til i morgen tidlig. I morgen kveld må koden skannes på nytt.</Text>
+          <Text style={styles.kortSmått}>Vakten gjelder til kl. 07:30 i morgen – du har brannlisten så lenge elevene sover. I morgen kveld må koden skannes på nytt.</Text>
         </Card>
       ) : (
         <Card>
