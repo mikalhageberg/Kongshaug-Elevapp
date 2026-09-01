@@ -2,6 +2,7 @@ import db from './db.js';
 import { currentNightDate } from './fireWindow.js';
 import { getFireOverview, nightLabel } from './fireReport.js';
 import { watchNightDate, watchers } from './fireWatch.js';
+import { recordAdminNotification } from './adminNotify.js';
 import { sendExpoPush } from './pushSend.js';
 
 // Send push-påminnelse til elever som ikke har krysset seg av på
@@ -65,6 +66,14 @@ export async function sendWatchMissingPush(nightDate = watchNightDate()) {
         title: 'Brannlisten er komplett',
         body: `Alle ${overview.total} elever er gjort rede for (${natt}).`,
       };
+
+  // Legges i varslingssenteret FØR utsendingen, og uavhengig av hvordan den
+  // går. Et varsel som aldri nådde låseskjermen er nettopp det vakten skal
+  // kunne finne igjen i appen.
+  recordAdminNotification({
+    userIds: vakter.map((v) => v.id),
+    nightDate, kind: 'vakt', ...melding,
+  });
 
   const r = await sendExpoPush(tokens, melding);
   return { nightDate, missing: missing.length, watchers: vakter.length, ...r };

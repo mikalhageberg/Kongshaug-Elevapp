@@ -252,6 +252,22 @@ db.exec(`
     UNIQUE (user_id, night_date)
   );
   CREATE INDEX IF NOT EXISTS idx_fire_watch_night ON fire_watch_shifts(night_date);
+
+  -- Varslingssenteret: kopi av varslene som ble sendt til administratorene, én
+  -- rad per mottaker. Et push-varsel er flyktig – dette er det som blir
+  -- liggende. Raden skrives selv om utsendingen feiler; det er nettopp da den
+  -- trengs. Se adminNotify.js.
+  CREATE TABLE IF NOT EXISTS admin_notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    night_date TEXT    NOT NULL,          -- natten varselet hører til
+    kind       TEXT    NOT NULL,          -- 'vakt' | 'beskjed'
+    title      TEXT    NOT NULL,
+    body       TEXT    NOT NULL,
+    read_at    TEXT,                      -- NULL = ulest
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_admin_notif_user ON admin_notifications(user_id, night_date);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

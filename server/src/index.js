@@ -14,6 +14,7 @@ import historyRoutes from './routes/history.js';
 import dinnerRoutes from './routes/dinner.js';
 import menuRoutes from './routes/menus.js';
 import pushRoutes from './routes/push.js';
+import notificationRoutes from './routes/notifications.js';
 import { createDutyRouter } from './routes/duty.js';
 import dormTaskRoutes from './routes/dormTasks.js';
 import practiceRoutes from './routes/practice.js';
@@ -58,6 +59,8 @@ app.use('/api/history', historyRoutes);
 app.use('/api/dinner', dinnerRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/push', pushRoutes);
+// Varslingssenteret: kopien av varslene administratorene har fått.
+app.use('/api/notifications', notificationRoutes);
 // Internatvask. Kjøkkentjenesten ligger på /api/dinner/kitchen-duty av
 // bakoverkompatibilitet, men bruker samme ruter (se routes/duty.js).
 app.use('/api/dorm-duty', createDutyRouter('dorm'));

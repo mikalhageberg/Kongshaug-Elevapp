@@ -3,6 +3,8 @@ import { Expo } from 'expo-server-sdk';
 import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { sendExpoPush } from '../pushSend.js';
+import { recordAdminNotification, allAdminIds } from '../adminNotify.js';
+import { watchNightDate } from '../fireWatch.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -32,6 +34,12 @@ router.post('/broadcast', requireAdmin, async (req, res) => {
   const title = String(req.body?.title || '').trim();
   const body = String(req.body?.body || '').trim();
   if (!title || !body) return res.status(400).json({ error: 'Tittel og tekst kreves' });
+
+  // Beskjeden går til alle med appen, elevene inkludert. I varslingssenteret
+  // legges den bare for administratorene – det er de som har et senter.
+  recordAdminNotification({
+    userIds: allAdminIds(), nightDate: watchNightDate(), kind: 'beskjed', title, body,
+  });
 
   const rows = db.prepare('SELECT token FROM push_tokens').all();
   res.json(await sendExpoPush(rows.map((r) => r.token), { title, body }));

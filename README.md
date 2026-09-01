@@ -147,6 +147,33 @@ Har ingen skannet koden, sendes varselet ikke videre til alle som tilfeldigvis
 har appen installert. Det er hele meningen med skanningen. «Send test nå» sier
 ifra om det er tilfellet.
 
+#### Varslingssenter
+
+Et push-varsel er flyktig. Det kan komme mens telefonen ligger i lommen, bli
+sveipet bort i søvne, eller ha gått ut før vakten rakk å ta vakten. Derfor
+lagres hvert varsel som er sendt til en administrator også som en rad
+(`server/src/adminNotify.js`), og fanen **Varsler** i appen viser dem – kveldens
+øverst, uleste med farget kant og et tall på fanen.
+
+To ting følger av hva senteret er *til for*:
+
+- **Raden skrives selv om utsendingen feiler**, og selv om mottakeren ikke har
+  appen installert. Et varsel som aldri nådde låseskjermen er nettopp det som
+  skal kunne finnes igjen.
+- **Senteret krever ikke gyldig vakt.** Har du fått et varsel, skal du kunne
+  lese det igjen etterpå – også etter at vakten er over og koden har skiftet.
+
+Det som legger seg der er varslene som faktisk ble sendt: vaktvarselet over, og
+beskjeder sendt med **«Send til alle»**. Ikke en hendelseslogg – ingen inn- og
+utsjekkinger, ingen statusendringer. Senteret er en kopi av det telefonen fikk,
+med tidspunktet.
+
+Én rad per mottaker, ikke én rad per varsel med mottakerliste ved siden av.
+Administratorer er en håndfull og varslene et par i døgnet, så utbrettingen
+koster ingenting – og lest-statusen ligger da der den hører hjemme, på
+mottakerens egen rad. Vaktvarselet lagres bare for dem som hadde vakten;
+beskjeder til alle lagres for alle administratorer.
+
 ### Lagringstid og automatisk sletting
 
 Systemet rydder etter seg selv, styrt fra admin → **Innstillinger → Personvern:
@@ -491,6 +518,7 @@ Kongshaug/
 │  │  ├─ andaktReport.js   # fravær/for sent per dag og uke
 │  │  ├─ andaktArchive.js  # arkivet over ferdige ukesrapporter
 │  │  ├─ fireWatch.js      # brannvakten: vakt-kode og vaktliste per natt
+│  │  ├─ adminNotify.js    # varslingssenteret: kopi av varslene til admin
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
 │  │  ├─ permissions.js    # superbrukere vs. vanlige administratorer
 │  │  ├─ practice.js       # øvekonkurransen

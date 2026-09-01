@@ -514,6 +514,7 @@
     <p>Er koden blitt avfotografert eller delt videre, lager du en ny. Alle tidligere koder slutter å virke med én gang. De som allerede har tatt vakten beholder den – de har jo møtt opp.</p>
   </div>
   <p><strong>Oppropsmodus.</strong> Knappen «Start opprop» i appen går gjennom elevene én av gangen, i samme rekkefølge som listen – internat for internat, rom for rom. Du velger først om oppropet skal gå gjennom alle eller bare dem som mangler. Hver elev har to knapper: den store <strong>«Til stede»</strong> registrerer og går videre, og den lille <strong>«Gå til neste»</strong> går videre uten å ta stilling. Det finnes med vilje ingen «borte»-knapp i oppropet: den som ikke er på rommet skal ikke bli borteregistrert av et raskt trykk, men bli stående på restlista til noen har funnet ut hvor hun er. Til slutt vises de som ikke ble gjort rede for, med internat og rom.</p>
+  <p><strong>Varslingssenter.</strong> Fanen «Varsler» i appen viser varslene vakten har fått – kveldens øverst, uleste med farget kant og et tall på fanen. Et push-varsel er flyktig: det kan komme mens telefonen ligger i lommen, bli sveipet bort, eller ha gått ut før vakten rakk å skanne koden. Her blir de liggende. Varselet lagres også når utsendingen feiler eller vakten ikke har appen installert, så et varsel som aldri nådde låseskjermen finnes likevel. Både vaktvarselet og beskjeder sendt med «Send til alle» havner der.</p>
   <p class="note">Varselet om hvem som mangler etter stengetid slås på under Varsler (12.3).</p>
 
   <div class="box stop">
@@ -852,10 +853,12 @@
     <span class="note">Ola Nordmann, Kari Ås, Per Hansen. Åpne appen for opprop (natt til fredag 4. september 2026).</span>
   </div>
   <p>Navnene står i selve varselet med vilje: et varsel som bare sa «3 mangler» ville tvunget vakten til å låse opp telefonen for å finne ut hvem – og det er nettopp de navnene hun trenger for å begynne å lete. Er alle registrert, kommer det et varsel om nettopp <em>det</em>, slik at vakten vet at kvelden er over uten å åpne noe.</p>
+  <p>Varselet legger seg også i <strong>varslingssenteret</strong> i appen (se 5.4), slik at vakten finner det igjen selv om det ble sveipet bort – eller aldri kom fram.</p>
   <p>Alle de tre automatiske varslene har en <strong>«Send test nå»</strong>-knapp, som sender akkurat det varselet med én gang.</p>
 
   <h3>12.4 Send til alle nå</h3>
   <p>Til beskjeder som ikke passer noe annet sted: «Brannøvelse i morgen tidlig», «Middagen er flyttet til 16:30». Går til alle som har appen installert, også ansatte som bruker den som brannvakt.</p>
+  <p class="note">Beskjeden legger seg i varslingssenteret hos administratorene, så den kan leses igjen i etterkant. Elevene får den bare som push.</p>
   <ol class="steps">
     <li><span class="st">Skriv en tittel</span> Maks 80 tegn. Dette er linjen elevene ser først.</li>
     <li><span class="st">Skriv teksten</span> Maks 240 tegn.</li>
@@ -995,6 +998,7 @@
     <tr><td class="k">Eleven fikk «QR-koden er ikke gyldig lenger»</td><td>Normalt – koden byttes ut med noen sekunders mellomrom. Be eleven skanne på nytt.</td></tr>
     <tr><td class="k">Elever får ikke push-varsler</td><td>Varsler må være tillatt på telefonen, og eleven må ha logget inn i appen. Bruk «Send test nå» for å bekrefte at utsendingen fra serveren virker.</td></tr>
     <tr><td class="k">Vakten ser «Du har ikke vakten» i appen</td><td>Vakt-koden er ikke skannet i kveld, eller den ble skannet i går. Åpne Brannliste → «Vakt-kode» og la henne skanne på nytt.</td></tr>
+    <tr><td class="k">Vakten fikk aldri varselet om hvem som mangler</td><td>Se etter i fanen «Varsler» i appen – varselet lagres der selv om utsendingen feilet. Står det ikke der heller, hadde ingen tatt vakten da det gikk, eller bryteren under Varsler er av.</td></tr>
     <tr><td class="k">Vakt-koden virker ikke</td><td>Koden gjelder bare natten den ble laget for. Er den fra i går, hent den nye. Er det nettopp trykket «Lag ny kode», er det den nye på skjermen som gjelder.</td></tr>
     <tr><td class="k">E-posten kommer ikke fram</td><td>Trykk «Send test nå». Kommer det et gult Brevo-varsel på Innstillinger, mangler nøklene på serveren. Ellers: sjekk mottakeradressen og søppelpostmappen.</td></tr>
     <tr><td class="k">Excel-importen avvises</td><td>Feilmeldingen sier radnummer og hvilken celle. Vanligste årsak: en overskrift som ikke er skrevet nøyaktig som i malen, eller en klasse/internat/instrument som ikke finnes i listene. Last ned malen og lim inn dataene der.</td></tr>
@@ -1042,6 +1046,7 @@
     <tr><td class="k">ta med brannlisten ut</td><td>Brannliste → Eksporter PDF</td></tr>
     <tr><td class="k">gi kveldsvakten brannlisten på telefonen</td><td>Brannliste → Vakt-kode → vakten skanner den i appen</td></tr>
     <tr><td class="k">gå opprop rom for rom</td><td>Mobilappen → Brannliste → Start opprop</td></tr>
+    <tr><td class="k">finne igjen et varsel som ble sveipet bort</td><td>Mobilappen → Varsler</td></tr>
     <tr><td class="k">godkjenne et overnattingsbesøk</td><td>Gjester → velg internat og rom → Godkjenn</td></tr>
     <tr><td class="k">vise QR-koden før andakten</td><td>Dashboard → Vis QR på storskjerm</td></tr>
     <tr><td class="k">rette oppmøte på andakt</td><td>Andakt / QR → «Ikke møtt» → knappene på raden</td></tr>

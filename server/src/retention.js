@@ -38,6 +38,7 @@ const EXPIRING = [
   ['dorm_duties', 'week_start', 'internatvask'],
   ['practice_sessions', 'session_date', 'øveøkter'],
   ['fire_watch_shifts', 'night_date', 'brannvakter'],
+  ['admin_notifications', 'night_date', 'vaktvarsler'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
   // Arkiverte ukesrapporter har sin egen periode (antall uker, se
   // andaktArchive.js). Den generelle lagringstiden gjelder likevel som ytre
