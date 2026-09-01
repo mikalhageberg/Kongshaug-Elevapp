@@ -41,17 +41,34 @@ export function isAppReviewUser(username) {
 // mistet telefon og den. `native` bæres med i tokenet, slik at serveren kan
 // kreve gyldig vakt av nettopp appen uten å røre adminsiden i nettleseren
 // (se requireWatchOnNative i routes/firelist.js).
-export function signToken(user, { native = false } = {}) {
-  const days = user.role === 'admin' ? config.nativeAdminSessionDays : config.nativeSessionDays;
+//
+// `role` overstyrer rollen i tokenet. Den finnes for ÉN ting: App/Play
+// Store-reviewer-kontoen, som må kunne se både elevappen og vaktappen uten to
+// innlogginger (se /review-mode i routes/auth.js). Ingen annen kode skal sende
+// den – ruten som gjør det sjekker isAppReviewUser først, og uten
+// APPLE_REVIEW_USERNAME satt er det ingen som er den kontoen.
+export function signToken(user, { native = false, role = null } = {}) {
+  const effectiveRole = role || user.role;
+  const days = effectiveRole === 'admin' ? config.nativeAdminSessionDays : config.nativeSessionDays;
   return jwt.sign(
-    { sub: user.id, role: user.role, username: user.username, ...(native ? { native: true } : {}) },
+    {
+      sub: user.id,
+      role: effectiveRole,
+      username: user.username,
+      ...(native ? { native: true } : {}),
+      // Merket gjør et lånt token synlig for requireAdmin. Uten det ville et
+      // adminmodus-token utstedt under gjennomgangen fortsatt gitt full
+      // admin-tilgang i dagevis etter at APPLE_REVIEW_USERNAME ble fjernet –
+      // og det er nettopp da unntaket skal være borte.
+      ...(role ? { reviewMode: true } : {}),
+    },
     config.jwtSecret,
     { expiresIn: native ? `${days}d` : '12h' }
   );
 }
 
-export function issueSession(res, user) {
-  const token = signToken(user);
+export function issueSession(res, user, { role = null } = {}) {
+  const token = signToken(user, { role });
   // Nettleseren bruker denne httpOnly-cookien. Native app (Expo) bruker i stedet
   // token-en som login-ruten returnerer i svaret (Bearer-header).
   res.cookie(COOKIE_NAME, token, {
@@ -86,6 +103,14 @@ export function requireAuth(req, res, next) {
 // Middleware: krever admin-rolle (bruk etter requireAuth).
 export function requireAdmin(req, res, next) {
   if (req.auth?.role !== 'admin') {
+    return res.status(403).json({ error: 'Krever administrator-tilgang' });
+  }
+  // Et lånt token (reviewer-kontoens adminmodus) gjelder bare så lenge kontoen
+  // faktisk er reviewer-kontoen. Sjekken gjøres her, ved hvert kall, og ikke
+  // bare da tokenet ble utstedt: fjernes APPLE_REVIEW_USERNAME etter at appen
+  // er godkjent, slutter tokenet å virke i samme øyeblikk i stedet for å leve
+  // videre til det utløper av seg selv.
+  if (req.auth.reviewMode && !isAppReviewUser(req.auth.username)) {
     return res.status(403).json({ error: 'Krever administrator-tilgang' });
   }
   next();

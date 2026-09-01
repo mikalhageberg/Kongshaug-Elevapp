@@ -99,7 +99,21 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
 
       <View style={{ height: 18 }} />
 
-      {status?.active ? (
+      {status?.bypass ? (
+        // App/Play Store-reviewer-kontoen. Vakt-QR-en henger på adminsiden på
+        // skolen, så en reviewer kan ikke skanne seg til vakten – serveren gir
+        // den i stedet. Sagt rett ut her, framfor en grønn «du har vakten» som
+        // ikke stemmer med noen rad i vaktlista under.
+        <Card style={{ borderColor: '#bfe3ce', backgroundColor: C.greenBg }}>
+          <Pill tone="green" text="App Review" />
+          <Text style={styles.kortTittel}>Vakten er gitt uten skanning</Text>
+          <Text style={styles.kortTekst}>
+            Denne testkontoen får brannlisten uten å skanne vakt-koden, siden koden
+            henger på en skjerm på skolen. En vanlig administrator må skanne den
+            hver kveld for å komme hit.
+          </Text>
+        </Card>
+      ) : status?.active ? (
         <Card style={{ borderColor: '#bfe3ce', backgroundColor: C.greenBg }}>
           <Pill tone="green" text={meg ? `Vakt fra kl. ${formatTime(meg.registeredAt)}` : 'Vakt i natt'} />
           <Text style={styles.kortTittel}>Du har vakten i natt</Text>
@@ -136,7 +150,7 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
         </View>
       ) : null}
 
-      {status?.active ? (
+      {status?.active && !status?.bypass ? (
         <Button title="Gi fra deg vakten" onPress={giFraSeg} loading={busy}
           color="#fff" textColor={C.redInk} fontSize={15}
           style={{ marginTop: 26, height: 48, borderWidth: 1.5, borderColor: '#e7c4c0' }} />

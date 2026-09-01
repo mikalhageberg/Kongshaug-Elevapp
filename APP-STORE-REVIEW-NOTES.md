@@ -12,12 +12,20 @@ Apple/Google.
    Gi den et passord du skriver inn i notatet under.
 2. **Sett miljøvariabelen `APPLE_REVIEW_USERNAME`** i Railway til nøyaktig det
    brukernavnet. Dette gjør at *kun* denne kontoen slipper GPS-sjekken
-   (brannliste/andakt) og QR-kode-kravet (andakt) – reviewere kan fysisk ikke
-   være på Kongshaug eller skanne skjermen der. Se `server/.env.example` og
-   `server/src/config.js` for detaljer.
+   (brannliste/andakt), QR-kode-kravet (andakt) og vakt-koden (brannlisten i
+   appen) – reviewere kan fysisk ikke være på Kongshaug eller skanne skjermene
+   der. Samme variabel gir kontoen velgeren mellom elev- og adminmodus øverst i
+   appen. Se `server/.env.example` og `server/src/config.js` for detaljer.
+
+   ⚠ **Adminmodus er ekte administrator-tilgang**, ikke en demo: så lenge
+   variabelen står på, når testkontoen hele skolens elevregister gjennom
+   admin-API-et. Det er prisen for at reviewer skal få se vaktappen i det hele
+   tatt, men det er også grunnen til punktet under.
 3. **Fjern `APPLE_REVIEW_USERNAME` igjen** så snart appen er godkjent. Det er
    et reelt, om enn smalt avgrenset, unntak fra brannsikkerhets-verifiseringen,
-   og skal ikke stå på lenger enn nødvendig.
+   og skal ikke stå på lenger enn nødvendig. Et adminmodus-token som allerede
+   er utstedt slutter å virke i samme øyeblikk – det trengs altså ingen
+   opprydding utover å fjerne variabelen.
 4. **Gjør øvekonkurransen synlig i gjennomgangsperioden.** Er det ingen aktiv
    konkurranse, ser reviewer bare «Ingen øvekonkurranse er satt opp», og kan
    ikke prøve funksjonen – det kan bli lest som en skjult funksjon. Under
@@ -46,18 +54,25 @@ forklart hvorfor appen krever GPS og hvorfor den ber om bilder. Det må derfor
 kunne leses av en reviewer som ikke kan norsk.
 
 Feltet i App Store Connect tar **4000 tegn**, og den engelske under ligger nå på
-rundt 3800 – den fyller feltet nesten helt, og de to versjonene får ikke
-plass sammen. Lim inn **den engelske**. Den norske under er kilden, for skolens
-egen del. Legger du til mer, må noe annet kortes ned.
+**3989** – altså elleve tegn under taket. Lim inn **den engelske**. Den norske
+under er kilden, for skolens egen del, og har ingen grense. Skal du legge til
+noe i den engelske, må omtrent like mye kortes ned et annet sted først.
 
 ```
 This is a closed app for a single school (Kongshaug Musikkgymnas, Norway).
 There is no self-registration - students receive accounts from the school
 administration.
 
-Test account (student):
+Test account:
   Username: apple.reviewer
   Password: <the password you set above>
+
+Two modes in one account:
+The app is two apps: the student app, and a smaller one for staff on night
+duty. So you can see both from one login, the test account has an
+"App Review" bar at the top - tap "Elev" (student) or "Admin" to switch. Admin
+mode shows the fire roll call for the whole school; staff normally unlock it
+by scanning a code shown at the school, and the test account is exempt.
 
 About the GPS requirement:
 Two features (fire roll call and morning assembly) require the user to be
@@ -81,29 +96,27 @@ About "Øvekonkurranse" (practice competition, with documentation photo):
 The school is a music programme, and periodically runs a competition where
 students practise as much as possible on their main instrument. The student
 starts a stopwatch in the app, completes a mandatory warm-up, and registers
-the session when finished. The screen stays awake while the timer runs, so the
-phone can rest on a music stand without locking.
+the session when finished.
 
 Roughly half of all sessions (the share is set by the school) must be
-documented with a photo before they can be registered. This is a check
-against someone just letting the clock run.
+documented with a photo. This is a check against someone just letting the
+clock run.
 
 IMPORTANT ABOUT THIS PHOTO - PRIVACY:
 The app explicitly asks the student NOT to photograph themselves or anyone
 else. The camera screen says, in Norwegian: "Please photograph the
 instrument, the music stand or the room - preferably not yourself or others."
 The same instruction is repeated before the photo is taken and in the privacy
-policy. The purpose is to document that
-practice took place, not who practised - the student is already identified
-by their login, so a photo of the person would add nothing.
+policy. The purpose is to document that practice took place, not who
+practised - the student is already identified by their login, so a photo of
+the person would add nothing.
 
 The photo is stored on the school's own server with the session, is visible
 only to the student and the administration, is deleted automatically with the
 rest of the practice history, and is never shared with third parties.
 
-The camera is used for two things only: scanning the assembly QR code, and
-taking these documentation photos. Both are covered by the camera usage
-description.
+The camera is used for these two things only - the QR code and these photos -
+both covered by the camera usage description.
 
 About "Internat" and "Middag" (weekly duties):
 Students take turns with dormitory cleaning and kitchen duty, one week each.
@@ -121,8 +134,7 @@ launch, and the same check is used when a student signs off a dormitory task
 who signed, and that the device confirmed a biometric unlock are stored - no
 biometric data is read or stored by the app, and the check happens entirely on
 the device, through iOS. If the device has no biometrics or passcode set up,
-the user passes through without a check, and signing is done in the browser
-version with the student's password instead.
+the user passes through without a check.
 
 Privacy policy: https://elevapp.online/personvern/
 ```
@@ -133,9 +145,17 @@ Privacy policy: https://elevapp.online/personvern/
 Dette er en lukket app for én skole (Kongshaug Musikkgymnas, Norge). Det finnes
 ingen selvregistrering – elever får kontoer utdelt av skolens administrasjon.
 
-Testkonto (elev):
+Testkonto:
   Brukernavn: apple.reviewer
   Passord:    <sett inn passordet du valgte over>
+
+To modus i én konto:
+Appen er egentlig to apper: elevappen, og en mye smalere app for den ansatte
+som har nattevakt. For at dere skal se begge uten to innlogginger, viser
+testkontoen en «App Review»-rad øverst med knappene «Elev» og «Admin» – trykk
+for å bytte. Adminmodus viser brannlisten for hele skolen. Ansatte låser den
+normalt opp ved å skanne en kode på en skjerm på skolen; testkontoen er
+unntatt, som over.
 
 Om GPS-kravet:
 Appen har to funksjoner (brannliste og andakt) som krever at brukeren er

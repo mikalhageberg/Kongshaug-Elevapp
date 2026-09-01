@@ -204,6 +204,12 @@ router.delete('/away-period/:id', (req, res) => {
 function requireWatchOnNative(req, res, next) {
   if (!req.auth?.native) return next();
   if (hasActiveWatch(req.auth.sub)) return next();
+  // Reviewer-kontoen slipper også dette kravet. Vakt-QR-en henger på
+  // adminsiden på skolen, og en reviewer hos Apple har like lite tilgang til
+  // den som til skolens område – uten unntaket ville vaktappen vært en tom
+  // skjerm gjennom hele gjennomgangen. Samme sperre som for GPS og andakts-QR:
+  // uten APPLE_REVIEW_USERNAME satt gjelder det ingen.
+  if (isAppReviewUser(req.auth.username)) return next();
   return res.status(403).json({
     error: 'no-watch',
     message: 'Du har ikke tatt vakten i kveld. Skann vakt-koden på adminsiden under Brannliste.',
@@ -250,9 +256,14 @@ router.post('/watch/register', requireAdmin, (req, res) => {
 router.get('/watch/status', requireAdmin, (req, res) => {
   const nightDate = watchNightDate();
   const list = watchers(nightDate);
+  // bypass forteller vaktskjermen at vakten er gitt uten skanning, slik at den
+  // kan si det rett ut i stedet for å vise en grønn «du har vakten» som ikke
+  // stemmer med lista under. Gjelder kun reviewer-kontoen.
+  const bypass = isAppReviewUser(req.auth.username);
   res.json({
     nightDate,
-    active: list.some((w) => w.id === req.auth.sub),
+    active: bypass || list.some((w) => w.id === req.auth.sub),
+    bypass,
     watchers: list,
   });
 });

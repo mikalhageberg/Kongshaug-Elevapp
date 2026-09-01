@@ -98,10 +98,12 @@ export const config = {
   nativeAdminSessionDays: Number(process.env.NATIVE_ADMIN_SESSION_DAYS ?? 7),
 
   // App Store/Play Store-reviewere kan ikke fysisk være på skolen, så de kan
-  // ikke bestå GPS-sjekken (brannliste/andakt) eller skanne en ekte QR-kode
-  // (andakt). Med APPLE_REVIEW_USERNAME satt, hopper KUN den ene, eksakte
-  // kontoen over disse sjekkene – lag en dedikert testkonto til dette, aldri
-  // en ekte elevs konto. Tom (standard) = ingen unntak for noen.
+  // ikke bestå GPS-sjekken (brannliste/andakt), skanne en ekte QR-kode
+  // (andakt) eller nå vakt-koden på adminsiden. Med APPLE_REVIEW_USERNAME
+  // satt, hopper KUN den ene, eksakte kontoen over disse sjekkene – lag en
+  // dedikert testkonto til dette, aldri en ekte elevs konto. Samme konto, og
+  // bare den, kan bytte mellom elev- og adminmodus i appen (se /review-mode i
+  // routes/auth.js). Tom (standard) = ingen unntak for noen.
   // ⚠ Fjern miljøvariabelen igjen når appen er godkjent – dette er et reelt,
   // om enn smalt avgrenset, unntak fra brannsikkerhets-verifiseringen.
   appReview: {

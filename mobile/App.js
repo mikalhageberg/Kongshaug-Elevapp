@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, AppState } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, AppState } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { api, loadToken, setToken, refreshCampus } from './src/api';
@@ -48,6 +48,7 @@ function AppInner() {
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('home');
   const [locked, setLocked] = useState(false);
+  const [byttBusy, setByttBusy] = useState(false);
   const leftAt = useRef(null);
 
   useEffect(() => {
@@ -84,6 +85,25 @@ function AppInner() {
     });
     return () => sub.remove();
   }, [user]);
+
+  // Bytt mellom elevapp og vaktapp. Serveren utsteder et nytt token med den
+  // andre rollen, og godtar det bare fra reviewer-kontoen (se /review-mode i
+  // routes/auth.js) – appen kan altså ikke gi seg selv adminrollen ved å
+  // kalle dette.
+  async function byttModus(mode) {
+    if (byttBusy) return;
+    setByttBusy(true);
+    try {
+      const d = await api('/api/auth/review-mode', { method: 'POST', body: { mode } });
+      await setToken(d.token);
+      setTab('home');
+      setUser(d.user);
+    } catch (ex) {
+      Alert.alert('Kunne ikke bytte modus', ex.message);
+    } finally {
+      setByttBusy(false);
+    }
+  }
 
   async function logout() {
     await unregisterPushToken();
@@ -134,11 +154,17 @@ function AppInner() {
     );
   }
 
+  // Vises kun for reviewer-kontoen, i begge modusene.
+  const modusvelger = user.appReviewBypass ? (
+    <ReviewModeBar mode={user.role} onVelg={byttModus} busy={byttBusy} />
+  ) : null;
+
   // Administratoren får sin egen, mye smalere app: brannlisten og vakten.
   if (user.role === 'admin') {
     return (
       <View style={[styles.safe, { paddingTop: insets.top }]}>
         <ExpoStatusBar style="dark" />
+        {modusvelger}
         <AdminApp user={user} onLogout={logout} insets={insets} />
       </View>
     );
@@ -149,6 +175,7 @@ function AppInner() {
     // flate strekker seg helt ned bak navigasjonslinjen.
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ExpoStatusBar style="dark" />
+      {modusvelger}
       <View style={{ flex: 1 }}>
         {tab === 'home' && <DashboardScreen user={user} onLogout={logout} goTo={setTab} />}
         {tab === 'brann' && <BrannlisteScreen user={user} />}
@@ -174,6 +201,36 @@ function AppInner() {
   );
 }
 
+// Velgeren mellom elevapp og vaktapp. Appen er to apper i én, og en reviewer
+// hos Apple eller Google har én testkonto – uten denne raden ville halve appen
+// framstått som en funksjon vi hadde skjult for dem.
+//
+// Serveren bestemmer om den vises (user.appReviewBypass), ikke appen. For alle
+// ekte elever og ansatte finnes den ikke.
+function ReviewModeBar({ mode, onVelg, busy }) {
+  return (
+    <View style={styles.reviewBar}>
+      <Text style={styles.reviewLabel}>App Review</Text>
+      {[['student', 'Elev'], ['admin', 'Admin']].map(([key, label]) => {
+        const active = mode === key;
+        return (
+          <Pressable
+            key={key}
+            disabled={busy || active}
+            onPress={() => onVelg(key)}
+            style={[styles.reviewKnapp, active && styles.reviewKnappAktiv]}
+          >
+            <Text style={[styles.reviewKnappTekst, active && styles.reviewKnappTekstAktiv]}>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+      {busy ? <ActivityIndicator color="#fff" size="small" style={{ marginLeft: 2 }} /> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -189,4 +246,16 @@ const styles = StyleSheet.create({
   // likt, og etiketten klippes framfor å presse naboene ut.
   tab: { flex: 1, alignItems: 'center', gap: 3, paddingHorizontal: 4, paddingVertical: 4 },
   tabLabel: { fontSize: 11 },
+  reviewBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: C.navyDark, paddingHorizontal: 14, paddingVertical: 8,
+  },
+  reviewLabel: { flex: 1, color: '#9fb0c6', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  reviewKnapp: {
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999,
+    borderWidth: 1, borderColor: '#3c5273',
+  },
+  reviewKnappAktiv: { backgroundColor: '#fff', borderColor: '#fff' },
+  reviewKnappTekst: { color: '#cdd8e6', fontSize: 13, fontWeight: '700' },
+  reviewKnappTekstAktiv: { color: C.navyDark },
 });
