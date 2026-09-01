@@ -109,15 +109,34 @@ export function sinceLastClose(now = new Date(), s = getSettings()) {
   return null;
 }
 
+// Klokkeslettet døgnet går over til neste natt.
+//
+// Dette er en brannsikkerhetsgrense, ikke en praktisk avrunding. Går døgnet
+// over ved midnatt, blir brannlisten et blankt ark fra kl. 00 – midt i den
+// natten den beskriver. Vakten som slår den opp kl. 03 fordi alarmen går,
+// ville ikke fått kveldens opprop, men en tom liste for natten som ennå ikke
+// har begynt, der hver eneste elev står som ikke gjort rede for.
+//
+// 07:30 er satt etter når elevene er oppe og ute av internatene, ikke etter
+// når det lysner. Samme grense som vakten går over på – de to MÅ følges at, se
+// watchNightDate i fireWatch.js.
+export const NIGHT_HANDOVER_MINUTES = 7 * 60 + 30;   // 07:30
+
 // Natten «nå» hører til for registrering – brukes også når vinduet er stengt
 // (f.eks. melde seg borte på dagtid), så til stede/borte alltid lander på samme
-// natt. Lik dagens dato bortsett fra i helgens etter-midnatt-hale.
+// natt.
+//
+// Fram til overgangen hører vi fortsatt til natten som gikk. Det gjelder både
+// oppslag (vaktens oversikt) og registrering: melder en elev seg borte kl. 03,
+// mener hun natten hun står i, ikke den som kommer.
+//
+// Unntaket er en skole som har satt innsjekken til å åpne før 07:30. Da har
+// kvelden allerede begynt, og vi følger den – ellers ville et åpent vindu og
+// lista pekt på hver sin natt.
 export function currentNightDate(now = new Date(), s = getSettings()) {
   const t = osloParts(now);
-  const y = dayBefore(t);
-  const wY = windowForDow(y.dow, s);
-  if (crossesMidnight(wY) && t.minutes <= toMin(wY.close) && t.minutes < toMin(windowForDow(t.dow, s).open)) {
-    return y.dateKey;
+  if (t.minutes < NIGHT_HANDOVER_MINUTES && t.minutes < toMin(windowForDow(t.dow, s).open)) {
+    return dayBefore(t).dateKey;
   }
   return t.dateKey;
 }

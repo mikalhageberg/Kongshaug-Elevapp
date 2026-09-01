@@ -124,10 +124,14 @@ router.post('/away', (req, res) => {
        DO UPDATE SET status = 'away', checked_at = datetime('now'), lat = NULL, lng = NULL`
   ).run({ uid: req.auth.sub, night });
 
-  // Valgfritt: meld også av middag for i dag.
+  // Valgfritt: meld også av middag for i dag. Middag føres på kalenderdatoen,
+  // ikke på natten – natten varer til 07:30, så mellom midnatt og da ville
+  // «i dag» ellers blitt gårsdagens middag, som for lengst er servert. Resten
+  // av middagshåndteringen bruker todayDate (se routes/dinner.js).
+  const dinnerDate = todayDate();
   const { noDinner } = req.body || {};
-  if (noDinner === true) db.prepare('INSERT OR IGNORE INTO dinner_optouts (user_id, date) VALUES (?, ?)').run(req.auth.sub, night);
-  else if (noDinner === false) db.prepare('DELETE FROM dinner_optouts WHERE user_id = ? AND date = ?').run(req.auth.sub, night);
+  if (noDinner === true) db.prepare('INSERT OR IGNORE INTO dinner_optouts (user_id, date) VALUES (?, ?)').run(req.auth.sub, dinnerDate);
+  else if (noDinner === false) db.prepare('DELETE FROM dinner_optouts WHERE user_id = ? AND date = ?').run(req.auth.sub, dinnerDate);
 
   const row = db
     .prepare('SELECT checked_at FROM fire_checkins WHERE user_id = ? AND night_date = ?')
@@ -146,7 +150,8 @@ router.get('/status', (req, res) => {
   let status = row?.status || null;
   let scheduled = false;
   if (!row && isScheduledAway(req.auth.sub, night)) { status = 'away'; scheduled = true; }
-  const noDinner = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, night);
+  // Middag ligger på kalenderdatoen, ikke på natten – se /away over.
+  const noDinner = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, todayDate());
   res.json({
     nightDate: night,
     status,                          // 'present' | 'away' | null
