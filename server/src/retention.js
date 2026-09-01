@@ -38,7 +38,6 @@ const EXPIRING = [
   ['dorm_duties', 'week_start', 'internatvask'],
   ['practice_sessions', 'session_date', 'øveøkter'],
   ['fire_watch_shifts', 'night_date', 'brannvakter'],
-  ['admin_notifications', 'night_date', 'vaktvarsler'],
   ['andakt_sessions', 'session_date', 'andakts-økter'],
   // Arkiverte ukesrapporter har sin egen periode (antall uker, se
   // andaktArchive.js). Den generelle lagringstiden gjelder likevel som ytre
@@ -68,8 +67,13 @@ export function scrubCoordinates(hours) {
 }
 
 // Sletter all datert historikk eldre enn `days` dager. Alt eller ingenting.
-export function deleteExpired(days) {
+//
+// Varslingssenteret har sin egen, kortere frist (`notificationDays`). Den
+// generelle lagringstiden gjelder som ytre grense: settes den kortere enn
+// varslenes egen, er det den som styrer – samme prinsipp som andaktsarkivet.
+export function deleteExpired(days, notificationDays = days) {
   const cutoff = `-${positiveInt(days, 'antall dager')} days`;
+  const varselDager = Math.min(positiveInt(notificationDays, 'antall dager for varsler'), positiveInt(days, 'antall dager'));
 
   // Dokumentasjonsbildene fra øvekonkurransen ligger som filer på disk, ikke i
   // databasen. Filnavnene hentes ut FØR radene slettes, og selve filene fjernes
@@ -90,6 +94,11 @@ export function deleteExpired(days) {
     const nøkler = db.prepare(`DELETE FROM fire_watch_days WHERE night_date < date('now', '-7 days')`).run().changes;
     if (nøkler) perTabell['vaktkoder'] = nøkler;
     total += nøkler;
+    // Varslene i senteret: egen frist, se over.
+    const varsler = db.prepare(`DELETE FROM admin_notifications WHERE night_date < date('now', ?)`)
+      .run(`-${varselDager} days`).changes;
+    if (varsler) perTabell['varsler'] = varsler;
+    total += varsler;
     for (const [table, column, label] of EXPIRING) {
       const n = db.prepare(`DELETE FROM ${table} WHERE ${column} < date('now', ?)`).run(cutoff).changes;
       if (n) perTabell[label] = n;
@@ -119,7 +128,7 @@ export function runRetention(now = zonedNow(), log = console) {
   if (!s.retentionEnabled) return { scrubbed, deleted: null };
   if (getLastSent(LAST_RUN_KEY) === now.dateKey) return { scrubbed, deleted: null };
 
-  const deleted = deleteExpired(s.retentionDays);
+  const deleted = deleteExpired(s.retentionDays, s.notificationRetentionDays);
   // Merkes som kjørt FØRST etter at slettingen faktisk gikk gjennom – feiler
   // den, prøver vi igjen ved neste tick i stedet for å hoppe over døgnet.
   setLastSent(LAST_RUN_KEY, now.dateKey);
@@ -134,9 +143,14 @@ export function runRetention(now = zonedNow(), log = console) {
 export function runRetentionNow() {
   const s = getSettings();
   const scrubbed = scrubCoordinates(s.gpsRetentionHours);
-  const deleted = deleteExpired(s.retentionDays);
+  const deleted = deleteExpired(s.retentionDays, s.notificationRetentionDays);
   setLastSent(LAST_RUN_KEY, zonedNow().dateKey);
-  return { scrubbed, deleted, retentionDays: s.retentionDays, gpsRetentionHours: s.gpsRetentionHours };
+  return {
+    scrubbed, deleted,
+    retentionDays: s.retentionDays,
+    gpsRetentionHours: s.gpsRetentionHours,
+    notificationRetentionDays: s.notificationRetentionDays,
+  };
 }
 
 export function startRetentionScheduler() {

@@ -2972,6 +2972,7 @@ async function renderSettings(main) {
       </div>
       ${numRow('retentionDays', 'Lagringstid', s.retentionDays, 'dager', 30, 3650, '365 dager ≈ ett skoleår.')}
       ${numRow('gpsRetentionHours', 'GPS-koordinater', s.gpsRetentionHours, 'timer', 1, 168, 'Etter dette nulles posisjonen, mens statusen (til stede / borte / for sent) blir stående. Brannlista trenger statusen, ikke stedet.')}
+      ${numRow('notificationRetentionDays', 'Varsler i appen', s.notificationRetentionDays, 'dager', 1, 365, 'Hvor lenge varslene blir liggende i brannvaktens varslingssenter. De er en kopi av beskjeder som allerede er sendt, og trengs bare i dagene etter. Er den generelle lagringstiden over kortere, er det den som gjelder.')}
       <div style="display:flex;justify-content:flex-end;margin-top:14px">
         <button class="btn btn-ghost" id="runRetention" style="height:44px;padding:0 18px;font-size:14px">Kjør sletting nå</button>
       </div>
@@ -3006,6 +3007,7 @@ async function renderSettings(main) {
       retentionEnabled: val('retentionEnabled').checked,
       retentionDays: Number(val('retentionDays').value),
       gpsRetentionHours: Number(val('gpsRetentionHours').value),
+      notificationRetentionDays: Number(val('notificationRetentionDays').value),
     };
   };
 

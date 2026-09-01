@@ -107,6 +107,14 @@ export function releaseWatch(userId, nightDate = watchNightDate()) {
     .run(userId, nightDate).changes > 0;
 }
 
+// Når tok denne administratoren vakten som gjelder nå? null hvis hun ikke har
+// vakt. Brukes av varslingssenteret, som viser vakten din og ikke noe annet:
+// siden skal være tom når vakten begynner.
+export function watchStartedAt(userId, now = new Date()) {
+  return db.prepare('SELECT registered_at FROM fire_watch_shifts WHERE user_id = ? AND night_date = ?')
+    .get(userId, watchNightDate(now))?.registered_at ?? null;
+}
+
 export function hasActiveWatch(userId, now = new Date()) {
   return !!db.prepare('SELECT 1 FROM fire_watch_shifts WHERE user_id = ? AND night_date = ?')
     .get(userId, watchNightDate(now));

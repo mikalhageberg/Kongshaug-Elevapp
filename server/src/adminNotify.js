@@ -43,12 +43,16 @@ export function allAdminIds() {
 }
 
 // Varslene til én administrator, nyeste først.
-export function listForUser(userId, limit = 50) {
-  return db.prepare(
-    `SELECT id, night_date, kind, title, body, read_at, created_at
-       FROM admin_notifications WHERE user_id = ?
-      ORDER BY created_at DESC, id DESC LIMIT ?`
-  ).all(userId, limit).map((r) => ({
+//
+// `since` er tidspunktet vakten hennes begynte. Senteret viser vakten hun står
+// i nå, og starter derfor tomt når hun tar den: varslene fra i går er ikke
+// hennes problem i kveld. De er ikke borte – de ligger under «Tidligere
+// vakter», og lever så lenge lagringstiden for varsler sier.
+//
+// Uten vakt er `since` null. Da er alt «tidligere», og siden er tom med en
+// forklaring på hvorfor.
+function les(rader) {
+  return rader.map((r) => ({
     id: r.id,
     nightDate: r.night_date,
     kind: r.kind,
@@ -60,9 +64,39 @@ export function listForUser(userId, limit = 50) {
   }));
 }
 
-export function unreadCount(userId) {
-  return db.prepare('SELECT COUNT(*) AS n FROM admin_notifications WHERE user_id = ? AND read_at IS NULL')
-    .get(userId).n;
+const KOLONNER = 'id, night_date, kind, title, body, read_at, created_at';
+
+// Varslene fra vakten som pågår.
+export function listCurrent(userId, since) {
+  if (!since) return [];
+  return les(db.prepare(
+    `SELECT ${KOLONNER} FROM admin_notifications
+      WHERE user_id = ? AND created_at >= ?
+      ORDER BY created_at DESC, id DESC`
+  ).all(userId, since));
+}
+
+// Alt som ligger foran vakten som pågår.
+export function listEarlier(userId, since, limit = 50) {
+  return les(since
+    ? db.prepare(
+        `SELECT ${KOLONNER} FROM admin_notifications
+          WHERE user_id = ? AND created_at < ?
+          ORDER BY created_at DESC, id DESC LIMIT ?`
+      ).all(userId, since, limit)
+    : db.prepare(
+        `SELECT ${KOLONNER} FROM admin_notifications WHERE user_id = ?
+          ORDER BY created_at DESC, id DESC LIMIT ?`
+      ).all(userId, limit));
+}
+
+// Uleste i vakten som pågår. Bevisst ikke i hele historikken: et gammelt
+// ulest varsel ville ellers latt merket henge på fanen i ukevis.
+export function unreadCount(userId, since) {
+  if (!since) return 0;
+  return db.prepare(
+    'SELECT COUNT(*) AS n FROM admin_notifications WHERE user_id = ? AND read_at IS NULL AND created_at >= ?'
+  ).get(userId, since).n;
 }
 
 // Merk som lest. Uten ids merkes alt – det er det å åpne senteret gjør.

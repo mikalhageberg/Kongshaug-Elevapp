@@ -155,13 +155,23 @@ lagres hvert varsel som er sendt til en administrator også som en rad
 (`server/src/adminNotify.js`), og fanen **Varsler** i appen viser dem – kveldens
 øverst, uleste med farget kant og et tall på fanen.
 
-To ting følger av hva senteret er *til for*:
+**Siden starter tom når vakten begynner.** Senteret viser vakten du står i nå –
+regnet fra klokkeslettet du skannet koden. Gårsdagens varsler er ikke ditt
+problem i kveld, og en side som allerede er full gjør at kveldens ene viktige
+beskjed drukner. De er ikke borte: de ligger under **«Tidligere vakter»**
+nederst, ett trykk unna.
+
+Tre ting følger av hva senteret er *til for*:
 
 - **Raden skrives selv om utsendingen feiler**, og selv om mottakeren ikke har
   appen installert. Et varsel som aldri nådde låseskjermen er nettopp det som
   skal kunne finnes igjen.
 - **Senteret krever ikke gyldig vakt.** Har du fått et varsel, skal du kunne
   lese det igjen etterpå – også etter at vakten er over og koden har skiftet.
+  Uten vakt er alt «tidligere», og siden er tom med en forklaring på hvorfor.
+- **Merket på fanen teller bare vaktens egne uleste.** Talte det hele
+  historikken, ville et gammelt ulest varsel latt merket henge i ukevis, og da
+  slutter man å se på det.
 
 Det som legger seg der er varslene som faktisk ble sendt: vaktvarselet over, og
 beskjeder sendt med **«Send til alle»**. Ikke en hendelseslogg – ingen inn- og
@@ -174,6 +184,13 @@ koster ingenting – og lest-statusen ligger da der den hører hjemme, på
 mottakerens egen rad. Vaktvarselet lagres bare for dem som hadde vakten;
 beskjeder til alle lagres for alle administratorer.
 
+**Varslene lever i 30 dager**, ikke ett år som resten av historikken. De er en
+kopi av beskjeder som allerede er sendt, og verdien deres er å kunne slås opp i
+dagene etter – ikke å bli et arkiv over hvem som fikk beskjed om hva i fjor.
+Perioden settes under **Innstillinger → Personvern: lagringstid → «Varsler i
+appen»** (1–365 dager). Den generelle lagringstiden gjelder som ytre grense: er
+den kortere, er det den som styrer.
+
 ### Lagringstid og automatisk sletting
 
 Systemet rydder etter seg selv, styrt fra admin → **Innstillinger → Personvern:
@@ -183,6 +200,8 @@ lagringstid** (`server/src/retention.js`):
   eleven er på skolens område i selve registreringsøyeblikket, og leses aldri
   igjen. Statusen (til stede / borte / for sent) blir stående – det er den
   brannsikkerheten trenger, ikke stedet.
+- **Varslene i brannvaktens varslingssenter slettes etter 30 dager.** Egen,
+  kortere frist enn resten – se «Varslingssenter» over.
 - **Datert historikk slettes etter ett skoleår** (365 dager som standard):
   brannliste, andakt, planlagt fravær, gjester, middagsvalg, kjøkkentjeneste,
   internatvask og øveøkter. Dokumentasjonsbildene fra øvekonkurransen ligger som

@@ -65,11 +65,20 @@ const DEFAULTS = {
   // GPS-koordinatene nulles allerede etter et døgn.
   retentionEnabled: true,          // slett datert historikk automatisk
   retentionDays: 365,              // hvor lenge historikken beholdes
+  // Varslingssenteret har sin egen, kortere frist. Varslene er en kopi av det
+  // som allerede er sagt, og verdien deres er å kunne slås opp i dagene etter –
+  // ikke å bli et arkiv over hvem som fikk beskjed om hva i fjor.
+  notificationRetentionDays: 30,   // hvor lenge varslene i senteret beholdes
   gpsRetentionHours: 24,           // hvor lenge koordinatene beholdes
 };
 
 // Grenser for lagringstiden. Nedre grense hindrer at et feiltrykk sletter
 // inneværende uke; øvre grense holder «for alltid» utenfor rekkevidde.
+// Varslene i senteret. Minst én dag – kortere ville tømt siden mens vakten
+// fortsatt pågår. Taket er ett år; over det gjelder den generelle
+// lagringstiden uansett som ytre grense.
+export const NOTIFICATION_DAYS_MIN = 1;
+export const NOTIFICATION_DAYS_MAX = 365;
 export const RETENTION_DAYS_MIN = 30;
 export const RETENTION_DAYS_MAX = 3650;
 export const GPS_HOURS_MIN = 1;
@@ -178,6 +187,7 @@ export function getSettings() {
     guestEmailRecipient: s.guestEmailRecipient ?? DEFAULTS.guestEmailRecipient,
     retentionEnabled: s.retentionEnabled != null ? s.retentionEnabled === 'true' : DEFAULTS.retentionEnabled,
     retentionDays: intOr(s.retentionDays, DEFAULTS.retentionDays),
+    notificationRetentionDays: intOr(s.notificationRetentionDays, DEFAULTS.notificationRetentionDays),
     gpsRetentionHours: intOr(s.gpsRetentionHours, DEFAULTS.gpsRetentionHours),
     practiceStartDate: s.practiceStartDate ?? DEFAULTS.practiceStartDate,
     practiceEndDate: s.practiceEndDate ?? DEFAULTS.practiceEndDate,
