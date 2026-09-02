@@ -5,9 +5,9 @@ import { config } from './config.js';
 // Bygg brannliste-oversikten for en gitt natt (night_date = dagen natten begynner).
 // Samme struktur som /api/firelist/overview.
 export function getFireOverview(nightDate = todayDate()) {
-  const students = db
+  const alle = db
     .prepare(
-      `SELECT u.id, u.full_name, u.dorm, u.room, f.status, f.checked_at
+      `SELECT u.id, u.full_name, u.dorm, u.room, u.class_name, u.home_dweller, f.status, f.checked_at
        FROM users u
        LEFT JOIN fire_checkins f
          ON f.user_id = u.id AND f.night_date = ?
@@ -15,6 +15,16 @@ export function getFireOverview(nightDate = todayDate()) {
        ORDER BY u.dorm COLLATE NOCASE, CAST(u.room AS INTEGER), u.full_name COLLATE NOCASE`
     )
     .all(nightDate);
+
+  // Hjemmeboerne står utenfor selve opptellingen. De bor ikke på internatet og
+  // kan ikke være i bygget om natten, så en «mangler»-rad på dem ville sendt
+  // vakten ut for å lete etter noen som sover hjemme. De listes for seg selv,
+  // permanent som «hjemme», slik at lista fortsatt gjør rede for hele kullet.
+  const students = alle.filter((s) => !s.home_dweller);
+  const homeDwellers = alle
+    .filter((s) => s.home_dweller)
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, 'nb'))
+    .map((s) => ({ id: s.id, fullName: s.full_name, className: s.class_name || null, status: 'home' }));
 
   const scheduledAway = new Set(
     db.prepare('SELECT DISTINCT user_id FROM fire_away_periods WHERE ? BETWEEN start_date AND end_date').all(nightDate).map((r) => r.user_id)
@@ -58,6 +68,10 @@ export function getFireOverview(nightDate = todayDate()) {
     missing,
     guestCount: guests.length,
     dorms: Object.values(dorms),
+    // Egen liste, med vilje utenfor `dorms`: eldre klienter som ikke kjenner
+    // feltet viser dem da ikke i det hele tatt, framfor å regne dem som savnet.
+    homeDwellers,
+    homeCount: homeDwellers.length,
   };
 }
 

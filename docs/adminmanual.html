@@ -343,6 +343,7 @@
     <li><span class="st">Fullt navn</span> Brukernavnet fylles ut automatisk som <code>fornavn.etternavn</code> mens du skriver – helt til du retter det selv.</li>
     <li><span class="st">Passord</span> La feltet stå tomt, så lages et tilfeldig passord. Eller trykk <strong>Generer</strong> for å se det med én gang.</li>
     <li><span class="st">Klasse, internat, rom og hovedinstrument</span> Klasse, internat og instrument velges fra faste lister. Rom er fri tekst.</li>
+    <li><span class="st">Hjemmeboer</span> Kryss av hvis eleven bor hjemme og aldri sover på internatet – se 3.3. La den stå tom for alle andre.</li>
     <li><span class="st">Opprett elev</span> Passordet vises i en melding nede på skjermen – <strong>skriv det ned nå</strong>.</li>
   </ol>
 
@@ -351,7 +352,25 @@
     <p>Ved redigering er brukernavnfeltet låst. Skal en elev ha nytt brukernavn, må kontoen opprettes på nytt – og da mister du historikken. Sjekk stavemåten før du oppretter.</p>
   </div>
 
-  <h3>3.3 Legge til mange på én gang</h3>
+  <h3>3.3 Hjemmeboere</h3>
+  <p>Noen elever bor hjemme og sover aldri på internatet. De skal ikke stå på brannlisten, men de skal heller ikke bare mangle på den: en vakt som teller navn skal se at eleven er gjort rede for.</p>
+  <p><strong>Slik merker du en elev:</strong> kryss av <strong>«Hjemmeboer»</strong> på elevkortet. Oppretter du flere om gangen, står det en kolonne <strong>«Hjemme»</strong> ytterst til høyre i rutenettet. Merket kan settes og fjernes når som helst, og gjelder fra samme kveld.</p>
+  <table>
+    <thead>    <tr><th style="width:34%">Hva som skjer</th><th>Hvor</th></tr></thead>
+    <tbody>
+    <tr><td class="k">Står permanent som «Hjemme»</td><td>Hver eneste natt. Eleven trenger ikke krysse av for noe, og kan ikke melde seg til stede.</td></tr>
+    <tr><td class="k">Telles ikke med</td><td>Verken i «til stede», «borte» eller «mangler». Tallet <em>84 / 96</em> gjelder bare dem som faktisk sover på internatet.</td></tr>
+    <tr><td class="k">Egen bolk nederst</td><td>På brannlistesiden, i PDF-en og på utskriften – med navn, klasse og teksten «Skal ikke ettersøkes ved brann».</td></tr>
+    <tr><td class="k">Ingen påminnelse</td><td>Kveldsvarselet om å huske brannlisten (12.1) går ikke til hjemmeboere.</td></tr>
+    <tr><td class="k">Ingen manuell overstyring</td><td>Statusknappene på brannlisten gjelder ikke hjemmeboere. Skal eleven likevel sove på internatet, fjerner du merket på elevkortet.</td></tr>
+    </tbody>
+  </table>
+  <div class="box tip">
+    <span class="h">Hjemmeboere er fortsatt vanlige elever</span>
+    <p>Merket gjelder <strong>bare brannlisten</strong>. Andakt, middag, kjøkkentjeneste, internatvask og øvekonkurransen fungerer som før – en hjemmeboer spiser gjerne middag på skolen selv om hun sover hjemme.</p>
+  </div>
+
+  <h3>3.4 Legge til mange på én gang</h3>
   <p>Knappen <strong>«Legg til flere»</strong> åpner et rutenett med én rad per elev. Nye rader dukker opp av seg selv når du begynner å fylle ut den siste. Brukernavn og passord lages automatisk for alle.</p>
 
   <h4>Importere fra Excel</h4>
@@ -374,31 +393,33 @@
   </table>
   <ul>
     <li>Overskriftene må skrives <strong>nøyaktig</strong> slik. Rekkefølgen på kolonnene spiller ingen rolle, og kolonner dere ikke bruker kan sløyfes helt.</li>
-    <li><strong>Navn</strong> må være med – hele navnet i én celle. Klasse, internat og hovedinstrument må være verdier fra listene i 3.6.</li>
+    <li><strong>Navn</strong> må være med – hele navnet i én celle. Klasse, internat og hovedinstrument må være verdier fra listene i 3.7.</li>
     <li>Enkeltceller kan stå tomme; du fyller dem inn i forhåndsvisningen.</li>
+    <li>Malen har <strong>ingen kolonne for hjemmeboere</strong>. Kryss av i «Hjemme»-kolonnen i forhåndsvisningen etter innlesingen, eller på elevkortet etterpå (3.3).</li>
     <li>Bare <strong>første fane</strong> i arket leses. Er det en skrivefeil, avvises arket med <strong>radnummer og hvilken celle</strong> som er feil.</li>
     <li>Knappen <strong>«Last ned mal»</strong> gir en tom .xlsx med overskriftene ferdig utfylt.</li>
   </ul>
   <p class="note">Elever som allerede finnes, hoppes over – de listes opp som «fantes allerede» etter innlesingen. Radene kan rettes før du trykker Opprett.</p>
 
-  <h3>3.4 Brukerkort – slik deler du ut passordene</h3>
+  <h3>3.5 Brukerkort – slik deler du ut passordene</h3>
   <div class="box stop">
     <span class="h">Passordene vises kun én gang</span>
     <p>Rett etter at kontoene er opprettet, får du knappen <strong>«Skriv ut brukerkort»</strong>. Den åpner en utskriftsvennlig side med ett kort per elev – navn, klasse, internat, brukernavn og passord – to i bredden på A4, til å klippe fra hverandre. Lukker du vinduet uten å skrive ut, må passordene settes på nytt, én for én.</p>
   </div>
   <p>Kortet sier selv at passordet er midlertidig og byttes ved første innlogging. Trenger nettleseren tillatelse til å åpne popup-vinduer, sier siden fra.</p>
 
-  <h3>3.5 Deaktivere eller slette?</h3>
+  <h3>3.6 Deaktivere eller slette?</h3>
   <table>
     <thead>    <tr><th style="width:26%">Handling</th><th>Hva skjer</th><th>Bruk når</th></tr></thead>
     <tbody>
     <tr><td class="k">Deaktivere<br><span class="note">(fjern «Aktiv konto»)</span></td><td>Eleven kan ikke logge inn, og forsvinner fra brannlisten og andaktsoversikten. All historikk blir stående.</td><td>Eleven har sluttet, er i permisjon, eller kontoen skal hvile.</td></tr>
     <tr><td class="k">Slette</td><td>Kontoen og <strong>alle registreringer</strong> fjernes for godt. Kan ikke angres.</td><td>Feiloppretting, eller når skolen skal rydde bort gamle data bevisst.</td></tr>
+    <tr><td class="k">Merke som hjemmeboer<br><span class="note">(se 3.3)</span></td><td>Eleven beholder appen og alt annet, men står permanent som «Hjemme» på brannlisten.</td><td>Eleven går på skolen, men bor hjemme og sover aldri på internatet.</td></tr>
     </tbody>
   </table>
   <p class="note">Nytt passord til en elev som har glemt sitt: åpne eleven, skriv (eller generer) et passord i passordfeltet, lagre. Eleven blir bedt om å velge sitt eget ved neste innlogging. La feltet stå tomt for å beholde passordet uendret.</p>
 
-  <h3>3.6 Faste lister</h3>
+  <h3>3.7 Faste lister</h3>
   <table>
     <thead>    <tr><th style="width:24%">Liste</th><th>Verdier</th></tr></thead>
     <tbody>
@@ -473,6 +494,7 @@
     <span class="pill grey">Til stede: 84 / 96</span>
     <span class="pill grey">6 borte</span>
     <span class="pill red">6 mangler</span>
+    <span class="pill grey">3 hjemmeboere</span>
   </p>
   <p style="margin-top:3mm">Under ligger filterknapper – <strong>Alle</strong> eller ett internat – og ett kort per internat med elever, rom og en fargeprikk for status.</p>
   <table>
@@ -482,6 +504,7 @@
     <tr><td class="k">🔵 Mørkeblå</td><td>Meldt seg borte i natt.</td></tr>
     <tr><td class="k">🔴 Rød</td><td>Ikke registrert. Raden har lys rød bakgrunn.</td></tr>
     <tr><td class="k">🟡 Gul rad</td><td>En gjest – merket «Gjest hos <em>elevnavn</em>» med rom.</td></tr>
+    <tr><td class="k">⚪ Grå rad</td><td>En hjemmeboer. Disse står i et eget, nedtonet kort <strong>nederst</strong> på siden – ikke i internatene, og ikke med i tellerne.</td></tr>
     </tbody>
   </table>
 
@@ -496,6 +519,7 @@
     </tbody>
   </table>
   <p class="note">Elevene kan bare registrere seg innenfor tidsvinduet skolen har satt (kapittel 13). Du kan sette status <strong>når som helst</strong> – også lenge etter at vinduet stengte. Det er slik du fikser eleven med tomt batteri.</p>
+  <p class="note">Hjemmeboere har ingen slike knapper – statusen deres er den samme hver natt, og settes på elevkortet (3.3).</p>
 
   <h3>5.3 Eksportere listen</h3>
   <p><strong>«Eksporter PDF»</strong> lager en utskriftsvennlig liste for natten som vises. Skal den komme av seg selv hver dag, sett opp automatisk e-post under Innstillinger (13.3).</p>
@@ -844,7 +868,7 @@
     <strong>Husk brannlisten!</strong><br>
     <span class="note">Du har ikke krysset deg av for i kveld ennå. Åpne appen og registrer om du er til stede eller borte.</span>
   </div>
-  <p class="note">Er alle registrert når klokken slår 20:00, sendes ingenting.</p>
+  <p class="note">Er alle registrert når klokken slår 20:00, sendes ingenting. Hjemmeboere (3.3) får aldri denne påminnelsen – de står allerede som «Hjemme».</p>
 
   <h3>12.2 Varsel om ukestjeneste</h3>
   <p>Sendes <strong>søndag kl. 18:00</strong> til elevene som har kjøkkentjeneste eller internatvask uken som starter dagen etter. Har eleven begge deler samme uke, kommer det ett varsel om hver.</p>
@@ -976,6 +1000,7 @@
     <li><span class="st">Deaktiver eller slett elever som har sluttet</span> Deaktiver hvis historikken skal bli stående.</li>
     <li><span class="st">Importer den nye elevlista fra Excel</span> Bruk malen, og last den ned fra knappen så overskriftene blir riktige.</li>
     <li><span class="st">Skriv ut brukerkortene med én gang</span> Passordene vises kun i dette ene vinduet.</li>
+    <li><span class="st">Merk av hjemmeboerne</span> Elevene som bor hjemme og aldri sover på internatet, så de ikke ligger og mangler på brannlisten hver kveld (3.3).</li>
     <li><span class="st">Gå gjennom Innstillinger</span> Frist for andakt, innsjekksvinduene, mottakere for e-post.</li>
     <li><span class="st">Legg inn turnusene</span> Kjøkkentjeneste og internatvask, og opprett vaskeoppgavene per internat.</li>
     <li><span class="st">Slå på varslene, og send en test</span> «Send test nå» på begge e-postutsendingene og begge push-varslene.</li>
@@ -1020,6 +1045,9 @@
   <h4>Kan en elev fikse sin egen registrering etter at vinduet stengte?</h4>
   <p>Nei. Etter stengetid er det bare en administrator som kan sette status, fra Brannliste-siden.</p>
 
+  <h4>Vi har elever som bor hjemme. Må de krysse av hver kveld?</h4>
+  <p>Nei. Merk dem som <strong>hjemmeboere</strong> på elevkortet (3.3). Da står de permanent som «Hjemme», holdes utenfor tellerne på brannlisten, og får ingen påminnelser. De står i en egen bolk nederst på listen og i PDF-en, så vakten ser at de er gjort rede for.</p>
+
   <h4>Ser elevene hverandres status?</h4>
   <p>Nei. Elevene ser sin egen status. Vaskeplan og kjøkkentjeneste er felles lister, og der ser de navnene til dem de har tjeneste sammen med.</p>
 
@@ -1059,6 +1087,7 @@
     <tr><td class="k">hente fraværet for en uke</td><td>Andakt / QR → Eksporter ukens fravær, eller Arkivet → Excel</td></tr>
     <tr><td class="k">opprette nye elever</td><td>Elever → Legg til flere → importer fra Excel</td></tr>
     <tr><td class="k">gi en elev nytt passord</td><td>Elever → blyanten → skriv passord → Lagre</td></tr>
+    <tr><td class="k">ta en elev som bor hjemme av brannlisten</td><td>Elever → blyanten → kryss av «Hjemmeboer»</td></tr>
     <tr><td class="k">legge inn ukemenyen</td><td>Kjøkken → Ukemeny → Last opp PDF</td></tr>
     <tr><td class="k">sette opp vaskeoppgaver</td><td>Internat → Oppgaver → Ny oppgave</td></tr>
     <tr><td class="k">signere vask for en elev uten telefon</td><td>Internat → uken → Signer</td></tr>

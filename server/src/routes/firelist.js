@@ -64,6 +64,17 @@ function isValidDate(s) {
   const dt = new Date(y, m - 1, d);
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
 }
+// Hjemmeboer: elev som bor hjemme og aldri sover på internatet. Statusen er
+// den samme hver eneste natt, så den registreres én gang på brukeren i stedet
+// for å måtte meldes inn på nytt hver kveld. Se fireReport.js for hvordan de
+// holdes utenfor opptellingen.
+function isHomeDweller(userId) {
+  return !!db.prepare('SELECT 1 FROM users WHERE id = ? AND home_dweller = 1').get(userId);
+}
+const HOME_DWELLER_MESSAGE =
+  'Du er registrert som hjemmeboer og står permanent som «hjemme» på brannlisten. '
+  + 'Gi beskjed til internatleder hvis du likevel skal sove på skolen.';
+
 // Er brukeren planlagt borte (via en periode) en gitt natt?
 function isScheduledAway(userId, night) {
   return !!db.prepare(
@@ -74,6 +85,11 @@ function isScheduledAway(userId, night) {
 // ── ELEV: meld deg til stede på brannlisten i kveld ──────────
 router.post('/checkin', (req, res) => {
   const { lat, lng } = req.body || {};
+  // Hjemmeboere skal ikke kunne skrive seg inn på lista i det hele tatt – da
+  // hadde vakten fått et navn å lete etter i et bygg eleven ikke sover i.
+  if (isHomeDweller(req.auth.sub)) {
+    return res.status(403).json({ error: 'home-dweller', message: HOME_DWELLER_MESSAGE });
+  }
   const reviewBypass = isAppReviewUser(req.auth?.username);
   if (reviewBypass) console.warn(`[app-review-bypass] brannliste-innsjekk uten vindu-/GPS-sjekk for «${req.auth.username}»`);
 
@@ -117,12 +133,18 @@ router.post('/checkin', (req, res) => {
 // Kan meldes når som helst – vinduet gjelder bare tilstedeværelse.
 router.post('/away', (req, res) => {
   const night = currentNightDate();
-  db.prepare(
-    `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
-     VALUES (@uid, @night, 'away', NULL, NULL)
-     ON CONFLICT(user_id, night_date)
-       DO UPDATE SET status = 'away', checked_at = datetime('now'), lat = NULL, lng = NULL`
-  ).run({ uid: req.auth.sub, night });
+  // Hjemmeboeren er allerede meldt borte, hver natt, én gang for alle. Raden i
+  // fire_checkins ville ikke gjort noen forskjell, men middagsavmeldingen under
+  // gjelder like fullt: mange hjemmeboere spiser middag på skolen.
+  const home = isHomeDweller(req.auth.sub);
+  if (!home) {
+    db.prepare(
+      `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
+       VALUES (@uid, @night, 'away', NULL, NULL)
+       ON CONFLICT(user_id, night_date)
+         DO UPDATE SET status = 'away', checked_at = datetime('now'), lat = NULL, lng = NULL`
+    ).run({ uid: req.auth.sub, night });
+  }
 
   // Valgfritt: meld også av middag for i dag. Middag føres på kalenderdatoen,
   // ikke på natten – natten varer til 07:30, så mellom midnatt og da ville
@@ -136,7 +158,10 @@ router.post('/away', (req, res) => {
   const row = db
     .prepare('SELECT checked_at FROM fire_checkins WHERE user_id = ? AND night_date = ?')
     .get(req.auth.sub, night);
-  res.json({ status: 'away', nightDate: night, checkedAt: row.checked_at, noDinner: noDinner === true });
+  res.json({
+    status: 'away', nightDate: night, checkedAt: row?.checked_at || null,
+    noDinner: noDinner === true, homeDweller: home,
+  });
 });
 
 // ── ELEV: min status i kveld ─────────────────────────────────
@@ -152,10 +177,19 @@ router.get('/status', (req, res) => {
   if (!row && isScheduledAway(req.auth.sub, night)) { status = 'away'; scheduled = true; }
   // Middag ligger på kalenderdatoen, ikke på natten – se /away over.
   const noDinner = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, todayDate());
+  // Hjemmeboeren har samme svar hver natt, uavhengig av hva som måtte ligge i
+  // fire_checkins. `status` settes til 'away' og ikke 'home': appversjoner som
+  // er ute i dag kjenner bare 'present' | 'away' | null, og med 'away' viser de
+  // hjemmeskjermen («Du er registrert som ikke på skolen») i stedet for å be en
+  // hjemmeboer om å melde seg til stede. Klienter som kan mer, ser på
+  // homeDweller først – se app.js.
+  const homeDweller = isHomeDweller(req.auth.sub);
+  if (homeDweller) { status = 'away'; scheduled = true; }
   res.json({
     nightDate: night,
     status,                          // 'present' | 'away' | null
     scheduled,                       // true = borte pga. planlagt periode
+    homeDweller,                     // true = bor hjemme, står permanent som «hjemme»
     noDinner,                        // meldt av middag i dag
     checkedIn: status === 'present',
     checkedAt: row?.checked_at || null,
@@ -284,8 +318,17 @@ router.delete('/watch', requireAdmin, (req, res) => {
 router.post('/admin-checkin', requireAdmin, requireWatchOnNative, (req, res) => {
   const uid = Number(req.body?.userId);
   const status = req.body?.status;
-  const u = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student'").get(uid);
+  const u = db.prepare("SELECT id, full_name, home_dweller FROM users WHERE id = ? AND role = 'student'").get(uid);
   if (!u) return res.status(404).json({ error: 'Fant ikke eleven' });
+  // Hjemmeboere står ikke på lista, og skal heller ikke kunne settes der herfra.
+  // Skal eleven likevel sove på internatet, fjernes hjemmeboer-merket på
+  // elevkortet – da gjelder det fra kvelden av, ikke bare for denne natten.
+  if (u.home_dweller) {
+    return res.status(400).json({
+      error: 'home-dweller',
+      message: `${u.full_name} er registrert som hjemmeboer og står ikke på brannlisten. Fjern hjemmeboer-merket på elevkortet hvis dette har endret seg.`,
+    });
+  }
   // Admin kan overstyre når som helst – ikke bundet av kveldsvinduet.
   const night = currentNightDate();
 

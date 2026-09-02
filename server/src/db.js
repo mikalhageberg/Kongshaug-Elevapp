@@ -345,6 +345,10 @@ ensureColumn('users', 'feide_id', 'TEXT');
 ensureColumn('users', 'superadmin', 'INTEGER NOT NULL DEFAULT 0');
 // Hovedinstrument – brukes til gruppering i øvekonkurransen.
 ensureColumn('users', 'instrument', 'TEXT');
+// Hjemmeboer: elev som bor hjemme og aldri sover på internatet. De står
+// permanent som «hjemme» og holdes utenfor brannlistens opptelling – ingen
+// skal lete etter dem i et brennende bygg. Se fireReport.js.
+ensureColumn('users', 'home_dweller', 'INTEGER NOT NULL DEFAULT 0');
 // Når dokumentasjonsbildet ble tatt. Bildet tas på slutten av økten, så
 // starttidspunktet ville gitt feil stempel på bildet.
 ensureColumn('practice_sessions', 'photo_at', 'TEXT');

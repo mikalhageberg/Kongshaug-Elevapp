@@ -21,6 +21,7 @@ function publicUser(u) {
     dorm: u.dorm,
     room: u.room,
     instrument: u.instrument,
+    homeDweller: !!u.home_dweller,
     superadmin: !!u.superadmin,
     active: !!u.active,
     mustChangePassword: !!u.must_change_password,
@@ -73,7 +74,7 @@ router.get('/', (req, res) => {
 
 // POST /api/users  – opprett bruker. Kun admin. Elever kan ikke registrere seg selv.
 router.post('/', requireSuperAdmin, async (req, res) => {
-  let { username, password, fullName, role, className, dorm, room, instrument, superadmin } = req.body || {};
+  let { username, password, fullName, role, className, dorm, room, instrument, homeDweller, superadmin } = req.body || {};
   username = normalizeUsername(username);
   fullName = String(fullName || '').trim();
   role = role === 'admin' ? 'admin' : 'student';
@@ -95,10 +96,12 @@ router.post('/', requireSuperAdmin, async (req, res) => {
   // Nye kontoer får et midlertidig passord som må byttes ved første innlogging.
   const info = db
     .prepare(
-      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, superadmin, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
+      `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, home_dweller, superadmin, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
     )
     .run(username, password_hash, fullName, role, className || null, dorm || null, room || null, instrument || null,
+      // Hjemmeboer gjelder bare elever – en administrator står ikke på brannlisten uansett.
+      role === 'student' && homeDweller ? 1 : 0,
       role === 'admin' && superadmin ? 1 : 0);
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
@@ -161,8 +164,8 @@ router.post('/bulk', requireSuperAdmin, async (req, res) => {
   const errors = [];
 
   const insert = db.prepare(
-    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, superadmin, must_change_password)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
+    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, home_dweller, superadmin, must_change_password)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
   );
 
   for (let i = 0; i < list.length; i++) {
@@ -180,6 +183,8 @@ router.post('/bulk', requireSuperAdmin, async (req, res) => {
         isStudent ? (row.dorm || null) : null,
         isStudent ? (row.room || null) : null,
         isStudent ? (row.instrument || null) : null,
+        // Hjemmeboer gjelder bare elever, og bare når det er huket av.
+        isStudent && row.homeDweller ? 1 : 0,
         // Superbruker gjelder bare administratorer, og bare når det er huket av.
         !isStudent && row.superadmin ? 1 : 0
       );
@@ -199,7 +204,7 @@ router.patch('/:id', async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   if (!user) return res.status(404).json({ error: 'Fant ikke brukeren' });
 
-  const { fullName, className, dorm, room, instrument, active, password, superadmin } = req.body || {};
+  const { fullName, className, dorm, room, instrument, homeDweller, active, password, superadmin } = req.body || {};
 
   // Å endre en administrator – ikke minst passordet hennes – er å kunne overta
   // kontoen. Vanlige administratorer kan derfor rette på elever, men ikke på
@@ -216,6 +221,10 @@ router.patch('/:id', async (req, res) => {
   if (dorm !== undefined) { fields.push('dorm = ?'); vals.push(dorm || null); }
   if (room !== undefined) { fields.push('room = ?'); vals.push(room || null); }
   if (instrument !== undefined) { fields.push('instrument = ?'); vals.push(instrument || null); }
+  // Hjemmeboer-merket. Settes det på, forsvinner eleven fra brannlistens
+  // opptelling fra og med den samme natten; kveldens registrering blir stående
+  // i fire_checkins, men brukes ikke lenger til noe.
+  if (homeDweller !== undefined) { fields.push('home_dweller = ?'); vals.push(homeDweller ? 1 : 0); }
   if (active !== undefined) {
     if (!active && erSisteSuperbruker(id)) {
       return res.status(400).json({ error: 'Kan ikke deaktivere den siste superbrukeren.' });

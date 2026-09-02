@@ -451,7 +451,9 @@ async function renderUserList(main, cfg) {
           <div style="font-size:14.5px;font-weight:700">${u.fullName}${u.id === user.id ? ' <span style="font-size:11px;font-weight:700;color:var(--muted-2)">(deg)</span>' : ''}</div>
           <div style="font-size:14px;color:var(--slate)">${u.username}</div>
           ${isStudent ? `<div style="font-size:14px;color:var(--slate)">${u.className || '–'}</div>
-          <div style="font-size:14px;color:var(--slate)">${u.dorm || '–'}${u.room ? ' · ' + u.room : ''}</div>`
+          <div style="font-size:14px;color:var(--slate)">${u.homeDweller
+            ? '<span class="pill" style="background:#f2f4f6;color:var(--muted-2)">Hjemmeboer</span>'
+            : (u.dorm || '–') + (u.room ? ' · ' + u.room : '')}</div>`
           : `<div>${u.superadmin
               ? '<span class="pill" style="background:#e7edf5;color:var(--navy)">Superbruker</span>'
               : '<span style="font-size:13px;color:var(--muted-2);font-weight:600">Administrator</span>'}</div>`}
@@ -525,7 +527,14 @@ function userModal(existing, onSaved, cfg) {
         <div style="margin-top:16px">
           <label class="field-label">Hovedinstrument</label>
           <select class="field field-sm" name="instrument" style="background:#f7f8fa">${instrumentOptions}</select>
-        </div>` : '';
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:11px;margin-top:16px;padding:14px 16px;background:#f7f8fa;border-radius:12px;cursor:pointer">
+          <input type="checkbox" name="homeDweller" ${existing?.homeDweller ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" />
+          <span>
+            <span style="display:block;font-size:14.5px;font-weight:700;color:var(--slate)">Hjemmeboer</span>
+            <span style="display:block;font-size:13px;color:var(--muted-2);margin-top:2px;line-height:1.5">Bor hjemme og sover aldri på internatet. Eleven står permanent som «hjemme», telles ikke med på brannlisten – verken som til stede eller savnet – og får ingen påminnelser om å krysse av.</span>
+          </span>
+        </label>` : '';
   // Superbruker gjelder bare administratorer. Vises til superbrukere; en vanlig
   // administrator kommer uansett ikke inn på denne siden.
   const adminFields = !isStudent && user.superadmin ? `
@@ -598,6 +607,7 @@ function userModal(existing, onSaved, cfg) {
     if (isStudent) {
       body.className = f.className.value; body.dorm = f.dorm.value; body.room = f.room.value;
       body.instrument = f.instrument.value;
+      body.homeDweller = f.homeDweller.checked;
     }
     if (!isStudent && f.superadmin) body.superadmin = f.superadmin.checked;
     if (f.password.value) body.password = f.password.value;
@@ -624,7 +634,7 @@ function userModal(existing, onSaved, cfg) {
 // administratorer bare navn (brukernavn + passord genereres for begge).
 // Navnekolonnen får en nedre grense: uten den spiser de faste kolonnene hele
 // bredden, og «Fullt navn» kollapser til et par tegn.
-const BULK_COLS_STUDENT = 'minmax(170px, 1fr) 96px 132px 68px 140px 30px';
+const BULK_COLS_STUDENT = 'minmax(160px, 1fr) 92px 126px 62px 132px 56px 30px';
 const BULK_COLS_ADMIN = 'minmax(200px, 1fr) 150px 30px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
@@ -634,7 +644,10 @@ function bulkRowHTML(isStudent) {
       <select class="field field-sm" name="className" style="background:#f7f8fa">${optionsHTML(CLASSES, 'Klasse', '')}</select>
       <select class="field field-sm" name="dorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Internat', '')}</select>
       <input class="field field-sm" name="room" placeholder="Rom" />
-      <select class="field field-sm" name="instrument" style="background:#f7f8fa">${optionsHTML(INSTRUMENTS, 'Instrument', '')}</select>` : '';
+      <select class="field field-sm" name="instrument" style="background:#f7f8fa">${optionsHTML(INSTRUMENTS, 'Instrument', '')}</select>
+      <label title="Bor hjemme – står ikke på brannlisten" style="display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <input type="checkbox" name="homeDweller" style="width:18px;height:18px" />
+      </label>` : '';
   // Administratorer velges som superbruker allerede ved opprettelsen, så man
   // slipper å opprette først og gi tilgang etterpå.
   const adminFields = isStudent ? '' : `
@@ -659,6 +672,7 @@ function parseBulkRows(rowsEl, isStudent) {
       base.dorm = row.querySelector('[name="dorm"]').value;
       base.room = row.querySelector('[name="room"]').value.trim();
       base.instrument = row.querySelector('[name="instrument"]').value;
+      base.homeDweller = row.querySelector('[name="homeDweller"]').checked;
     }
     return base;
   }).filter((s) => s.fullName);
@@ -674,6 +688,7 @@ function bulkAddModal(cfg, onSaved) {
        <label class="field-label" style="margin:0">Internat</label>
        <label class="field-label" style="margin:0">Rom</label>
        <label class="field-label" style="margin:0">Instrument</label>
+       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemme</label>
        <span></span>`
     : `<label class="field-label" style="margin:0">Navn</label>
        <label class="field-label" style="margin:0">Tilgang</label>
@@ -3368,6 +3383,8 @@ function vaktQrModal() {
   });
 }
 
+const homeLabel = (n) => `${n} ${n === 1 ? 'hjemmeboer' : 'hjemmeboere'}`;
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
@@ -3375,6 +3392,7 @@ async function renderBrannliste(main) {
         <span id="hcPresent" class="pill" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px;white-space:nowrap">Til stede: ${d.present} / ${d.total}</span>
         <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px;white-space:nowrap">${d.away} borte</span>
         <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${d.missing} mangler</span>
+        ${d.homeCount ? `<span id="hcHome" class="pill" style="background:#f2f4f6;color:var(--muted-2);padding:10px 16px;white-space:nowrap">${homeLabel(d.homeCount)}</span>` : ''}
         <button class="btn btn-ghost" id="exportPdf" style="height:40px;padding:0 16px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter PDF</button>
         <button class="btn btn-ghost" id="vaktQr" style="height:40px;padding:0 16px;font-size:14px"><span style="width:16px;height:16px;display:block">${nav.qr}</span>Vakt-kode</button>
       </div>` : '');
@@ -3397,6 +3415,7 @@ async function renderBrannliste(main) {
     set('#hcPresent', `Til stede: ${d.present} / ${d.total}`);
     set('#hcAway', `${d.away} borte`);
     set('#hcMissing', `${d.missing} mangler`);
+    set('#hcHome', homeLabel(d.homeCount));
   }
 
   async function setStatus(uid, status) {
@@ -3426,6 +3445,31 @@ async function renderBrannliste(main) {
           <div style="font-size:14px;color:var(--amber-ink);font-weight:700;margin-top:2px">Rom ${esc(g.room ?? '–')} · ${hos}</div>
         </div>
         <span class="pill pill-amber" style="flex:0 0 auto">Gjest</span>
+      </div>`;
+  }
+
+  // Hjemmeboerne får sitt eget kort nederst, uten status-knapper: statusen er
+  // den samme hver natt og settes på elevkortet, ikke her. Kortet er med for at
+  // vakten skal se at elevene er gjort rede for – ikke bare mangle på lista.
+  function homeCardHTML() {
+    const home = d.homeDwellers || [];
+    if (!home.length) return '';
+    const rows = home.map((s) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;background:#fafbfc">
+        <span class="dot" style="background:var(--muted-2)"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:19px;font-weight:700;line-height:1.25;color:var(--muted-2)">${esc(s.fullName)}</div>
+          <div style="font-size:14px;color:var(--muted-2);font-weight:600;margin-top:2px">${esc(s.className || 'Uten klasse')}</div>
+        </div>
+        <span class="pill" style="flex:0 0 auto;background:#f2f4f6;color:var(--muted-2)">Hjemme</span>
+      </div>`).join('');
+    return `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:19px;font-weight:800">Hjemmeboere</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${home.length}</span></div>
+          <div style="font-size:13.5px;color:var(--muted-2);font-weight:600;margin-top:3px">Bor hjemme og sover ikke på internatet. Skal ikke ettersøkes ved brann.</div>
+        </div>
+        ${rows}
       </div>`;
   }
 
@@ -3461,7 +3505,7 @@ async function renderBrannliste(main) {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}</span></div>
         ${studentRows}${orphanRows}
       </div>`;
-    }).join('');
+    }).join('') + (activeFilter === 'Alle' ? homeCardHTML() : '');
     grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => setStatus(Number(b.dataset.uid), b.dataset.set)));
   }
   chips.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
@@ -3609,6 +3653,19 @@ function buildFireListPrintHTML(d) {
     </div>`;
   }).join('');
 
+  // Hjemmeboerne til slutt, i sin egen bolk. Samme grunn som i PDF-en: lista
+  // skal gjøre rede for hele kullet, men disse navnene skal ingen lete etter.
+  const home = d.homeDwellers || [];
+  const homeBlock = home.length ? `
+    <div class="dorm home">
+      <h2>Hjemmeboere <span class="cnt">${home.length}</span></h2>
+      <div class="note">Bor hjemme og sover ikke på internatet. Skal ikke ettersøkes ved brann.</div>
+      <table>
+        <thead><tr><th>Navn</th><th class="c-status">Klasse</th><th class="c-status">Status</th></tr></thead>
+        <tbody>${home.map((s) => `<tr><td>${esc(s.fullName)}</td><td>${esc(s.className ?? '–')}</td><td>Hjemme</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : '';
+
   return `<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>Brannliste ${esc(d.nightDate)}</title>
 <style>
   *{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}
@@ -3625,6 +3682,8 @@ function buildFireListPrintHTML(d) {
   .c-room{width:56px}.c-status{width:104px}.c-time{width:64px}
   tr.guest td{font-style:italic;color:#6b4e00}
   tr.miss td{font-weight:bold}
+  .home,.home td{color:#555}
+  .home .note{font-size:11.5px;color:#555;margin:0 0 4px}
   .toolbar{margin-top:26px}
   .toolbar button{font-size:14px;padding:8px 16px;cursor:pointer}
   @page{size:A4;margin:15mm}
@@ -3633,8 +3692,9 @@ function buildFireListPrintHTML(d) {
 <body>
   <h1>Brannliste — natt til ${esc(nightLabel)}</h1>
   <div class="meta">Kongshaug Musikkgymnas · skrevet ut ${esc(printedAt)}</div>
-  <div class="summary">Til stede: ${d.present} / ${d.total} &nbsp;·&nbsp; Borte: ${d.away} &nbsp;·&nbsp; Mangler: ${d.missing}</div>
+  <div class="summary">Til stede: ${d.present} / ${d.total} &nbsp;·&nbsp; Borte: ${d.away} &nbsp;·&nbsp; Mangler: ${d.missing}${d.homeCount ? ` &nbsp;·&nbsp; Hjemmeboere: ${d.homeCount}` : ''}</div>
   ${dorms}
+  ${homeBlock}
   <div class="toolbar"><button onclick="window.print()">Skriv ut / lagre som PDF</button></div>
   <script>window.onload=function(){setTimeout(function(){window.print();},350);};<\/script>
 </body></html>`;

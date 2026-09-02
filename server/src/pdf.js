@@ -23,7 +23,7 @@ export function buildFireListPdf(overview) {
       .text(`Kongshaug Musikkgymnas · generert ${new Date().toLocaleString('nb-NO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Oslo' })}`);
     doc.moveDown(0.7);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#000')
-      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}${overview.guestCount ? `       Gjester: ${overview.guestCount}` : ''}`);
+      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}${overview.guestCount ? `       Gjester: ${overview.guestCount}` : ''}${overview.homeCount ? `       Hjemmeboere: ${overview.homeCount}` : ''}`);
     doc.moveDown(0.3);
 
     for (const dorm of overview.dorms) {
@@ -66,6 +66,37 @@ export function buildFireListPdf(overview) {
         for (const g of guests.filter((g) => g.hostId === s.id)) renderGuest(g, true);
       }
       for (const g of guests.filter((g) => !hostIds.has(g.hostId))) renderGuest(g, false);
+      doc.y = y + 2;
+    }
+
+    // Hjemmeboerne til slutt, tydelig adskilt fra internatene. De skal ikke
+    // ettersøkes ved brann, men de står her fordi et brannvesen som teller navn
+    // mot klasselista ellers ville sittet igjen med elever det ikke fantes svar
+    // på. Ingen status- eller tidskolonne – status er den samme hver natt.
+    const home = overview.homeDwellers || [];
+    if (home.length) {
+      if (doc.y + 90 > bottom()) doc.addPage();
+      doc.moveDown(1.2);
+      doc.font('Helvetica-Bold').fontSize(13).fillColor('#000')
+        .text(`Hjemmeboere  (${home.length})`, left);
+      doc.font('Helvetica').fontSize(10).fillColor('#555')
+        .text('Bor hjemme og sover ikke på internatet. Skal ikke ettersøkes.', left);
+      let uy = doc.y + 2;
+      doc.moveTo(left, uy).lineTo(right, uy).lineWidth(1).strokeColor('#000').stroke();
+
+      let y = uy + 8;
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#555');
+      doc.text('NAVN', cols.name, y); doc.text('KLASSE', cols.room, y); doc.text('STATUS', cols.status, y);
+      y += 15;
+      for (const s of home) {
+        if (y + 18 > bottom()) { doc.addPage(); y = 50; }
+        doc.font('Helvetica').fontSize(11).fillColor('#555');
+        doc.text(s.fullName, cols.name, y, { width: cols.room - cols.name - 8, ellipsis: true, lineBreak: false });
+        doc.text(String(s.className ?? '–'), cols.room, y, { lineBreak: false });
+        doc.text('Hjemme', cols.status, y, { lineBreak: false });
+        y += 17;
+        doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.4).strokeColor('#e2e2e2').stroke();
+      }
       doc.y = y + 2;
     }
 
