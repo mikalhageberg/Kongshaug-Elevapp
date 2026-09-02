@@ -23,8 +23,9 @@ const LAYOUT_SCHEMA = {
     dormCol: { type: ['integer', 'null'], description: '0-basert kolonne for internat, eller null.' },
     roomCol: { type: ['integer', 'null'], description: '0-basert kolonne for rom, eller null.' },
     instrumentCol: { type: ['integer', 'null'], description: '0-basert kolonne for elevens hovedinstrument, eller null hvis arket ikke har det.' },
+    homeDwellerCol: { type: ['integer', 'null'], description: '0-basert kolonne som markerer at eleven bor hjemme (hjemmeboer/dagelev), eller null.' },
   },
-  required: ['dataStartRow', 'nameCol', 'classCol', 'dormCol', 'roomCol', 'instrumentCol'],
+  required: ['dataStartRow', 'nameCol', 'classCol', 'dormCol', 'roomCol', 'instrumentCol', 'homeDwellerCol'],
 };
 
 const SYSTEM_PROMPT = [
@@ -33,8 +34,10 @@ const SYSTEM_PROMPT = [
   'Finn ut hvordan arket er bygd opp: hvilken kolonne inneholder elevens fulle navn, klasse, internat, rom og hovedinstrument,',
   'og på hvilken rad de faktiske elevradene begynner (hopp over tittel- og overskriftsrader og tomme rader).',
   'Hovedinstrument er instrumentet eleven har som sitt viktigste – kolonnen kan hete «instrument», «hovedinstrument» eller «hovedinstr.».',
+  'En hjemmeboer er en elev som bor hjemme og ikke på internatet; kolonnen kan hete «hjemmeboer», «hjemme» eller «dagelev»,',
+  'og er krysset av med X for de elevene det gjelder.',
   'Svar KUN med kolonnenumre og radnummer – ikke gjengi innholdet i cellene.',
-  'Hvis arket ikke har en kolonne for klasse, internat, rom eller hovedinstrument, sett feltet til null.',
+  'Hvis arket ikke har en kolonne for klasse, internat, rom, hovedinstrument eller hjemmeboer, sett feltet til null.',
 ].join(' ');
 
 // Klasse: «1A», «vg1a» og «VG 1A» skal alle treffe «VG1A».
@@ -127,6 +130,10 @@ export async function parseStudentsXlsx(rows, { classes = [], dorms = [], instru
       dorm: matchDorm(col(row, layout?.dormCol), dorms),
       room: room || null,
       instrument: matchInstrument(col(row, layout?.instrumentCol), instruments),
+      // Fritt ark: her retter admin uansett i forhåndsvisningen, så en celle vi
+      // ikke kjenner igjen leses som «ikke hjemmeboer» framfor å stoppe hele
+      // innlesingen. Malen er strengere – se parseStudentsTemplate.
+      homeDweller: HOME_DWELLER_JA.has(col(row, layout?.homeDwellerCol).toLowerCase()),
     });
   }
 
@@ -148,7 +155,15 @@ const TEMPLATE_HEADERS = {
   dorm: 'Internat',
   room: 'Rom',
   instrument: 'Hovedinstrument',
+  homeDweller: 'Hjemmeboer',
 };
+
+// Hjemmeboer-kolonnen krysses av med «X». Vi godtar de skrivemåtene folk
+// faktisk bruker i et regneark, men gjetter ikke: står det noe annet i cellen,
+// er det en skrivefeil som skal rettes i arket – ikke en verdi vi skal tolke.
+// Alternativet ville vært at «nei» eller «-» stille ble lest som et JA.
+const HOME_DWELLER_JA = new Set(['x', 'xx', 'ja', 'j', '1', 'true', 'sant', '✓', '✔', 'v']);
+const HOME_DWELLER_NEI = new Set(['nei', 'n', '0', 'false', 'usant', '-', '–']);
 
 // Tolker et ark som følger malen. Kaster med en presis feilmelding hvis noe
 // ikke stemmer – da er det arket som skal rettes, ikke gjetningen som skal
@@ -186,12 +201,19 @@ export function parseStudentsTemplate(rows, { classes = [], dorms = [], instrume
     const className = cellText(row, cols.className);
     const dorm = cellText(row, cols.dorm);
     const instrument = cellText(row, cols.instrument);
+    const hjemme = cellText(row, cols.homeDweller).toLowerCase();
+    let homeDweller = false;
+    if (hjemme && !HOME_DWELLER_NEI.has(hjemme)) {
+      if (HOME_DWELLER_JA.has(hjemme)) homeDweller = true;
+      else feil.push(`rad ${radnr}: ${q(cellText(row, cols.homeDweller))} er ikke et gyldig hjemmeboer-merke – sett «X», eller la cellen stå tom`);
+    }
     const student = {
       fullName,
       className: krev(className, matchClass(className, classes), radnr, 'en gyldig klasse'),
       dorm: krev(dorm, matchDorm(dorm, dorms), radnr, 'et gyldig internat'),
       room: cellText(row, cols.room) || null,
       instrument: krev(instrument, matchInstrument(instrument, instruments), radnr, 'et gyldig hovedinstrument'),
+      homeDweller,
     };
     if (existingSet.has(key)) existing.push(fullName);
     else students.push(student);

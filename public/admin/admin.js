@@ -634,7 +634,7 @@ function userModal(existing, onSaved, cfg) {
 // administratorer bare navn (brukernavn + passord genereres for begge).
 // Navnekolonnen får en nedre grense: uten den spiser de faste kolonnene hele
 // bredden, og «Fullt navn» kollapser til et par tegn.
-const BULK_COLS_STUDENT = 'minmax(160px, 1fr) 92px 126px 62px 132px 56px 30px';
+const BULK_COLS_STUDENT = 'minmax(150px, 1fr) 92px 120px 62px 124px 88px 30px';
 const BULK_COLS_ADMIN = 'minmax(200px, 1fr) 150px 30px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
@@ -688,7 +688,7 @@ function bulkAddModal(cfg, onSaved) {
        <label class="field-label" style="margin:0">Internat</label>
        <label class="field-label" style="margin:0">Rom</label>
        <label class="field-label" style="margin:0">Instrument</label>
-       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemme</label>
+       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemmeboer</label>
        <span></span>`
     : `<label class="field-label" style="margin:0">Navn</label>
        <label class="field-label" style="margin:0">Tilgang</label>
@@ -719,13 +719,14 @@ function bulkAddModal(cfg, onSaved) {
             <summary style="cursor:pointer;font-weight:800">Slik skal Excel-malen se ut</summary>
             <ol style="margin:8px 0 0;padding-left:18px">
               <li><b>Rad 1 er overskriftsraden</b>, og skal inneholde postene – skriv dem nøyaktig slik:
-                  <b>Navn</b>, <b>Klasse</b>, <b>Internat</b>, <b>Rom</b>, <b>Hovedinstrument</b>.</li>
+                  <b>Navn</b>, <b>Klasse</b>, <b>Internat</b>, <b>Rom</b>, <b>Hovedinstrument</b>, <b>Hjemmeboer</b>.</li>
               <li><b>Én elev per rad</b> nedover fra rad 2. Ingen tittel- eller tomme rader over overskriftene.</li>
               <li><b>Navn</b> må være med, og skal være hele navnet i én celle («Ingrid Sæther»).
                   Rekkefølgen på kolonnene spiller ingen rolle.</li>
               <li>Kolonner skolen ikke bruker kan sløyfes helt – men en kolonne som er med må hete akkurat som over.
                   Enkeltceller kan stå tomme; da fyller du dem inn selv i radene under.</li>
               <li><b>Klasse</b>, <b>Internat</b> og <b>Hovedinstrument</b> må skrives som i listene her – <b>Rom</b> er fri tekst.</li>
+              <li><b>Hjemmeboer</b>: sett en <b>X</b> for elever som bor hjemme og aldri sover på internatet. La cellen stå tom for alle andre.</li>
               <li>Bare <b>den første fanen</b> i arket leses.</li>
             </ol>
             <div style="margin-top:8px"><b>Klasse:</b> ${CLASSES.join(', ')}</div>
@@ -791,8 +792,8 @@ function bulkAddModal(cfg, onSaved) {
 
     // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
     bg.querySelector('#bxlsxMal').addEventListener('click', () => {
-      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument'].map((v) => ({ v, s: 1 }));
-      downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20] }));
+      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));
+      downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20, 14] }));
     });
 
     bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
@@ -820,6 +821,7 @@ function bulkAddModal(cfg, onSaved) {
           if (s.instrument) row.querySelector('[name="instrument"]').value = s.instrument;
           if (s.dorm) row.querySelector('[name="dorm"]').value = s.dorm;
           if (s.room) row.querySelector('[name="room"]').value = s.room;
+          if (s.homeDweller) row.querySelector('[name="homeDweller"]').checked = true;
         }
         addRow(false);                       // én tom rad til slutt
         updateCount();

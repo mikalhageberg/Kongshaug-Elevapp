@@ -118,8 +118,8 @@ router.post('/', requireSuperAdmin, async (req, res) => {
 //
 // To måter å tolke arket på, styrt av ?mode:
 //   mal (standard) – arket følger skolens faste mal (overskriftsrad med
-//        Navn/Klasse/Internat/Rom/Hovedinstrument). Tolkes lokalt, ingen
-//        OpenAI, ingenting sendes ut av skolen.
+//        Navn/Klasse/Internat/Rom/Hovedinstrument/Hjemmeboer). Tolkes lokalt,
+//        ingen OpenAI, ingenting sendes ut av skolen.
 //   ai            – vilkårlig ark: OpenAI får bare de første radene og svarer
 //        med hvilke kolonner som er hva. Se studentParser.js.
 //

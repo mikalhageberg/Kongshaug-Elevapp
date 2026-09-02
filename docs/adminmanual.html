@@ -354,7 +354,7 @@
 
   <h3>3.3 Hjemmeboere</h3>
   <p>Noen elever bor hjemme og sover aldri på internatet. De skal ikke stå på brannlisten, men de skal heller ikke bare mangle på den: en vakt som teller navn skal se at eleven er gjort rede for.</p>
-  <p><strong>Slik merker du en elev:</strong> kryss av <strong>«Hjemmeboer»</strong> på elevkortet. Oppretter du flere om gangen, står det en kolonne <strong>«Hjemme»</strong> ytterst til høyre i rutenettet. Merket kan settes og fjernes når som helst, og gjelder fra samme kveld.</p>
+  <p><strong>Slik merker du en elev:</strong> kryss av <strong>«Hjemmeboer»</strong> på elevkortet. Oppretter du flere om gangen, står det en kolonne <strong>«Hjemmeboer»</strong> ytterst til høyre i rutenettet – og importerer du fra Excel, setter du en <strong>X</strong> i kolonnen med samme navn (3.4). Merket kan settes og fjernes når som helst, og gjelder fra samme kveld.</p>
   <table>
     <thead>    <tr><th style="width:34%">Hva som skjer</th><th>Hvor</th></tr></thead>
     <tbody>
@@ -385,17 +385,18 @@
 
   <p>Malen ser slik ut – rad 1 er overskriftsraden, én elev per rad nedover:</p>
   <table>
-    <thead>    <tr><th>Navn</th><th>Klasse</th><th>Internat</th><th>Rom</th><th>Hovedinstrument</th></tr></thead>
+    <thead>    <tr><th>Navn</th><th>Klasse</th><th>Internat</th><th>Rom</th><th>Hovedinstrument</th><th>Hjemmeboer</th></tr></thead>
     <tbody>
-    <tr><td>Ingrid Sæther</td><td>VG1A</td><td>Treet 1</td><td>12</td><td>Fiolin</td></tr>
-    <tr><td>Ola Nordmann</td><td>VG2B</td><td>Svingen nede</td><td>3B</td><td>Trommer/slagverk</td></tr>
+    <tr><td>Ingrid Sæther</td><td>VG1A</td><td>Treet 1</td><td>12</td><td>Fiolin</td><td></td></tr>
+    <tr><td>Ola Nordmann</td><td>VG2B</td><td>Svingen nede</td><td>3B</td><td>Trommer/slagverk</td><td></td></tr>
+    <tr><td>Sigrid Vik</td><td>VG1A</td><td></td><td></td><td>Sang</td><td>X</td></tr>
     </tbody>
   </table>
   <ul>
     <li>Overskriftene må skrives <strong>nøyaktig</strong> slik. Rekkefølgen på kolonnene spiller ingen rolle, og kolonner dere ikke bruker kan sløyfes helt.</li>
     <li><strong>Navn</strong> må være med – hele navnet i én celle. Klasse, internat og hovedinstrument må være verdier fra listene i 3.7.</li>
     <li>Enkeltceller kan stå tomme; du fyller dem inn i forhåndsvisningen.</li>
-    <li>Malen har <strong>ingen kolonne for hjemmeboere</strong>. Kryss av i «Hjemme»-kolonnen i forhåndsvisningen etter innlesingen, eller på elevkortet etterpå (3.3).</li>
+    <li><strong>Hjemmeboer</strong>: sett en <strong>X</strong> for elever som bor hjemme og aldri sover på internatet (3.3), og la cellen stå tom for alle andre. Står det noe annet enn X i cellen, sier importen ifra med radnummer.</li>
     <li>Bare <strong>første fane</strong> i arket leses. Er det en skrivefeil, avvises arket med <strong>radnummer og hvilken celle</strong> som er feil.</li>
     <li>Knappen <strong>«Last ned mal»</strong> gir en tom .xlsx med overskriftene ferdig utfylt.</li>
   </ul>
@@ -1000,7 +1001,7 @@
     <li><span class="st">Deaktiver eller slett elever som har sluttet</span> Deaktiver hvis historikken skal bli stående.</li>
     <li><span class="st">Importer den nye elevlista fra Excel</span> Bruk malen, og last den ned fra knappen så overskriftene blir riktige.</li>
     <li><span class="st">Skriv ut brukerkortene med én gang</span> Passordene vises kun i dette ene vinduet.</li>
-    <li><span class="st">Merk av hjemmeboerne</span> Elevene som bor hjemme og aldri sover på internatet, så de ikke ligger og mangler på brannlisten hver kveld (3.3).</li>
+    <li><span class="st">Sjekk hjemmeboerne</span> Hadde arket en <strong>Hjemmeboer</strong>-kolonne, er de allerede avkrysset. Ellers merker du dem på elevkortet, så de ikke ligger og mangler på brannlisten hver kveld (3.3).</li>
     <li><span class="st">Gå gjennom Innstillinger</span> Frist for andakt, innsjekksvinduene, mottakere for e-post.</li>
     <li><span class="st">Legg inn turnusene</span> Kjøkkentjeneste og internatvask, og opprett vaskeoppgavene per internat.</li>
     <li><span class="st">Slå på varslene, og send en test</span> «Send test nå» på begge e-postutsendingene og begge push-varslene.</li>
