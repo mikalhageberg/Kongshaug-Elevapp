@@ -327,6 +327,26 @@ opprettes. Elever som allerede finnes hoppes over. Serveren styres av
 `?mode=mal|ai` på `POST /api/users/parse-xlsx`; koden ligger i
 `server/src/studentParser.js`.
 
+### Nytt skoleår
+
+Nederst på **Elever** ligger knappen **Gjør klar til nytt skoleår** (bare for
+superbrukere). Den gjør hele skoleårsskiftet i én omgang:
+
+1. **Nye elever i VG1** legges inn for hånd eller fra Excel – samme importboks
+   som over, men arket kan bare inneholde VG1-klasser.
+2. **Forhåndsvisning** av hele planen: elevene i VG3 er satt til *Slett elev*,
+   VG1 → VG2 og VG2 → VG3 er satt som ny klasse, og elever uten kjent klasse
+   står som nå. Hver elev har en nedtrekksmeny, så en som går året om igjen
+   kan settes til VG3 i stedet for å slettes, og de nye radene kan rettes.
+3. **Godkjenn og gjennomfør** – etter en ekstra bekreftelse. Sletting,
+   flytting og opprettelse skjer i **én transaksjon** (`POST
+   /api/users/new-school-year`): enten skjer alt, eller ingenting. Slettede
+   elever forsvinner med alle registreringer, som ved vanlig sletting.
+   Etterpå vises brukerkortene for de nye elevene, som i «Legg til flere».
+
+Brukernavnene til de nye elevene lages etter at VG3 er slettet, så en ny elev
+som heter det samme som en som gikk ut, får navnet uten tall bak.
+
 ### Ukestjenester: kjøkkentjeneste og internatvask
 
 Begge går på rundgang, én uke av gangen, og er bygget på samme kode i alle lag –

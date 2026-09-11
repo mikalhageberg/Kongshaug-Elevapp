@@ -379,8 +379,17 @@ async function renderUserList(main, cfg) {
       <button id="bulkclear" class="btn btn-ghost" style="height:38px;padding:0 14px;font-size:13.5px">Fjern valg</button>
       ${kanOpprette ? '<button id="bulkdel" class="btn" style="height:38px;padding:0 16px;font-size:13.5px;background:var(--red);color:#fff">Slett valgte</button>' : ''}
     </div>
-    <div id="table" style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden"></div></div>`);
+    <div id="table" style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden"></div>
+    ${isStudent && kanOpprette ? `
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin-top:22px">
+      <div style="flex:1;min-width:260px">
+        <div style="font-size:15px;font-weight:800">Nytt skoleår</div>
+        <div style="font-size:13.5px;color:var(--muted-2);line-height:1.5;margin-top:3px">Sletter elevene i VG3, flytter resten ett trinn opp og legger inn de nye VG1-elevene. Du får se og rette alt før noe skjer.</div>
+      </div>
+      <button id="nyttSkoleår" class="btn btn-ghost" style="height:44px;padding:0 18px;font-size:14.5px;white-space:nowrap">Gjør klar til nytt skoleår</button>
+    </div>` : ''}</div>`);
   main.appendChild(page);
+  page.querySelector('#nyttSkoleår')?.addEventListener('click', () => nyttSkoleårModal(users, load));
 
   const selected = new Set();
   const bulkbar = page.querySelector('#bulkbar');
@@ -638,10 +647,10 @@ const BULK_COLS_STUDENT = 'minmax(150px, 1fr) 92px 120px 62px 124px 88px 30px';
 const BULK_COLS_ADMIN = 'minmax(200px, 1fr) 150px 30px';
 const bulkCols = (isStudent) => (isStudent ? BULK_COLS_STUDENT : BULK_COLS_ADMIN);
 
-function bulkRowHTML(isStudent) {
+function bulkRowHTML(isStudent, classes = CLASSES) {
   const rmBtn = `<button type="button" class="rm-row" title="Fjern rad" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:18px;height:18px;display:block">${icon.x}</span></button>`;
   const studentFields = isStudent ? `
-      <select class="field field-sm" name="className" style="background:#f7f8fa">${optionsHTML(CLASSES, 'Klasse', '')}</select>
+      <select class="field field-sm" name="className" style="background:#f7f8fa">${optionsHTML(classes, 'Klasse', '')}</select>
       <select class="field field-sm" name="dorm" style="background:#f7f8fa">${optionsHTML(DORMS, 'Internat', '')}</select>
       <input class="field field-sm" name="room" placeholder="Rom" />
       <select class="field field-sm" name="instrument" style="background:#f7f8fa">${optionsHTML(INSTRUMENTS, 'Instrument', '')}</select>
@@ -678,33 +687,12 @@ function parseBulkRows(rowsEl, isStudent) {
   }).filter((s) => s.fullName);
 }
 
-function bulkAddModal(cfg, onSaved) {
-  const isStudent = cfg.role === 'student';
-  const unit = cfg.unit;              // 'elever' | 'administratorer'
-  const nounCap = isStudent ? 'elever' : 'administratorer';
-  // «1 elever» leses som en skrivefeil i en kvittering man bare får se én gang.
-  // Telleren nede i hjørnet og overskriften i resultatvisningen bruker denne.
-  const antall = (n) => `${n} ${n === 1 ? (isStudent ? 'elev' : 'administrator') : unit}`;
-  const headLabels = isStudent
-    ? `<label class="field-label" style="margin:0">Navn</label>
-       <label class="field-label" style="margin:0">Klasse</label>
-       <label class="field-label" style="margin:0">Internat</label>
-       <label class="field-label" style="margin:0">Rom</label>
-       <label class="field-label" style="margin:0">Instrument</label>
-       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemmeboer</label>
-       <span></span>`
-    : `<label class="field-label" style="margin:0">Navn</label>
-       <label class="field-label" style="margin:0">Tilgang</label>
-       <span></span>`;
-  const bg = el(`
-    <div class="modal-bg"><div class="modal" style="width:${isStudent ? 780 : 520}px">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
-        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Legg til flere ${unit}</div>
-          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Én rad per ${isStudent ? 'elev' : 'administrator'}. Brukernavn og passord lages automatisk.</div></div>
-        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
-      </div>
-      <div id="body" style="padding:22px 26px">
-        ${isStudent ? `
+// ── Excel-import av elever (delt av «Legg til flere» og «Nytt skoleår») ──
+// Boksen med valget mal/OpenAI, forklaringen av malen og filvelgeren.
+// `classes` er klassene arket får lov å inneholde – hele CLASSES ellers, bare
+// VG1 når det er neste skoleårs elever som leses inn.
+function importBoxHTML(classes) {
+  return `
         <div style="background:#eef4fb;border:1px solid #d7e4f4;border-radius:10px;padding:12px 14px;margin-bottom:18px">
           <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">Importer fra Excel</div>
           <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:10px">Last opp elevlista, så fylles radene under ut. Du kan rette dem før du oppretter.</div>
@@ -732,7 +720,7 @@ function bulkAddModal(cfg, onSaved) {
               <li><b>Hjemmeboer</b>: sett en <b>X</b> for elever som bor hjemme og aldri sover på internatet. La cellen stå tom for alle andre.</li>
               <li>Bare <b>den første fanen</b> i arket leses.</li>
             </ol>
-            <div style="margin-top:8px"><b>Klasse:</b> ${CLASSES.join(', ')}</div>
+            <div style="margin-top:8px"><b>Klasse:</b> ${classes.join(', ')}</div>
             <div><b>Internat:</b> ${DORMS.join(', ')}</div>
             <div><b>Hovedinstrument:</b> ${INSTRUMENTS.join(', ')}</div>
             <p style="margin:8px 0 0;color:var(--muted-2)">Er det en skrivefeil i arket, sier importen ifra med radnummer
@@ -744,7 +732,109 @@ function bulkAddModal(cfg, onSaved) {
             <button type="button" class="btn btn-ghost" id="bxlsxMal" style="height:38px;padding:0 16px;font-size:13.5px">Last ned mal</button>
           </div>
           <div id="bximport" style="font-size:12.5px;margin-top:9px;display:none"></div>
-        </div>` : ''}
+        </div>`;
+}
+
+// Legger til en rad i et bulk-skjema, og holder telleren oppdatert. Den siste
+// raden får automatisk en tom rad under seg når man begynner å skrive i den.
+function makeRowAdder(rowsEl, updateCount, isStudent, classes = CLASSES) {
+  const addRow = (focus) => {
+    const row = el(bulkRowHTML(isStudent, classes));
+    rowsEl.appendChild(row);
+    if (focus) row.querySelector('[name="fullName"]').focus();
+    row.querySelector('.rm-row').addEventListener('click', () => {
+      if (rowsEl.querySelectorAll('.brow').length > 1) row.remove(); else row.querySelectorAll('input').forEach((i) => (i.value = ''));
+      updateCount();
+    });
+    row.querySelector('[name="fullName"]').addEventListener('input', () => {
+      updateCount();
+      if (row === rowsEl.lastElementChild && row.querySelector('[name="fullName"]').value.trim()) addRow(false);
+    });
+    row.querySelectorAll('select').forEach((s) => s.addEventListener('change', updateCount));
+    return row;
+  };
+  return addRow;
+}
+
+// Kobler knappene i importboksen: les arket (malen lokalt, eller OpenAI for
+// ark uten mal) og fyll radene, slik at admin kan rette før opprettelsen.
+// Elever som allerede finnes hoppes over.
+function bindStudentImport(bg, { rowsEl, addRow, updateCount, classes }) {
+  const note = bg.querySelector('#bximport');
+  const showNote = (html, color) => { note.innerHTML = html; note.style.color = color || 'var(--muted-2)'; note.style.display = 'block'; };
+
+  // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
+  bg.querySelector('#bxlsxMal').addEventListener('click', () => {
+    const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));
+    downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20, 14] }));
+  });
+
+  bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
+    const input = bg.querySelector('#bxlsx');
+    const file = input.files[0];
+    if (!file) { showNote('Velg en Excel-fil (.xlsx).', 'var(--red-ink)'); return; }
+    const mode = bg.querySelector('input[name="bxmode"]:checked').value;
+    const btn = bg.querySelector('#bxlsxRead'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
+    showNote(mode === 'ai' ? 'Leser arket med OpenAI…' : 'Leser arket…');
+    try {
+      const qs = `mode=${mode}&classes=${encodeURIComponent(classes.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`
+        + `&instruments=${encodeURIComponent(INSTRUMENTS.join(','))}`;
+      const res = await fetch(`/api/users/parse-xlsx?${qs}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+        body: file, credentials: 'same-origin',
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Kunne ikke lese arket'); }
+      const d = await res.json();
+      rowsEl.innerHTML = '';
+      for (const s of d.students) {
+        const row = addRow(false);
+        row.querySelector('[name="fullName"]').value = s.fullName;
+        if (s.className) row.querySelector('[name="className"]').value = s.className;
+        if (s.instrument) row.querySelector('[name="instrument"]').value = s.instrument;
+        if (s.dorm) row.querySelector('[name="dorm"]').value = s.dorm;
+        if (s.room) row.querySelector('[name="room"]').value = s.room;
+        if (s.homeDweller) row.querySelector('[name="homeDweller"]').checked = true;
+      }
+      addRow(false);                       // én tom rad til slutt
+      updateCount();
+      input.value = '';
+      const n = d.students.length;
+      let html = `<b>Fant ${n} ${n === 1 ? 'ny elev' : 'nye elever'}.</b> Sjekk radene under før du oppretter.`;
+      if (d.existing.length) html += `<br>${d.existing.length} fantes allerede og ble utelatt: ${d.existing.map(esc).join(', ')}.`;
+      showNote(html, 'var(--navy)');
+    } catch (ex) { showNote(esc(ex.message), 'var(--red-ink)'); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  });
+}
+
+function bulkAddModal(cfg, onSaved) {
+  const isStudent = cfg.role === 'student';
+  const unit = cfg.unit;              // 'elever' | 'administratorer'
+  const nounCap = isStudent ? 'elever' : 'administratorer';
+  // «1 elever» leses som en skrivefeil i en kvittering man bare får se én gang.
+  // Telleren nede i hjørnet og overskriften i resultatvisningen bruker denne.
+  const antall = (n) => `${n} ${n === 1 ? (isStudent ? 'elev' : 'administrator') : unit}`;
+  const headLabels = isStudent
+    ? `<label class="field-label" style="margin:0">Navn</label>
+       <label class="field-label" style="margin:0">Klasse</label>
+       <label class="field-label" style="margin:0">Internat</label>
+       <label class="field-label" style="margin:0">Rom</label>
+       <label class="field-label" style="margin:0">Instrument</label>
+       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemmeboer</label>
+       <span></span>`
+    : `<label class="field-label" style="margin:0">Navn</label>
+       <label class="field-label" style="margin:0">Tilgang</label>
+       <span></span>`;
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="width:${isStudent ? 780 : 520}px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Legg til flere ${unit}</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Én rad per ${isStudent ? 'elev' : 'administrator'}. Brukernavn og passord lages automatisk.</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div id="body" style="padding:22px 26px">
+        ${isStudent ? importBoxHTML(CLASSES) : ''}
         <div style="display:grid;grid-template-columns:${bulkCols(isStudent)};gap:8px;margin-bottom:6px">${headLabels}</div>
         <div id="rows" style="max-height:340px;overflow-y:auto;padding-right:2px"></div>
         <button type="button" id="addrow" class="btn btn-ghost" style="height:38px;padding:0 16px;font-size:13.5px;margin-top:4px">+ Legg til rad</button>
@@ -771,76 +861,11 @@ function bulkAddModal(cfg, onSaved) {
   const rowsEl = bg.querySelector('#rows');
   const cnt = bg.querySelector('#cnt');
   const updateCount = () => { cnt.textContent = antall(parseBulkRows(rowsEl, isStudent).length); };
-  const addRow = (focus) => {
-    const row = el(bulkRowHTML(isStudent));
-    rowsEl.appendChild(row);
-    if (focus) row.querySelector('[name="fullName"]').focus();
-    row.querySelector('.rm-row').addEventListener('click', () => {
-      if (rowsEl.querySelectorAll('.brow').length > 1) row.remove(); else row.querySelectorAll('input').forEach((i) => (i.value = ''));
-      updateCount();
-    });
-    // Legg automatisk til en ny tom rad når man begynner å fylle ut den siste.
-    row.querySelector('[name="fullName"]').addEventListener('input', () => {
-      updateCount();
-      if (row === rowsEl.lastElementChild && row.querySelector('[name="fullName"]').value.trim()) addRow(false);
-    });
-    row.querySelectorAll('select').forEach((s) => s.addEventListener('change', updateCount));
-    return row;
-  };
+  const addRow = makeRowAdder(rowsEl, updateCount, isStudent);
   for (let i = 0; i < 6; i++) addRow(false);
   bg.querySelector('#addrow').addEventListener('click', () => addRow(true));
 
-  // Excel-import: les arket (malen lokalt, eller OpenAI for ark uten mal) og
-  // fyll radene, slik at admin kan rette før opprettelsen. Elever som allerede
-  // finnes hoppes over.
-  if (isStudent) {
-    const note = bg.querySelector('#bximport');
-    const showNote = (html, color) => { note.innerHTML = html; note.style.color = color || 'var(--muted-2)'; note.style.display = 'block'; };
-
-    // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
-    bg.querySelector('#bxlsxMal').addEventListener('click', () => {
-      const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));
-      downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20, 14] }));
-    });
-
-    bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
-      const input = bg.querySelector('#bxlsx');
-      const file = input.files[0];
-      if (!file) { showNote('Velg en Excel-fil (.xlsx).', 'var(--red-ink)'); return; }
-      const mode = bg.querySelector('input[name="bxmode"]:checked').value;
-      const btn = bg.querySelector('#bxlsxRead'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Leser…';
-      showNote(mode === 'ai' ? 'Leser arket med OpenAI…' : 'Leser arket…');
-      try {
-        const qs = `mode=${mode}&classes=${encodeURIComponent(CLASSES.join(','))}&dorms=${encodeURIComponent(DORMS.join(','))}`
-          + `&instruments=${encodeURIComponent(INSTRUMENTS.join(','))}`;
-        const res = await fetch(`/api/users/parse-xlsx?${qs}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-          body: file, credentials: 'same-origin',
-        });
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Kunne ikke lese arket'); }
-        const d = await res.json();
-        rowsEl.innerHTML = '';
-        for (const s of d.students) {
-          const row = addRow(false);
-          row.querySelector('[name="fullName"]').value = s.fullName;
-          if (s.className) row.querySelector('[name="className"]').value = s.className;
-          if (s.instrument) row.querySelector('[name="instrument"]').value = s.instrument;
-          if (s.dorm) row.querySelector('[name="dorm"]').value = s.dorm;
-          if (s.room) row.querySelector('[name="room"]').value = s.room;
-          if (s.homeDweller) row.querySelector('[name="homeDweller"]').checked = true;
-        }
-        addRow(false);                       // én tom rad til slutt
-        updateCount();
-        input.value = '';
-        const n = d.students.length;
-        let html = `<b>Fant ${n} ${n === 1 ? 'ny elev' : 'nye elever'}.</b> Sjekk radene under før du oppretter.`;
-        if (d.existing.length) html += `<br>${d.existing.length} fantes allerede og ble utelatt: ${d.existing.map(esc).join(', ')}.`;
-        showNote(html, 'var(--navy)');
-      } catch (ex) { showNote(esc(ex.message), 'var(--red-ink)'); }
-      finally { btn.disabled = false; btn.textContent = old; }
-    });
-  }
+  if (isStudent) bindStudentImport(bg, { rowsEl, addRow, updateCount, classes: CLASSES });
 
   bg.querySelector('#create').addEventListener('click', async () => {
     const berr = bg.querySelector('#berr'); berr.style.display = 'none';
@@ -854,7 +879,9 @@ function bulkAddModal(cfg, onSaved) {
   });
 }
 
-function bulkResultView(bg, result, antall, onSaved) {
+// opts.tittel erstatter «N elever opprettet», opts.ekstra er en linje under
+// (nytt skoleår: hvor mange som ble slettet og flyttet).
+function bulkResultView(bg, result, antall, onSaved, opts = {}) {
   const { created, errors } = result;
   // Herfra og ut lukkes vinduet bare med en knapp: passordene finnes ingen
   // andre steder enn på denne skjermen.
@@ -862,8 +889,9 @@ function bulkResultView(bg, result, antall, onSaved) {
   bg.querySelector('#body').innerHTML = `
     <div style="text-align:center;padding:6px 0 4px">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><span style="width:34px;height:34px">${icon.check}</span></div>
-      <div style="font-size:20px;font-weight:800">${antall(created.length)} opprettet</div>
-      <p style="font-size:14px;color:var(--muted);line-height:1.5;margin:8px 0 0">Passordene vises <b>kun nå</b>. Last ned brukerkortene og del dem ut.</p>
+      <div style="font-size:20px;font-weight:800">${opts.tittel || `${antall(created.length)} opprettet`}</div>
+      ${opts.ekstra ? `<p style="font-size:14px;color:var(--slate);font-weight:600;line-height:1.5;margin:8px 0 0">${opts.ekstra}</p>` : ''}
+      ${created.length ? `<p style="font-size:14px;color:var(--muted);line-height:1.5;margin:8px 0 0">Passordene ${created.length === 1 ? 'til den nye eleven vises' : 'vises'} <b>kun nå</b>. Last ned brukerkortene og del dem ut.</p>` : ''}
     </div>
     ${errors.length ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:16px 0 0">${errors.length} linjer ble hoppet over: ${errors.map((e) => 'linje ' + e.line + (e.fullName ? ' (' + e.fullName + ')' : '')).join(', ')}</div>` : ''}`;
   // Bytt ut bunnknappene
@@ -872,7 +900,7 @@ function bulkResultView(bg, result, antall, onSaved) {
     <div></div>
     <div style="display:flex;gap:12px">
       <button id="done" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Lukk</button>
-      <button id="cards" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Skriv ut brukerkort</button>
+      ${created.length ? `<button id="cards" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Skriv ut brukerkort</button>` : ''}
     </div>`;
   const lukk = () => { bg.remove(); onSaved(); };
   footer.querySelector('#done').addEventListener('click', lukk);
@@ -880,7 +908,205 @@ function bulkResultView(bg, result, antall, onSaved) {
   // elevlista bak sto igjen uten de nye radene. Nå lukker det som «Lukk».
   bg.querySelector('#close').replaceWith(bg.querySelector('#close').cloneNode(true));
   bg.querySelector('#close').addEventListener('click', lukk);
-  footer.querySelector('#cards').addEventListener('click', () => printCredentialCards(created));
+  footer.querySelector('#cards')?.addEventListener('click', () => printCredentialCards(created));
+}
+
+// ── Nytt skoleår ─────────────────────────────────────────────
+// Klassen forteller trinnet: VG1A → VG2A, VG2B → VG3B, VG3 → ferdig (slettes).
+// null = ferdig; undefined = en klasse vi ikke kjenner (tom, eller utenfor
+// CLASSES) – de elevene rører vi ikke, men admin ser dem i forhåndsvisningen.
+const VG1_CLASSES = CLASSES.filter((c) => /^VG1/.test(c));
+function nesteKlasse(className) {
+  const m = /^VG([123])([A-Z])$/.exec(className || '');
+  if (!m) return undefined;
+  if (m[1] === '3') return null;
+  const neste = `VG${Number(m[1]) + 1}${m[2]}`;
+  return CLASSES.includes(neste) ? neste : undefined;
+}
+
+// To steg i samme vindu: først de nye VG1-elevene (for hånd eller fra Excel),
+// så en forhåndsvisning av hele planen der hver elev kan rettes – en VG3-elev
+// som går året om igjen settes til «VG3A» i stedet for «Slett», en elev uten
+// klasse kan få en. Ingenting skrives før «Godkjenn».
+function nyttSkoleårModal(alleBrukere, onSaved) {
+  const SLETT = '__slett';
+  const elever = alleBrukere.filter((u) => u.role === 'student');
+  const antall = (n) => `${n} ${n === 1 ? 'elev' : 'elever'}`;
+  // Planen: id → SLETT, eller klassen eleven skal ha etterpå ('' = uten klasse).
+  const plan = new Map(elever.map((u) => {
+    const neste = nesteKlasse(u.className);
+    return [u.id, neste === null ? SLETT : neste === undefined ? (u.className || '') : neste];
+  }));
+  const nFerdig = elever.filter((u) => nesteKlasse(u.className) === null).length;
+  const nOpp = elever.filter((u) => typeof nesteKlasse(u.className) === 'string').length;
+  const ukjente = elever.filter((u) => nesteKlasse(u.className) === undefined);
+
+  const headLabels = `
+       <label class="field-label" style="margin:0">Navn</label>
+       <label class="field-label" style="margin:0">Klasse</label>
+       <label class="field-label" style="margin:0">Internat</label>
+       <label class="field-label" style="margin:0">Rom</label>
+       <label class="field-label" style="margin:0">Instrument</label>
+       <label class="field-label" style="margin:0;text-align:center" title="Bor hjemme – står ikke på brannlisten">Hjemmeboer</label>
+       <span></span>`;
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="width:860px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Gjør klar til nytt skoleår</div>
+          <div id="sub" style="font-size:13px;color:var(--muted-2);font-weight:600">Steg 1 av 2 · Nye elever i VG1</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div id="body" style="padding:22px 26px;max-height:calc(100vh - 230px);overflow-y:auto">
+        <div id="steg1">
+          <div style="background:var(--amber-bg);border:1px solid #f0dca0;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13.5px;line-height:1.55">
+            <div style="font-weight:800;margin-bottom:4px">Dette skjer når du godkjenner</div>
+            <ul style="margin:0;padding-left:18px">
+              <li><b>${antall(nFerdig)} i VG3</b> slettes, med alle registreringer (brannliste, andakt, øving).</li>
+              <li><b>${antall(nOpp)}</b> flyttes ett trinn opp: VG1 → VG2 og VG2 → VG3.</li>
+              ${ukjente.length ? `<li><b>${antall(ukjente.length)}</b> har ingen kjent klasse og blir stående som nå: ${ukjente.map((u) => esc(u.fullName)).join(', ')}.</li>` : ''}
+              <li>De nye VG1-elevene under opprettes med brukernavn og passord.</li>
+            </ul>
+            <div style="margin-top:6px;color:var(--amber-ink);font-weight:700">Ingenting skjer før du har sett og godkjent forhåndsvisningen i neste steg.</div>
+          </div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:8px">Nye elever i VG1</div>
+          ${importBoxHTML(VG1_CLASSES)}
+        </div>
+        <div id="steg2" style="display:none">
+          <div id="planSum" style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px"></div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:8px">Elever som finnes i dag</div>
+          <div id="planTable" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:22px"></div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:8px">Nye elever i VG1</div>
+        </div>
+        <div id="nyeElever">
+          <div style="display:grid;grid-template-columns:${BULK_COLS_STUDENT};gap:8px;margin-bottom:6px">${headLabels}</div>
+          <div id="rows" style="max-height:340px;overflow-y:auto;padding-right:2px"></div>
+          <button type="button" id="addrow" class="btn btn-ghost" style="height:38px;padding:0 16px;font-size:13.5px;margin-top:4px">+ Legg til rad</button>
+        </div>
+        <p id="berr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+        <span id="cnt" style="font-size:14px;color:var(--muted-2);font-weight:600"></span>
+        <div style="display:flex;gap:12px">
+          <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+          <button id="back" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px;display:none">Tilbake</button>
+          <button id="next" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Vis forhåndsvisning</button>
+          <button id="apply" class="btn" style="height:46px;padding:0 22px;font-size:14.5px;background:var(--red);color:#fff;display:none">Godkjenn og gjennomfør</button>
+        </div>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', close);
+  bg.querySelector('#cancel').addEventListener('click', close);
+  // Som i «Legg til flere»: klikk utenfor lukker helt til passordene står på skjermen.
+  bg.addEventListener('click', (e) => { if (e.target === bg && !bg.dataset.lukkSperre) close(); });
+
+  const rowsEl = bg.querySelector('#rows');
+  const cnt = bg.querySelector('#cnt');
+  const nyeNå = () => parseBulkRows(rowsEl, true);
+  const updateCount = () => { cnt.textContent = `${antall(nyeNå().length)} nye i VG1`; };
+  const addRow = makeRowAdder(rowsEl, updateCount, true, VG1_CLASSES);
+  for (let i = 0; i < 6; i++) addRow(false);
+  updateCount();
+  bg.querySelector('#addrow').addEventListener('click', () => addRow(true));
+  bindStudentImport(bg, { rowsEl, addRow, updateCount, classes: VG1_CLASSES });
+
+  const steg1 = bg.querySelector('#steg1'), steg2 = bg.querySelector('#steg2');
+  const nyeElever = bg.querySelector('#nyeElever');
+  const btnNext = bg.querySelector('#next'), btnBack = bg.querySelector('#back'), btnApply = bg.querySelector('#apply');
+  const berr = bg.querySelector('#berr');
+  const visFeil = (msg) => { berr.textContent = msg; berr.style.display = 'block'; };
+
+  // Sortert på klassen de har nå, så VG3 (som slettes) ligger samlet nederst.
+  const coll = new Intl.Collator('nb', { numeric: true, sensitivity: 'base' });
+  const sortert = [...elever].sort((a, b) =>
+    coll.compare(a.className || '~', b.className || '~') || coll.compare(a.fullName, b.fullName));
+
+  function oppsummer() {
+    let slett = 0, flytt = 0, uendret = 0;
+    for (const u of elever) {
+      const v = plan.get(u.id);
+      if (v === SLETT) slett++; else if (v !== (u.className || '')) flytt++; else uendret++;
+    }
+    bg.querySelector('#planSum').textContent =
+      `${antall(slett)} slettes · ${flytt} flyttes · ${uendret} uendret · ${nyeNå().length} nye i VG1`;
+  }
+  function tegnPlan() {
+    const cols = '1.7fr 1fr 1fr 1.5fr';
+    const valg = (u) => {
+      const v = plan.get(u.id);
+      const opt = (val, label) => `<option value="${val}" ${v === val ? 'selected' : ''}>${label}</option>`;
+      return `<select class="field field-sm" data-plan="${u.id}" style="background:${v === SLETT ? 'var(--red-bg)' : '#f7f8fa'};font-weight:600">
+        ${opt(SLETT, 'Slett elev')}${CLASSES.map((c) => opt(c, c)).join('')}${opt('', 'Uten klasse')}
+      </select>`;
+    };
+    bg.querySelector('#planTable').innerHTML = `
+      <div class="th" style="grid-template-columns:${cols};gap:12px;padding:12px 18px"><div>Navn</div><div>Klasse nå</div><div>Status</div><div>Etter skoleårsskiftet</div></div>
+      ${sortert.map((u) => `
+        <div class="tr" data-rad="${u.id}" style="grid-template-columns:${cols};gap:12px;padding:9px 18px;${u.active ? '' : 'opacity:.62'}">
+          <div style="font-size:14px;font-weight:700">${esc(u.fullName)}</div>
+          <div style="font-size:14px;color:var(--slate)">${u.className || '–'}</div>
+          <div>${u.active ? '<span class="pill pill-green">Aktiv</span>' : '<span class="pill pill-grey">Deaktivert</span>'}</div>
+          <div>${valg(u)}</div>
+        </div>`).join('') || '<div style="padding:18px;color:var(--muted-2)">Ingen elever finnes fra før.</div>'}`;
+    bg.querySelectorAll('[data-plan]').forEach((sel) => sel.addEventListener('change', () => {
+      plan.set(Number(sel.dataset.plan), sel.value);
+      sel.style.background = sel.value === SLETT ? 'var(--red-bg)' : '#f7f8fa';
+      oppsummer();
+    }));
+    oppsummer();
+  }
+
+  function visSteg(n) {
+    berr.style.display = 'none';
+    const preview = n === 2;
+    steg1.style.display = preview ? 'none' : '';
+    steg2.style.display = preview ? '' : 'none';
+    // Radene med nye elever er de samme i begge steg – de flyttes bare, så
+    // rettelser i forhåndsvisningen ikke går tapt ved «Tilbake».
+    (preview ? steg2 : steg1).appendChild(nyeElever);
+    btnNext.style.display = preview ? 'none' : '';
+    btnBack.style.display = preview ? '' : 'none';
+    btnApply.style.display = preview ? '' : 'none';
+    bg.querySelector('#sub').textContent = preview ? 'Steg 2 av 2 · Forhåndsvisning – rett det som trengs, og godkjenn' : 'Steg 1 av 2 · Nye elever i VG1';
+    if (preview) tegnPlan();
+    bg.querySelector('#body').scrollTop = 0;
+  }
+  rowsEl.addEventListener('input', () => { if (steg2.style.display !== 'none') oppsummer(); });
+  rowsEl.addEventListener('click', () => { if (steg2.style.display !== 'none') setTimeout(oppsummer, 0); });
+  btnNext.addEventListener('click', () => visSteg(2));
+  btnBack.addEventListener('click', () => visSteg(1));
+
+  btnApply.addEventListener('click', async () => {
+    berr.style.display = 'none';
+    const changes = [];
+    for (const u of elever) {
+      const v = plan.get(u.id);
+      if (v === SLETT) changes.push({ id: u.id, action: 'delete' });
+      else if (v !== (u.className || '')) changes.push({ id: u.id, action: 'class', className: v });
+    }
+    const students = nyeNå();
+    if (!changes.length && !students.length) { visFeil('Det er ingenting å gjøre: ingen elever endres, og ingen nye er lagt inn.'); return; }
+    const nSlett = changes.filter((c) => c.action === 'delete').length;
+    const nFlytt = changes.length - nSlett;
+    const linjer = [
+      nSlett ? `slette ${antall(nSlett)} for godt, med alle registreringer` : '',
+      nFlytt ? `flytte ${antall(nFlytt)} til ny klasse` : '',
+      students.length ? `opprette ${antall(students.length)} i VG1` : '',
+    ].filter(Boolean);
+    if (!confirm(`Gjennomføre skoleårsskiftet? Dette vil ${linjer.join(', ')}. Slettingen kan ikke angres.`)) return;
+    btnApply.disabled = true; btnBack.disabled = true; btnApply.textContent = 'Gjennomfører…';
+    try {
+      const r = await api('/api/users/new-school-year', { method: 'POST', body: { changes, students } });
+      bulkResultView(bg, r, antall, onSaved, {
+        tittel: 'Klart til nytt skoleår',
+        ekstra: `${antall(r.deleted)} slettet · ${r.moved} flyttet · ${antall(r.created.length)} opprettet i VG1`,
+      });
+    } catch (ex) {
+      visFeil(ex.message);
+      btnApply.disabled = false; btnBack.disabled = false; btnApply.textContent = 'Godkjenn og gjennomfør';
+    }
+  });
 }
 
 // Åpner en utskriftsvennlig side med brukerkort i rutenett (klippes med skjærekniv).

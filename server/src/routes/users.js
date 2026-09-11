@@ -198,6 +198,92 @@ router.post('/bulk', requireSuperAdmin, async (req, res) => {
   res.status(201).json({ created, errors, count: created.length });
 });
 
+// POST /api/users/new-school-year  – gjør klar til nytt skoleår, i ÉN omgang.
+// body: {
+//   changes:  [{ id, action: 'delete' }]               – elever som er ferdige (VG3)
+//             [{ id, action: 'class', className }]     – elever som flyttes opp ett trinn
+//   students: [{ fullName, className, dorm, room, instrument, homeDweller }]  – nye VG1-elever
+// }
+// Selve planen (hvem som slettes, hvem som flyttes hvor) legges i admin.js,
+// som eier klasselista, og bekreftes av admin i en forhåndsvisning. Serveren
+// gjør ingenting med elever som ikke står i changes.
+//
+// Sletting, flytting og opprettelse skjer i én transaksjon: enten skjer alt,
+// eller ingenting. Ellers kunne en feil midtveis etterlatt en elevliste der
+// VG3 var borte, men VG2 fortsatt sto som VG2 – og ingen vei tilbake.
+router.post('/new-school-year', requireSuperAdmin, async (req, res) => {
+  const changes = Array.isArray(req.body?.changes) ? req.body.changes : [];
+  const list = Array.isArray(req.body?.students) ? req.body.students : [];
+  if (!changes.length && !list.length) return res.status(400).json({ error: 'Ingenting å gjøre' });
+  if (list.length > 500) return res.status(400).json({ error: 'For mange nye elever på én gang (maks 500)' });
+
+  const selfId = Number(req.auth.sub);
+  const deleteIds = [], moves = [];
+  for (const c of changes) {
+    const id = Number(c?.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Ugyldig elev i endringene' });
+    const u = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
+    // Bare elever: administratorer har ikke klasse, og skal aldri kunne
+    // slettes via en rute som handler om elevene.
+    if (!u || u.role !== 'student' || id === selfId) return res.status(400).json({ error: `Bruker ${id} er ikke en elev` });
+    if (c.action === 'delete') deleteIds.push(id);
+    else if (c.action === 'class') moves.push({ id, className: String(c.className || '').trim() || null });
+    else return res.status(400).json({ error: 'Ukjent handling i endringene' });
+  }
+
+  // Passordene hashes FØR transaksjonen: bcrypt er asynkront, og en
+  // better-sqlite3-transaksjon må være synkron.
+  const nye = [];
+  const errors = [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i] || {};
+    const fullName = String(row.fullName || '').trim();
+    if (!fullName) { errors.push({ line: i + 1, error: 'Mangler navn' }); continue; }
+    const password = generatePassword();
+    nye.push({ line: i + 1, row, fullName, password, hash: await hashPassword(password) });
+  }
+
+  const insert = db.prepare(
+    `INSERT INTO users (username, password_hash, full_name, role, class_name, dorm, room, instrument, home_dweller, superadmin, must_change_password)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
+  );
+  const created = [];
+  let deleted = 0, moved = 0;
+  try {
+    db.transaction(() => {
+      if (deleteIds.length) {
+        const ph = deleteIds.map(() => '?').join(',');
+        deleted = db.prepare(`DELETE FROM users WHERE id IN (${ph})`).run(...deleteIds).changes;
+      }
+      const flytt = db.prepare('UPDATE users SET class_name = ? WHERE id = ?');
+      for (const m of moves) moved += flytt.run(m.className, m.id).changes;
+      // Brukernavnene lages etter slettingen, så en ny elev som heter det
+      // samme som en som nettopp gikk ut, får navnet uten tall bak.
+      const taken = new Set();
+      for (const n of nye) {
+        const username = uniqueUsername(n.fullName, taken);
+        if (!username) { errors.push({ line: n.line, fullName: n.fullName, error: 'Kunne ikke lage brukernavn' }); continue; }
+        const r = n.row;
+        const info = insert.run(
+          username, n.hash, n.fullName, 'student',
+          r.className || null, r.dorm || null, r.room || null, r.instrument || null,
+          r.homeDweller ? 1 : 0, 0
+        );
+        const u = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+        created.push({ ...publicUser(u), password: n.password });
+      }
+    })();
+  } catch (ex) {
+    console.error('[users] nytt skoleår feilet:', ex);
+    return res.status(500).json({ error: 'Kunne ikke gjennomføre. Ingenting er endret.' });
+  }
+  // Registreringene forsvant med kontoene (ON DELETE CASCADE); de arkiverte
+  // ukesrapportene er frosne JSON-kopier og ryddes for seg.
+  if (deleteIds.length) removeUsersFromArchive(deleteIds);
+
+  res.status(201).json({ deleted, moved, created, errors, count: created.length });
+});
+
 // PATCH /api/users/:id  – oppdater felter og/eller sett nytt passord.
 router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id);
