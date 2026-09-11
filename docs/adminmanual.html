@@ -236,7 +236,7 @@
   <div class="toc">
     <div class="row"><span class="n">1</span><span class="d"><span class="t">Kom i gang</span> <span class="desc">– tilgang, innlogging, sidemenyen</span></span></div>
     <div class="row"><span class="n">2</span><span class="d"><span class="t">Dashboard</span> <span class="desc">– dagens status på ett blikk</span></span></div>
-    <div class="row"><span class="n">3</span><span class="d"><span class="t">Elever</span> <span class="desc">– opprette, importere, brukerkort, deaktivere</span></span></div>
+    <div class="row"><span class="n">3</span><span class="d"><span class="t">Elever</span> <span class="desc">– opprette, importere, brukerkort, deaktivere, nytt skoleår</span></span></div>
     <div class="row"><span class="n">4</span><span class="d"><span class="t">Administratorer</span> <span class="desc">– kontoer for ansatte</span></span></div>
     <div class="row"><span class="n">5</span><span class="d"><span class="t">Brannliste</span> <span class="desc">– kveldens oversikt og manuell overstyring</span></span></div>
     <div class="row"><span class="n">6</span><span class="d"><span class="t">Gjester</span> <span class="desc">– godkjenne besøk og registrere gjester</span></span></div>
@@ -247,7 +247,7 @@
     <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, frysing, stilling, dokumentasjon</span></span></div>
     <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes og vaktens telefoner</span></span></div>
     <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
-    <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, ved skolestart</span></span></div>
+    <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, skolestart og skoleslutt</span></span></div>
     <div class="row"><span class="n">15</span><span class="d"><span class="t">Feilsøking og vanlige spørsmål</span></span></div>
     <div class="row"><span class="n">16</span><span class="d"><span class="t">Hurtigreferanse</span> <span class="desc">– hvem gjør hva, hvor</span></span></div>
   </div>
@@ -430,6 +430,39 @@
     </tbody>
   </table>
   <p class="note">Disse listene ligger i koden, ikke i Innstillinger. Skal et internat, en klasse eller et instrument legges til eller fjernes, må den som drifter systemet endre det – si fra i god tid før skolestart.</p>
+
+  <h3>3.8 Nytt skoleår</h3>
+  <p>Nederst på elevsiden ligger knappen <strong>«Gjør klar til nytt skoleår»</strong>. Den gjør hele skoleårsskiftet i én omgang: avgangselevene slettes, resten flyttes ett trinn opp, og de nye VG1-elevene legges inn. Bare superbrukere ser knappen.</p>
+  <table>
+    <thead>    <tr><th style="width:26%">Elevene i …</th><th>… får</th></tr></thead>
+    <tbody>
+    <tr><td class="k">VG3A og VG3B</td><td>Slettes, med alle registreringer – som ved vanlig sletting (3.6).</td></tr>
+    <tr><td class="k">VG2A og VG2B</td><td>VG3A og VG3B.</td></tr>
+    <tr><td class="k">VG1A og VG1B</td><td>VG2A og VG2B.</td></tr>
+    <tr><td class="k">Uten klasse</td><td>Ingen endring. De listes opp, så du kan gi dem en klasse i forhåndsvisningen.</td></tr>
+    </tbody>
+  </table>
+  <p>Deaktiverte elever behandles som de andre i klassen sin: en deaktivert VG2-elev flyttes til VG3 og forblir deaktivert.</p>
+
+  <h4>Slik gjør du det</h4>
+  <ol class="steps">
+    <li><span class="st">Trykk «Gjør klar til nytt skoleår»</span> Øverst i vinduet står det hvor mange som slettes og hvor mange som flyttes. Ingenting skjer ennå.</li>
+    <li><span class="st">Legg inn de nye VG1-elevene</span> Skriv dem inn rad for rad, eller importer dem fra Excel – samme importboks som i 3.4, med samme mal. Bare VG1A og VG1B kan velges her; står det VG2 i arket, avvises det med radnummer.</li>
+    <li><span class="st">Vis forhåndsvisning</span> Alle dagens elever listes opp med klassen de har nå, og en nedtrekksmeny for hva som skjer med dem: <strong>Slett elev</strong>, en klasse, eller <strong>Uten klasse</strong>. Rett det som trengs – se tipset under. De nye VG1-radene ligger nederst og kan også rettes. Telleren øverst viser hvor mange som slettes, flyttes, står uendret og er nye.</li>
+    <li><span class="st">Godkjenn og gjennomfør</span> Du får én bekreftelse til, med tallene. Så gjøres alt på én gang: enten skjer alt, eller ingenting.</li>
+    <li><span class="st">Skriv ut brukerkortene</span> Kvitteringen viser hvor mange som ble slettet, flyttet og opprettet, og knappen «Skriv ut brukerkort» for de nye elevene – som i 3.5. Passordene vises kun her.</li>
+  </ol>
+
+  <div class="box tip">
+    <span class="h">Elever som går et år om igjen, eller ikke kommer tilbake</span>
+    <p>Forhåndsvisningen er laget for nettopp dette. En VG3-elev som skal ta året på nytt: bytt «Slett elev» til <strong>VG3A</strong> eller <strong>VG3B</strong>. En VG1-elev som slutter: bytt VG2A til <strong>Slett elev</strong>, eller la eleven flyttes og deaktiver kontoen etterpå hvis historikken skal bli stående.</p>
+  </div>
+
+  <div class="box stop">
+    <span class="h">Slettingen kan ikke angres</span>
+    <p>Trenger skolen noe fra avgangselevene – andaktsrapporter fra arkivet, brannliste-PDF-er – last det ned <strong>før</strong> du godkjenner (14.4). Etterpå er registreringene borte.</p>
+  </div>
+  <p class="note">Brukernavnene til de nye elevene lages etter at VG3 er slettet. En ny elev som heter det samme som en som nettopp gikk ut, får derfor navnet uten tall bak – <code>ola.nordmann</code>, ikke <code>ola.nordmann2</code>.</p>
 </section>
 
 <!-- ═══════════════ 4 ADMINISTRATORER ═══════════════ -->
@@ -998,9 +1031,8 @@
 
   <h3>14.3 Ved skolestart</h3>
   <ol class="steps">
-    <li><span class="st">Deaktiver eller slett elever som har sluttet</span> Deaktiver hvis historikken skal bli stående.</li>
-    <li><span class="st">Importer den nye elevlista fra Excel</span> Bruk malen, og last den ned fra knappen så overskriftene blir riktige.</li>
-    <li><span class="st">Skriv ut brukerkortene med én gang</span> Passordene vises kun i dette ene vinduet.</li>
+    <li><span class="st">Gjør klar til nytt skoleår</span> Knappen nederst på Elever (3.8) sletter avgangselevene, flytter resten ett trinn opp og legger inn de nye VG1-elevene – importer dem fra Excel med malen. Rett elever som slutter eller går året om igjen i forhåndsvisningen.</li>
+    <li><span class="st">Skriv ut brukerkortene med én gang</span> Passordene til de nye elevene vises kun i dette ene vinduet.</li>
     <li><span class="st">Sjekk hjemmeboerne</span> Hadde arket en <strong>Hjemmeboer</strong>-kolonne, er de allerede avkrysset. Ellers merker du dem på elevkortet, så de ikke ligger og mangler på brannlisten hver kveld (3.3).</li>
     <li><span class="st">Gå gjennom Innstillinger</span> Frist for andakt, innsjekksvinduene, mottakere for e-post.</li>
     <li><span class="st">Legg inn turnusene</span> Kjøkkentjeneste og internatvask, og opprett vaskeoppgavene per internat.</li>
@@ -1010,8 +1042,8 @@
 
   <h3>14.4 Ved skoleslutt</h3>
   <ul>
-    <li>Last ned det skolen trenger å ta vare på: andaktsrapportene fra arkivet, og eventuelle brannliste-PDF-er.</li>
-    <li>Deaktiver avgangselevene.</li>
+    <li>Last ned det skolen trenger å ta vare på: andaktsrapportene fra arkivet, og eventuelle brannliste-PDF-er. Avgangselevenes registreringer forsvinner når du gjør klar til nytt skoleår (3.8).</li>
+    <li>Avgangselevene trenger du ikke røre – de slettes ved skolestart. Vil du at de skal slippe appen i sommer, deaktiver dem.</li>
     <li>Er en øvekonkurranse i gang, frys den når siste øvedag er over – da står stillingen fast mens dere kårer vinneren.</li>
     <li>Vurder om øvekonkurransen skal nullstilles før neste år.</li>
   </ul>
@@ -1087,6 +1119,7 @@
     <tr><td class="k">rette oppmøte på andakt</td><td>Andakt / QR → «Ikke møtt» → knappene på raden</td></tr>
     <tr><td class="k">hente fraværet for en uke</td><td>Andakt / QR → Eksporter ukens fravær, eller Arkivet → Excel</td></tr>
     <tr><td class="k">opprette nye elever</td><td>Elever → Legg til flere → importer fra Excel</td></tr>
+    <tr><td class="k">flytte alle opp et trinn ved skolestart</td><td>Elever → nederst → Gjør klar til nytt skoleår</td></tr>
     <tr><td class="k">gi en elev nytt passord</td><td>Elever → blyanten → skriv passord → Lagre</td></tr>
     <tr><td class="k">ta en elev som bor hjemme av brannlisten</td><td>Elever → blyanten → kryss av «Hjemmeboer»</td></tr>
     <tr><td class="k">legge inn ukemenyen</td><td>Kjøkken → Ukemeny → Last opp PDF</td></tr>
@@ -1097,9 +1130,10 @@
     </tbody>
   </table>
 
-  <h3>De fire som ikke kan angres</h3>
+  <h3>De fem som ikke kan angres</h3>
   <ol>
     <li><strong>Slette bruker</strong> – fjerner alle registreringer for eleven.</li>
+    <li><strong>Gjør klar til nytt skoleår</strong> – sletter hele VG3 med alle registreringer.</li>
     <li><strong>Slette uke fra arkivet</strong> – sletter også registreringene uken bygger på.</li>
     <li><strong>Nullstill konkurransen</strong> – alle øveøkter og bilder, for alle elever.</li>
     <li><strong>Kjør sletting nå</strong> – rydder historikk og GPS etter periodene som er satt.</li>
