@@ -682,6 +682,9 @@ function bulkAddModal(cfg, onSaved) {
   const isStudent = cfg.role === 'student';
   const unit = cfg.unit;              // 'elever' | 'administratorer'
   const nounCap = isStudent ? 'elever' : 'administratorer';
+  // «1 elever» leses som en skrivefeil i en kvittering man bare får se én gang.
+  // Telleren nede i hjørnet og overskriften i resultatvisningen bruker denne.
+  const antall = (n) => `${n} ${n === 1 ? (isStudent ? 'elev' : 'administrator') : unit}`;
   const headLabels = isStudent
     ? `<label class="field-label" style="margin:0">Navn</label>
        <label class="field-label" style="margin:0">Klasse</label>
@@ -748,7 +751,7 @@ function bulkAddModal(cfg, onSaved) {
         <p id="berr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
-        <span id="cnt" style="font-size:14px;color:var(--muted-2);font-weight:600">0 ${unit}</span>
+        <span id="cnt" style="font-size:14px;color:var(--muted-2);font-weight:600">${antall(0)}</span>
         <div style="display:flex;gap:12px">
           <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
           <button id="create" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Opprett ${nounCap}</button>
@@ -759,11 +762,15 @@ function bulkAddModal(cfg, onSaved) {
   const close = () => bg.remove();
   bg.querySelector('#close').addEventListener('click', close);
   bg.querySelector('#cancel').addEventListener('click', close);
-  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  // Klikk utenfor lukker – helt til kontoene er opprettet. Da står passordene
+  // på skjermen for eneste gang, og et bomklikk på siden av vinduet ville
+  // kostet en runde med å slette og opprette alle elevene på nytt bare for å
+  // få brukerkortene. Se bulkResultView, som setter sperren.
+  bg.addEventListener('click', (e) => { if (e.target === bg && !bg.dataset.lukkSperre) close(); });
 
   const rowsEl = bg.querySelector('#rows');
   const cnt = bg.querySelector('#cnt');
-  const updateCount = () => { cnt.textContent = `${parseBulkRows(rowsEl, isStudent).length} ${unit}`; };
+  const updateCount = () => { cnt.textContent = antall(parseBulkRows(rowsEl, isStudent).length); };
   const addRow = (focus) => {
     const row = el(bulkRowHTML(isStudent));
     rowsEl.appendChild(row);
@@ -842,17 +849,20 @@ function bulkAddModal(cfg, onSaved) {
     const btn = bg.querySelector('#create'); btn.disabled = true; btn.textContent = 'Oppretter…';
     try {
       const r = await api('/api/users/bulk', { method: 'POST', body: { students, role: cfg.role } });
-      bulkResultView(bg, r, unit, onSaved);
+      bulkResultView(bg, r, antall, onSaved);
     } catch (ex) { berr.textContent = ex.message; berr.style.display = 'block'; btn.disabled = false; btn.textContent = `Opprett ${nounCap}`; }
   });
 }
 
-function bulkResultView(bg, result, unit, onSaved) {
+function bulkResultView(bg, result, antall, onSaved) {
   const { created, errors } = result;
+  // Herfra og ut lukkes vinduet bare med en knapp: passordene finnes ingen
+  // andre steder enn på denne skjermen.
+  bg.dataset.lukkSperre = '1';
   bg.querySelector('#body').innerHTML = `
     <div style="text-align:center;padding:6px 0 4px">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><span style="width:34px;height:34px">${icon.check}</span></div>
-      <div style="font-size:20px;font-weight:800">${created.length} ${unit} opprettet</div>
+      <div style="font-size:20px;font-weight:800">${antall(created.length)} opprettet</div>
       <p style="font-size:14px;color:var(--muted);line-height:1.5;margin:8px 0 0">Passordene vises <b>kun nå</b>. Last ned brukerkortene og del dem ut.</p>
     </div>
     ${errors.length ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:16px 0 0">${errors.length} linjer ble hoppet over: ${errors.map((e) => 'linje ' + e.line + (e.fullName ? ' (' + e.fullName + ')' : '')).join(', ')}</div>` : ''}`;
@@ -864,7 +874,12 @@ function bulkResultView(bg, result, unit, onSaved) {
       <button id="done" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Lukk</button>
       <button id="cards" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Skriv ut brukerkort</button>
     </div>`;
-  footer.querySelector('#done').addEventListener('click', () => { bg.remove(); onSaved(); });
+  const lukk = () => { bg.remove(); onSaved(); };
+  footer.querySelector('#done').addEventListener('click', lukk);
+  // Krysset øverst gikk tidligere rett til bg.remove() uten onSaved, så
+  // elevlista bak sto igjen uten de nye radene. Nå lukker det som «Lukk».
+  bg.querySelector('#close').replaceWith(bg.querySelector('#close').cloneNode(true));
+  bg.querySelector('#close').addEventListener('click', lukk);
   footer.querySelector('#cards').addEventListener('click', () => printCredentialCards(created));
 }
 
