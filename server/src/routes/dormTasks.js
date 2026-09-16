@@ -15,7 +15,7 @@ router.use(requireAuth);
 
 const feil = (res, ex) => res.status(400).json({ error: ex.message || 'Kunne ikke lagre oppgaven.' });
 
-// GET /api/dorm-tasks?dorm=Øvre%20Vestheim
+// GET /api/dorm-tasks?dorm=Granhaug
 // Admin ser alle oppgaver (også deaktiverte); eleven ser bare de aktive på sitt
 // eget internat – lista er ikke hemmelig, men den er heller ikke hennes sak.
 router.get('/', (req, res) => {

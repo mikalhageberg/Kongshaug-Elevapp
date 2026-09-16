@@ -67,8 +67,10 @@ const DORMS = [
   'Treet 2',
   'Svingen nede',
   'Svingen oppe',
-  'Nedre Vestheim',
-  'Øvre Vestheim',
+  // Vestheim føres gang for gang, ikke som to bygg: brannlisten og
+  // vaskelistene følger gangen. Åtte ganger i hvert bygg, 10–80.
+  ...Array.from({ length: 8 }, (_, i) => `Nedre Vestheim - ${(i + 1) * 10}-Gangen`),
+  ...Array.from({ length: 8 }, (_, i) => `Øvre Vestheim - ${(i + 1) * 10}-Gangen`),
   'Granhaug',
   'Nedre Austheim',
   'Øvre Austheim',
@@ -524,7 +526,12 @@ function userModal(existing, onSaved, cfg) {
   const noun = isStudent ? 'elev' : 'administrator';
   // Sletting er superbruker-område, og ingen sletter seg selv.
   const canDelete = isEdit && existing.id !== user.id && user.superadmin;
-  const dormOptions = optionsHTML(DORMS, 'Velg internat…', existing?.dorm);
+  // Står eleven på et internat som ikke lenger finnes i lista (f.eks. «Øvre
+  // Vestheim» fra før gangene ble egne internat), vises det likevel som valg –
+  // ellers ville feltet stått tomt, og et «Lagre» blanket internatet uten at
+  // noen så det.
+  const dormList = existing?.dorm && !DORMS.includes(existing.dorm) ? [...DORMS, existing.dorm] : DORMS;
+  const dormOptions = optionsHTML(dormList, 'Velg internat…', existing?.dorm);
   const classOptions = optionsHTML(CLASSES, 'Velg klasse…', existing?.className);
   const instrumentOptions = optionsHTML(INSTRUMENTS, 'Velg instrument…', existing?.instrument);
   const studentFields = isStudent ? `
@@ -718,7 +725,7 @@ function importBoxHTML(classes) {
                   Enkeltceller kan stå tomme; da fyller du dem inn selv i radene under.</li>
               <li><b>Klasse</b>, <b>Internat</b> og <b>Hovedinstrument</b> må skrives som i listene her – <b>Rom</b> er fri tekst.</li>
               <li><b>Hjemmeboer</b>: sett en <b>X</b> for elever som bor hjemme og aldri sover på internatet. La cellen stå tom for alle andre.</li>
-              <li>Bare <b>den første fanen</b> i arket leses.</li>
+              <li>Bare <b>den første fanen</b> i arket leses. Malen har en fane til, <b>Gyldige verdier</b>, med listene under – den kan bli stående.</li>
             </ol>
             <div style="margin-top:8px"><b>Klasse:</b> ${classes.join(', ')}</div>
             <div><b>Internat:</b> ${DORMS.join(', ')}</div>
@@ -765,8 +772,7 @@ function bindStudentImport(bg, { rowsEl, addRow, updateCount, classes }) {
 
   // Tom mal med overskriftsraden ferdig utfylt – da blir postene riktige.
   bg.querySelector('#bxlsxMal').addEventListener('click', () => {
-    const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));
-    downloadBlob('elevliste-mal.xlsx', buildXlsx({ rows: [header], sheetName: 'Elever', cols: [26, 10, 18, 8, 20, 14] }));
+    downloadBlob('elevliste-mal.xlsx', buildStudentTemplateXlsx());
   });
 
   bg.querySelector('#bxlsxRead').addEventListener('click', async () => {
@@ -3806,21 +3812,47 @@ function zipStore(files) {
     ...u16(entries), ...u16(entries), ...u32(centralSize), ...u32(offset), ...u16(0)]);
   return new Blob([...parts, ...central, eocd], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
+// Elevliste-malen: overskriftsraden ferdig utfylt, og en fane til med de
+// gyldige verdiene for klasse, internat og hovedinstrument – så den som fyller
+// ut arket slipper å gjette hvordan «Øvre Vestheim - 10-Gangen» skal skrives.
+// Importen leser bare den første fanen, så fane to kan bli stående i arket.
+function buildStudentTemplateXlsx() {
+  const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));
+  const lister = [CLASSES, DORMS, INSTRUMENTS];
+  const antall = Math.max(...lister.map((l) => l.length));
+  const verdier = [
+    ['Klasse', 'Internat', 'Hovedinstrument'].map((v) => ({ v, s: 1 })),
+    ...Array.from({ length: antall }, (_, i) => lister.map((l) => l[i] || '')),
+  ];
+  return buildXlsx({
+    sheets: [
+      { name: 'Elever', rows: [header], cols: [26, 10, 24, 8, 20, 14] },
+      { name: 'Gyldige verdier', rows: verdier, cols: [10, 24, 20] },
+    ],
+  });
+}
+
 // rows: array av rader; hver celle er enten en streng (stil 0) eller { v, s } der
 // s er stilindeks: 1=overskrift, 2=rød (fravær), 3=gul (for sent).
 // cols: valgfri array med kolonnebredder.
-function buildXlsx({ rows, sheetName = 'Ark1', cols = [] }) {
+// Flere faner: gi `sheets: [{ name, rows, cols }]` i stedet for rows/sheetName/cols.
+// Den første fanen er den importen leser (se xlsxReader.js).
+function buildXlsx({ rows, sheetName = 'Ark1', cols = [], sheets }) {
+  const faner = sheets || [{ name: sheetName, rows, cols }];
   const cellXml = (c, ref) => {
     const cell = (c && typeof c === 'object') ? c : { v: c };
     const s = cell.s ? ` s="${cell.s}"` : '';
     return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(cell.v)}</t></is></c>`;
   };
-  const rowsXml = rows.map((row, r) =>
-    `<row r="${r + 1}">${row.map((c, i) => cellXml(c, colLetter(i) + (r + 1))).join('')}</row>`
-  ).join('');
-  const colsXml = cols.length
-    ? `<cols>${cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
-    : '';
+  const sheetXml = ({ rows, cols = [] }) => {
+    const rowsXml = rows.map((row, r) =>
+      `<row r="${r + 1}">${row.map((c, i) => cellXml(c, colLetter(i) + (r + 1))).join('')}</row>`
+    ).join('');
+    const colsXml = cols.length
+      ? `<cols>${cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
+      : '';
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${colsXml}<sheetData>${rowsXml}</sheetData></worksheet>`;
+  };
   const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
     + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
@@ -3838,13 +3870,15 @@ function buildXlsx({ rows, sheetName = 'Ark1', cols = [] }) {
     + '</cellXfs>'
     + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
     + '</styleSheet>';
+  // Fane n heter sheetN.xml og har relasjon rIdN; stilarket får neste ledige id.
+  const stilId = `rId${faner.length + 1}`;
   const files = [
-    { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+    { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${faner.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
     { name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
-    { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEsc(sheetName).slice(0, 31)}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
-    { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${faner.map((f, i) => `<sheet name="${xmlEsc(f.name || `Ark${i + 1}`).slice(0, 31)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${faner.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="${stilId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
     { name: 'xl/styles.xml', data: styles },
-    { name: 'xl/worksheets/sheet1.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${colsXml}<sheetData>${rowsXml}</sheetData></worksheet>` },
+    ...faner.map((f, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(f) })),
   ];
   return zipStore(files);
 }

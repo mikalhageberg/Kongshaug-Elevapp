@@ -60,5 +60,5 @@ standardverdier. Endrer du noe av dette, går teksten ut av takt:
   serveren, så de må rettes for hånd hvis `DEFAULTS` i `server/src/settings.js`
   endres.
 - **Listene over klasser, internat og instrumenter** står i adminhåndbokens
-  kapittel 3.6, og må holdes i takt med `CLASSES`, `DORMS` og `INSTRUMENTS` i
+  kapittel 3.7, og må holdes i takt med `CLASSES`, `DORMS` og `INSTRUMENTS` i
   `public/admin/admin.js`.

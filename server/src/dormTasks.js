@@ -5,26 +5,29 @@
 // veggen. Eleven får den opp i appen, og kvitterer med Face ID/fingeravtrykk når
 // jobben er gjort.
 //
-// Hver oppgave har en kort kode (ØVEST1 = Øvre Vestheim, oppgave 1). Koden er
+// Hver oppgave har en kort kode (GRANH1 = Granhaug, oppgave 1). Koden er
 // det admin skriver i Excel-turnusen, og den er unik på tvers av internatene, så
 // en import aldri kan treffe feil internats oppgave.
 
 import db from './db.js';
 
-// Internatnavn → kodestamme: «Øvre Vestheim» → ØVEST, «Granhaug» → GRANH.
-// Første bokstav i første ord + de fire første tegnene i det siste ordet, slik
-// at Øvre/Nedre Vestheim og Øvre/Nedre Austheim holdes fra hverandre.
+// Internatnavn → kodestamme: «Øvre Austheim» → ØAUST, «Granhaug» → GRANH,
+// «Treet 1» → TREET1, «Øvre Vestheim - 10-Gangen» → ØVRE10, «Nedre Vestheim -
+// 10-Gangen» → NEDRE10.
+// Har navnet et tall, er det tallet som skiller internatene fra hverandre
+// (Treet 1/2, gangene på Vestheim), så første ord + tallet blir stammen.
+// Ellers: første bokstav i første ord + de fire første tegnene i det siste,
+// slik at Øvre og Nedre Austheim holdes fra hverandre.
 export function codeStem(dorm) {
   const ord = String(dorm || '').toUpperCase().replace(/[^A-ZÆØÅ0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
   if (!ord.length) return 'OPPG';
   if (ord.length === 1) return ord[0].slice(0, 5);
-  const sist = ord[ord.length - 1];
-  // «Treet 1» → TREET1: tallet hører til internatnavnet, ikke til oppgavenummeret.
-  if (/^\d+$/.test(sist)) return ord[0].slice(0, 5) + sist;
-  return ord[0][0] + sist.slice(0, 4);
+  const tall = ord.find((o) => /^\d+$/.test(o));
+  if (tall) return ord[0].slice(0, 5) + tall;
+  return ord[0][0] + ord[ord.length - 1].slice(0, 4);
 }
 
-// Neste ledige kode for internatet: ØVEST1, ØVEST2 … Hopper over koder som
+// Neste ledige kode for internatet: GRANH1, GRANH2 … Hopper over koder som
 // finnes fra før (også deaktiverte oppgaver, så en kode aldri gjenbrukes).
 export function nextCode(dorm) {
   const stem = codeStem(dorm);

@@ -49,11 +49,24 @@ function matchClass(value, classes) {
 }
 
 // Internat: «treet 1», «Treet 1» og «treet1» skal alle treffe «Treet 1».
+// Gangene på Vestheim heter «Øvre Vestheim - 10-Gangen», men i et ark står
+// det gjerne kortere: «Øvre 10-gangen». Det godtas når ordene i cellen står i
+// samme rekkefølge i nøyaktig ett internatnavn. «10-gangen» alene finnes i
+// både Nedre og Øvre, og gir derfor ikke treff – da må arket rettes.
 function matchDorm(value, dorms) {
   const v = normName(value);
   if (!v) return null;
   const tight = v.replace(/\s+/g, '');
-  return dorms.find((d) => normName(d) === v || normName(d).replace(/\s+/g, '') === tight) || null;
+  const hel = dorms.find((d) => normName(d) === v || normName(d).replace(/\s+/g, '') === tight);
+  if (hel) return hel;
+  const ord = v.split(' ');
+  const delvis = dorms.filter((d) => {
+    const navn = normName(d).split(' ');
+    let i = 0;
+    for (const n of navn) if (n === ord[i]) i++;
+    return i === ord.length;
+  });
+  return delvis.length === 1 ? delvis[0] : null;
 }
 
 // Hovedinstrument mot den faste lista. Godtar hele ordet og de vanligste
