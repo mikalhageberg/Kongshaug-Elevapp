@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { api } from '../../api';
 import { C, formatTime, formatDateLong, shiftDate } from '../../theme';
 import { Button, Card } from '../../ui';
@@ -37,6 +37,27 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   useEffect(() => { last(); }, [last]);
 
   const onRefresh = async () => { setRefreshing(true); await last(); setRefreshing(false); };
+
+  // Opprop er en evakueringsrutine, ikke en måte å se over lista på. Hver
+  // «Til stede» skriver rett i brannlisten, så en runde tatt «bare for å prøve»
+  // markerer elever som gjort rede for uten at noen har sett dem – og da er
+  // lista verdiløs akkurat den natten den trengs.
+  //
+  // Derfor en dialog man må ta stilling til, og ikke bare en tekst på skjermen
+  // etterpå: den som er på vei inn hit i en travel kveld, leser ikke brødtekst.
+  function startOpprop() {
+    Alert.alert(
+      'Opprop – kun ved evakuering',
+      'Denne skal brukes når internatene evakueres, ikke for å sjekke lista en vanlig kveld.\n\n'
+      + 'Hvert trykk på «Til stede» skriver rett i brannlisten. En elev som ikke har '
+      + 'registrert seg selv ennå, blir stående som til stede fordi du trykket – ikke '
+      + 'fordi noen har sett henne.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Vi evakuerer', style: 'destructive', onPress: () => setOpprop(true) },
+      ],
+    );
+  }
 
   async function settStatus(userId, status) {
     setVenter(userId);
@@ -91,7 +112,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
           <Tall tekst={String(d.missing)} under="mangler" bg={d.missing ? C.redBg : '#e7edf5'} fg={d.missing ? C.redInk : C.navy} />
         </View>
 
-        <Button title="Start opprop" onPress={() => setOpprop(true)} style={{ marginTop: 16, height: 60 }} fontSize={19} />
+        <Button title="Opprop ved evakuering" onPress={startOpprop} style={{ marginTop: 16, height: 60 }} fontSize={19} />
 
         {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 

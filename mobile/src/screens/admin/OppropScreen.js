@@ -8,6 +8,14 @@ import { Button, Pill } from '../../ui';
 // for internat, rom for rom. Det er den rekkefølgen man faktisk går i når man
 // banker på dørene.
 //
+// Dette er en EVAKUERINGSRUTINE, ikke en gjennomgang av lista. Hver «Til stede»
+// skriver rett i brannlisten, så en runde tatt for å prøve funksjonen markerer
+// elever som gjort rede for uten at noen har sett dem – og overskriver dem som
+// ennå ikke har rukket å registrere seg selv. Derfor står advarselen både i
+// dialogen før man kommer hit (BrannlisteAdminScreen) og på denne skjermen:
+// dialogen forsvinner når den er lukket, og den som blar videre etterpå skal
+// fortsatt se hva runden gjør.
+//
 // To knapper, med vilje. «Til stede» er den store: det er den som skal treffes
 // i mørket med en hånd. «Gå til neste» er liten og lar eleven stå uavklart –
 // den som ikke er på rommet skal ikke bli borteregistrert av et raskt trykk,
@@ -85,7 +93,14 @@ export default function OppropScreen({ overview, onClose, onDone }) {
             Du får én elev av gangen, i samme rekkefølge som brannlisten. «Til stede»
             registrerer eleven med én gang.
           </Text>
-          <View style={{ height: 26 }} />
+          <View style={styles.advarsel}>
+            <Text style={styles.advarselTittel}>Kun ved evakuering</Text>
+            <Text style={styles.advarselTekst}>
+              Hvert trykk skriver rett i brannlisten. En elev som ikke har registrert
+              seg selv ennå, blir stående som til stede fordi du trykket.
+            </Text>
+          </View>
+          <View style={{ height: 22 }} />
           <Button title={`Alle på brannlisten (${alle.length})`} onPress={() => start('alle')} style={{ alignSelf: 'stretch' }} />
           <View style={{ height: 12 }} />
           <Button
@@ -222,6 +237,12 @@ const styles = StyleSheet.create({
   bjelke: { height: 5, backgroundColor: '#e4e8ee' },
   bjelkeFyll: { height: 5, backgroundColor: C.navy },
   midt: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 26 },
+  advarsel: {
+    backgroundColor: C.amberBg, borderWidth: 1, borderColor: '#f0dca0',
+    borderRadius: 14, padding: 15, marginTop: 22, alignSelf: 'stretch',
+  },
+  advarselTittel: { fontSize: 14.5, fontWeight: '800', color: C.amberInk, marginBottom: 5 },
+  advarselTekst: { fontSize: 14, color: C.amberInk, lineHeight: 20 },
   h1: { fontSize: 24, fontWeight: '800', color: C.ink, textAlign: 'center', letterSpacing: -0.5 },
   p: { fontSize: 15, color: C.muted, textAlign: 'center', lineHeight: 22, marginTop: 12 },
   internat: { fontSize: 14, fontWeight: '800', color: C.muted2, letterSpacing: 0.6, textTransform: 'uppercase' },

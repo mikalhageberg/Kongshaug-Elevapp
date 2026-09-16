@@ -398,7 +398,8 @@
     <li>Enkeltceller kan stå tomme; du fyller dem inn i forhåndsvisningen.</li>
     <li><strong>Hjemmeboer</strong>: sett en <strong>X</strong> for elever som bor hjemme og aldri sover på internatet (3.3), og la cellen stå tom for alle andre. Står det noe annet enn X i cellen, sier importen ifra med radnummer.</li>
     <li>Bare <strong>første fane</strong> i arket leses. Er det en skrivefeil, avvises arket med <strong>radnummer og hvilken celle</strong> som er feil.</li>
-    <li>Knappen <strong>«Last ned mal»</strong> gir en tom .xlsx med overskriftene ferdig utfylt.</li>
+    <li>Knappen <strong>«Last ned mal»</strong> gir en tom .xlsx med overskriftene ferdig utfylt, og en fane til – <strong>Gyldige verdier</strong> – med listene fra 3.7, så du ser hvordan internatene skal skrives. Den fanen kan bli stående i arket.</li>
+    <li>Gangene på Vestheim kan skrives kort: <strong>10-gangen</strong> leses som «Vestheim - 10-Gangen».</li>
   </ul>
   <p class="note">Elever som allerede finnes, hoppes over – de listes opp som «fantes allerede» etter innlesingen. Radene kan rettes før du trykker Opprett.</p>
 
@@ -425,7 +426,7 @@
     <thead>    <tr><th style="width:24%">Liste</th><th>Verdier</th></tr></thead>
     <tbody>
     <tr><td class="k">Klasser</td><td>VG1A, VG1B, VG2A, VG2B, VG3A, VG3B</td></tr>
-    <tr><td class="k">Internat</td><td>Treet 1, Treet 2, Svingen nede, Svingen oppe, Nedre Vestheim, Øvre Vestheim, Granhaug, Nedre Austheim, Øvre Austheim</td></tr>
+    <tr><td class="k">Internat</td><td>Treet 1, Treet 2, Svingen nede, Svingen oppe, Vestheim - 10-Gangen, Vestheim - 20-Gangen, … , Vestheim - 160-Gangen (én per gang, seksten i alt), Granhaug, Nedre Austheim, Øvre Austheim</td></tr>
     <tr><td class="k">Hovedinstrument</td><td>Sang, Piano, Orgel, Gitar, Bassgitar, Trommer/slagverk, Fiolin, Bratsj, Cello, Kontrabass, Fløyte, Klarinett, Obo, Fagott, Saksofon, Trompet, Trombone, Horn, Tuba, Harpe</td></tr>
     </tbody>
   </table>
@@ -575,7 +576,12 @@
     <span class="h">«Lag ny kode»</span>
     <p>Er koden blitt avfotografert eller delt videre, lager du en ny. Alle tidligere koder slutter å virke med én gang. De som allerede har tatt vakten beholder den – de har jo møtt opp.</p>
   </div>
-  <p><strong>Oppropsmodus.</strong> Knappen «Start opprop» i appen går gjennom elevene én av gangen, i samme rekkefølge som listen – internat for internat, rom for rom. Du velger først om oppropet skal gå gjennom alle eller bare dem som mangler. Hver elev har to knapper: den store <strong>«Til stede»</strong> registrerer og går videre, og den lille <strong>«Gå til neste»</strong> går videre uten å ta stilling. Det finnes med vilje ingen «borte»-knapp i oppropet: den som ikke er på rommet skal ikke bli borteregistrert av et raskt trykk, men bli stående på restlista til noen har funnet ut hvor hun er. Til slutt vises de som ikke ble gjort rede for, med internat og rom.</p>
+  <p><strong>Oppropsmodus.</strong> Knappen «Opprop ved evakuering» i appen går gjennom elevene én av gangen, i samme rekkefølge som listen – internat for internat, rom for rom. Du velger først om oppropet skal gå gjennom alle eller bare dem som mangler. Hver elev har to knapper: den store <strong>«Til stede»</strong> registrerer og går videre, og den lille <strong>«Gå til neste»</strong> går videre uten å ta stilling. Det finnes med vilje ingen «borte»-knapp i oppropet: den som ikke er på rommet skal ikke bli borteregistrert av et raskt trykk, men bli stående på restlista til noen har funnet ut hvor hun er. Til slutt vises de som ikke ble gjort rede for, med internat og rom.</p>
+  <div class="box stop">
+    <span class="h">Opprop er en evakueringsrutine – ikke en gjennomgang av lista</span>
+    <p>Hvert trykk på «Til stede» skriver rett i brannlisten. Tar noen en runde «bare for å prøve funksjonen», blir elever som ennå ikke har registrert seg selv stående som til stede fordi noen trykket – ikke fordi noen har sett dem. Da er lista verdiløs akkurat den natten den trengs.</p>
+    <p>Appen spør derfor om bekreftelse før oppropet starter. Skal dere øve på funksjonen, gjør det utenom kveldens innsjekk, og rydd opp etterpå med «Fjern»-knappen på radene.</p>
+  </div>
   <p><strong>Varslingssenter.</strong> Fanen «Varsler» i appen viser varslene vakten har fått – uleste med farget kant og et tall på fanen. Et push-varsel er flyktig: det kan komme mens telefonen ligger i lommen, bli sveipet bort, eller ha gått ut før vakten rakk å skanne koden. Her blir de liggende. Varselet lagres også når utsendingen feiler eller vakten ikke har appen installert, så et varsel som aldri nådde låseskjermen finnes likevel. Både vaktvarselet og beskjeder sendt med «Send til alle» havner der.</p>
   <p><strong>Siden starter tom når vakten begynner</strong>, regnet fra klokkeslettet koden ble skannet. Gårsdagens varsler er ikke vaktens problem i kveld, og en side som allerede er full gjør at kveldens ene viktige beskjed drukner. De eldre er ikke borte – de ligger under «Tidligere vakter» nederst, og blir liggende i 30 dager (13.4).</p>
   <p class="note">Varselet om hvem som mangler etter stengetid slås på under Varsler (12.3).</p>
@@ -756,7 +762,7 @@
     <li><span class="st">Trykk «Ny oppgave»</span> Under overskriften Oppgaver.</li>
     <li><span class="st">Velg internat</span> Oppgavene er knyttet til ett internat hver.</li>
     <li><span class="st">Skriv navn og beskrivelse</span> Skriv beskrivelsen slik den står på vaskelista – eleven får hele teksten opp.</li>
-    <li><span class="st">Sjekk koden</span> Den lages automatisk, f.eks. <strong>ØVEST1</strong> for Øvre Vestheim, oppgave 1. Du kan overstyre den. Koden er unik på tvers av internatene, og internat med tall i navnet får bindestrek – <code>TREET1-2</code> – så den ikke leses som «uke 12».</li>
+    <li><span class="st">Sjekk koden</span> Den lages automatisk, f.eks. <strong>GRANH1</strong> for Granhaug, oppgave 1, eller <strong>VESTH10-1</strong> for Vestheim - 10-Gangen, oppgave 1. Du kan overstyre den. Koden er unik på tvers av internatene, og internat med tall i navnet får bindestrek – <code>TREET1-2</code>, <code>VESTH10-1</code> – så den ikke leses som «uke 12».</li>
   </ol>
   <p>Hver oppgave kan senere <strong>redigeres</strong>, <strong>deaktiveres/aktiveres</strong> eller <strong>slettes</strong>.</p>
 
@@ -913,7 +919,7 @@
   <p>Sendes et innstillbart antall minutter etter at <strong>innsjekksvinduet stengte</strong> – ikke på et fast klokkeslett, siden vinduet lukker til ulik tid hverdag, fredag og lørdag. Standard er 15 minutter. Sett 0 for å sende i samme øyeblikk vinduet stenger.</p>
   <div class="box">
     <strong>3 mangler på brannlisten</strong><br>
-    <span class="note">Ola Nordmann, Kari Ås, Per Hansen. Åpne appen for opprop (natt til fredag 4. september 2026).</span>
+    <span class="note">Ola Nordmann, Kari Ås, Per Hansen er ikke gjort rede for (natt til fredag 4. september 2026).</span>
   </div>
   <p>Navnene står i selve varselet med vilje: et varsel som bare sa «3 mangler» ville tvunget vakten til å låse opp telefonen for å finne ut hvem – og det er nettopp de navnene hun trenger for å begynne å lete. Er alle registrert, kommer det et varsel om nettopp <em>det</em>, slik at vakten vet at kvelden er over uten å åpne noe.</p>
   <p>Varselet legger seg også i <strong>varslingssenteret</strong> i appen (se 5.4), slik at vakten finner det igjen selv om det ble sveipet bort – eller aldri kom fram.</p>
@@ -1112,7 +1118,7 @@
     <tr><td class="k">krysse av en elev manuelt</td><td>Brannliste → knappene på raden</td></tr>
     <tr><td class="k">ta med brannlisten ut</td><td>Brannliste → Eksporter PDF</td></tr>
     <tr><td class="k">gi kveldsvakten brannlisten på telefonen</td><td>Brannliste → Vakt-kode → vakten skanner den i appen</td></tr>
-    <tr><td class="k">gå opprop rom for rom</td><td>Mobilappen → Brannliste → Start opprop</td></tr>
+    <tr><td class="k">gå opprop rom for rom ved evakuering</td><td>Mobilappen → Brannliste → Opprop ved evakuering</td></tr>
     <tr><td class="k">finne igjen et varsel som ble sveipet bort</td><td>Mobilappen → Varsler</td></tr>
     <tr><td class="k">godkjenne et overnattingsbesøk</td><td>Gjester → velg internat og rom → Godkjenn</td></tr>
     <tr><td class="k">vise QR-koden før andakten</td><td>Dashboard → Vis QR på storskjerm</td></tr>

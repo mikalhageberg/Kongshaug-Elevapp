@@ -117,7 +117,19 @@ vakten beholder den; de har jo møtt opp.
 
 #### Oppropsmodus
 
-Knappen **«Start opprop»** i appen går gjennom elevene én av gangen, i samme
+**Opprop er en evakueringsrutine, ikke en gjennomgang av lista.** Hvert trykk på
+«Til stede» skriver rett i brannlisten. Tas en runde «bare for å prøve
+funksjonen», blir elever som ennå ikke har rukket å registrere seg selv stående
+som til stede fordi noen trykket – ikke fordi noen har sett dem. Da er lista
+verdiløs akkurat den natten den trengs.
+
+Appen spør derfor om bekreftelse før oppropet starter, og gjentar advarselen på
+startskjermen. Dialogen er der framfor bare en tekst fordi den som er på vei inn
+hit i en travel kveld ikke leser brødtekst. Av samme grunn sender **varselet om
+hvem som mangler ikke vakten hit** – den som mangler følges opp ved å banke på,
+og status settes på raden i lista.
+
+Knappen **«Opprop ved evakuering»** går gjennom elevene én av gangen, i samme
 rekkefølge som brannlisten – internat for internat, rom for rom. Det er den
 rekkefølgen man faktisk går i når man banker på dørene. Man velger først om
 oppropet skal gå gjennom **alle** eller **bare de som mangler**.
@@ -136,6 +148,9 @@ ble gjort rede for, med internat og rom, og en knapp for å gå gjennom dem igje
 
 Feiler et kall, blir oppropet stående på samme elev. Et opprop som hoppet videre
 etter en feil ville sagt at eleven var registrert uten at hun var det.
+
+Skal funksjonen øves på, gjør det utenom kveldens innsjekk, og rydd opp etterpå
+med «Fjern»-knappen på radene.
 
 #### Varsel om hvem som mangler
 
@@ -316,7 +331,10 @@ kan leses på to måter, og du velger selv:
     kan stå tomme (fylles inn i forhåndsvisningen). Bare første fane leses.
   - Er det en skrivefeil, avvises arket med **radnummer og hvilken celle** som
     er feil, i stedet for at importen gjetter. Knappen **Last ned mal** gir en
-    tom .xlsx med overskriftene ferdig utfylt.
+    tom .xlsx med overskriftene ferdig utfylt, og en fane til, **Gyldige
+    verdier**, med listene over klasser, internat og hovedinstrument. Bare
+    første fane leses, så den kan bli stående. Internat kan også skrives kort
+    når slutten er entydig: «10-gangen» leses som «Vestheim - 10-Gangen».
 
 - **Tolk arket med OpenAI** – for ark som ikke følger malen. Bare de første
   radene sendes til OpenAI, som svarer med hvilken kolonne som er hva; resten
@@ -374,10 +392,11 @@ dem. Oppgavene ligger i `dorm_tasks` (se `server/src/dormTasks.js`).
 
 - **Admin oppretter oppgavene** per internat, under **Internat → Oppgaver**, med
   hele beskrivelsen slik den står på vaskelista. Eleven leser den i appen.
-- Hver oppgave får en **kode**: `ØVEST1` = Øvre Vestheim, oppgave 1. Koden lages
-  av internatnavnet (første bokstav + fire av siste ord), teller oppover, og er
-  unik på tvers av internatene. Admin kan overstyre den. Internat med tall i
-  navnet får bindestrek, så `TREET1-2` ikke leses som «uke 12».
+- Hver oppgave får en **kode**: `GRANH1` = Granhaug, oppgave 1. Koden lages
+  av internatnavnet (første bokstav + fire av siste ord, eller de fem første
+  bokstavene + tallet når navnet har et: `TREET1`, `VESTH10`), teller oppover,
+  og er unik på tvers av internatene. Admin kan overstyre den. Internat med
+  tall i navnet får bindestrek, så `TREET1-2` ikke leses som «uke 12».
 - Koden er det man skriver i **«Oppgave»-kolonnen** i Excel-turnusen (se under).
 - Oppgaver som har vært satt opp kan ikke slettes, bare **deaktiveres** – ellers
   ville historikken mistet hva som faktisk ble gjort.

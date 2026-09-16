@@ -31,6 +31,12 @@ export async function sendFireListReminder() {
 // Navnene står i varselet med vilje. Et varsel som bare sier «3 mangler» tvinger
 // vakten til å låse opp telefonen for å finne ut hvem – og det er nettopp de tre
 // navnene hun trenger for å begynne å lete.
+//
+// Varselet sender IKKE vakten til oppropsmodus. Opprop er en evakueringsrutine:
+// den markerer elever som til stede, og overskriver dermed dem som ennå ikke
+// har rukket å registrere seg selv. Å foreslå den som en vanlig kveldsrutine
+// ville gjort brannlisten mindre til å stole på, ikke mer. Den som mangler
+// følges opp ved å banke på, og status settes på raden i lista.
 
 // Hvor mange navn som får plass før varselet blir en tekstvegg på låseskjermen.
 const NAVN_I_VARSEL = 5;
@@ -60,7 +66,7 @@ export async function sendWatchMissingPush(nightDate = watchNightDate()) {
   const melding = missing.length
     ? {
         title: `${missing.length} mangler på brannlisten`,
-        body: `${navneliste(missing.map((s) => s.fullName))}. Åpne appen for opprop (${natt}).`,
+        body: `${navneliste(missing.map((s) => s.fullName))} er ikke gjort rede for (${natt}).`,
       }
     : {
         title: 'Brannlisten er komplett',
