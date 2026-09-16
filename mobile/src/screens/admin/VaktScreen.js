@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../api';
 import { C, formatTime, formatDateLong, shiftDate } from '../../theme';
 import { Button, Card, Pill } from '../../ui';
+import Versjon from '../../Versjon';
 
 // Vakten. Å være logget inn er ikke nok til å få brannlisten på telefonen –
 // man må ha tatt kveldens vakt ved å skanne koden som henger på adminsiden
@@ -160,6 +161,12 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
       <Text style={styles.konto}>Innlogget som {user.fullName}</Text>
       <Button title="Logg ut" onPress={onLogout} color="#fff" textColor={C.slate} fontSize={15}
         style={{ marginTop: 10, height: 46, borderWidth: 1.5, borderColor: '#d3dae2' }} />
+
+      {/* Versjonen sto bare på elevenes hjemskjerm. En administrator ser aldri
+          den skjermen, og hadde dermed ingen måte å svare på hvilken versjon
+          telefonen kjører – som er nettopp det man trenger å vite når en
+          oppdatering ser ut til å mangle. */}
+      <Versjon />
     </ScrollView>
   );
 }
