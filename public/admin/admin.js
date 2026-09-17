@@ -45,6 +45,7 @@ const INSTRUMENTS = [
   'Gitar',
   'Bassgitar',
   'Trommer/slagverk',
+  'Marimba',
   'Fiolin',
   'Bratsj',
   'Cello',
@@ -58,7 +59,9 @@ const INSTRUMENTS = [
   'Trombone',
   'Horn',
   'Tuba',
+  'Eufonium',
   'Harpe',
+  'Musikkproduksjon',
 ];
 
 // Skolens internat. Endre denne listen hvis navn skal legges til/fjernes.
