@@ -51,7 +51,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
       'Denne skal brukes når internatene evakueres, ikke for å sjekke lista en vanlig kveld.\n\n'
       + 'Hvert trykk på «Til stede» skriver rett i brannlisten. En elev som ikke har '
       + 'registrert seg selv ennå, blir stående som til stede fordi du trykket – ikke '
-      + 'fordi noen har sett henne.',
+      + 'fordi eleven selv har registrert seg.',
       [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Vi evakuerer', style: 'destructive', onPress: () => setOpprop(true) },
