@@ -70,10 +70,9 @@ const DORMS = [
   'Treet 2',
   'Svingen nede',
   'Svingen oppe',
-  // Vestheim føres gang for gang, ikke som to bygg: brannlisten og
-  // vaskelistene følger gangen. Åtte ganger i hvert bygg, 10–80.
-  ...Array.from({ length: 8 }, (_, i) => `Nedre Vestheim - ${(i + 1) * 10}-Gangen`),
-  ...Array.from({ length: 8 }, (_, i) => `Øvre Vestheim - ${(i + 1) * 10}-Gangen`),
+  // Vestheim føres gang for gang («Vestheim - 10-Gangen» … «Vestheim -
+  // 80-Gangen»): brannlisten og vaskelistene følger gangen.
+  ...Array.from({ length: 8 }, (_, i) => `Vestheim - ${(i + 1) * 10}-Gangen`),
   'Granhaug',
   'Nedre Austheim',
   'Øvre Austheim',
@@ -3817,7 +3816,7 @@ function zipStore(files) {
 }
 // Elevliste-malen: overskriftsraden ferdig utfylt, og en fane til med de
 // gyldige verdiene for klasse, internat og hovedinstrument – så den som fyller
-// ut arket slipper å gjette hvordan «Øvre Vestheim - 10-Gangen» skal skrives.
+// ut arket slipper å gjette hvordan «Vestheim - 10-Gangen» skal skrives.
 // Importen leser bare den første fanen, så fane to kan bli stående i arket.
 function buildStudentTemplateXlsx() {
   const header = ['Navn', 'Klasse', 'Internat', 'Rom', 'Hovedinstrument', 'Hjemmeboer'].map((v) => ({ v, s: 1 }));

@@ -334,9 +334,8 @@ kan leses på to måter, og du velger selv:
     tom .xlsx med overskriftene ferdig utfylt, og en fane til, **Gyldige
     verdier**, med listene over klasser, internat og hovedinstrument. Bare
     første fane leses, så den kan bli stående. Internat kan også skrives kort
-    når ordene peker på nøyaktig ett internat: «Øvre 10-gangen» leses som
-    «Øvre Vestheim - 10-Gangen», mens «10-gangen» alene avvises (finnes i
-    begge byggene).
+    når ordene peker på nøyaktig ett internat: «10-gangen» leses som
+    «Vestheim - 10-Gangen», mens «Gangen» alene avvises.
 
 - **Tolk arket med OpenAI** – for ark som ikke følger malen. Bare de første
   radene sendes til OpenAI, som svarer med hvilken kolonne som er hva; resten
@@ -396,7 +395,7 @@ dem. Oppgavene ligger i `dorm_tasks` (se `server/src/dormTasks.js`).
   hele beskrivelsen slik den står på vaskelista. Eleven leser den i appen.
 - Hver oppgave får en **kode**: `GRANH1` = Granhaug, oppgave 1. Koden lages
   av internatnavnet (første bokstav + fire av siste ord, eller de fem første
-  bokstavene + tallet når navnet har et: `TREET1`, `ØVRE10`), teller oppover,
+  bokstavene + tallet når navnet har et: `TREET1`, `VESTH10`), teller oppover,
   og er unik på tvers av internatene. Admin kan overstyre den. Internat med
   tall i navnet får bindestrek, så `TREET1-2` ikke leses som «uke 12».
 - Koden er det man skriver i **«Oppgave»-kolonnen** i Excel-turnusen (se under).

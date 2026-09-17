@@ -49,10 +49,10 @@ function matchClass(value, classes) {
 }
 
 // Internat: «treet 1», «Treet 1» og «treet1» skal alle treffe «Treet 1».
-// Gangene på Vestheim heter «Øvre Vestheim - 10-Gangen», men i et ark står
-// det gjerne kortere: «Øvre 10-gangen». Det godtas når ordene i cellen står i
-// samme rekkefølge i nøyaktig ett internatnavn. «10-gangen» alene finnes i
-// både Nedre og Øvre, og gir derfor ikke treff – da må arket rettes.
+// Gangene på Vestheim heter «Vestheim - 10-Gangen», men i et ark står det
+// gjerne bare «10-gangen». Det godtas når ordene i cellen står i samme
+// rekkefølge i nøyaktig ett internatnavn. «Gangen» alene finnes i alle åtte,
+// og gir derfor ikke treff – da må arket rettes.
 function matchDorm(value, dorms) {
   const v = normName(value);
   if (!v) return null;

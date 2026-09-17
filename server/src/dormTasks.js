@@ -12,8 +12,7 @@
 import db from './db.js';
 
 // Internatnavn → kodestamme: «Øvre Austheim» → ØAUST, «Granhaug» → GRANH,
-// «Treet 1» → TREET1, «Øvre Vestheim - 10-Gangen» → ØVRE10, «Nedre Vestheim -
-// 10-Gangen» → NEDRE10.
+// «Treet 1» → TREET1, «Vestheim - 10-Gangen» → VESTH10.
 // Har navnet et tall, er det tallet som skiller internatene fra hverandre
 // (Treet 1/2, gangene på Vestheim), så første ord + tallet blir stammen.
 // Ellers: første bokstav i første ord + de fire første tegnene i det siste,
