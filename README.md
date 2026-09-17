@@ -120,7 +120,7 @@ vakten beholder den; de har jo møtt opp.
 **Opprop er en evakueringsrutine, ikke en gjennomgang av lista.** Hvert trykk på
 «Til stede» skriver rett i brannlisten. Tas en runde «bare for å prøve
 funksjonen», blir elever som ennå ikke har rukket å registrere seg selv stående
-som til stede fordi noen trykket – ikke fordi noen har sett dem. Da er lista
+som til stede fordi noen trykket – ikke fordi elevene selv har registrert seg. Da er lista
 verdiløs akkurat den natten den trengs.
 
 Appen spør derfor om bekreftelse før oppropet starter, og gjentar advarselen på
