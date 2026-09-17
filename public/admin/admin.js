@@ -1635,7 +1635,8 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
                 overskriftsraden: første celle er <b>Oppgave</b>, og deretter én kolonne per uke
                 (<b>Uke 45</b>, <b>Veke 46</b> eller bare <b>47</b>).</li>
             <li><b>Første kolonne</b> er oppgavekoden (<b>VESTH80-1</b>), slik den står i oppgavelista lenger ned på
-                siden – én kode per rad. Vil du ha oppgavenavnet synlig i arket, kan du legge inn en kolonne kalt
+                siden – én kode per rad. Malen har alle kodene klare i fanen <b>Oppgavekoder</b>; bare første fane
+                leses. Vil du ha oppgavenavnet synlig i arket, kan du legge inn en kolonne kalt
                 <b>Beskrivelse</b>; den leses ikke.</li>
             <li><b>I cellene skriver du navnet</b> på den som har oppgaven den uken. Tom celle = ingen satt opp.
                 Flere på samme oppgave samme uke skilles med komma eller linjeskift.</li>
@@ -2151,7 +2152,9 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
 
     // Internatvasken får samme oppsett som vaskelista på veggen: oppgavene
     // nedover, ukene bortover. Malen er tom – den gir bare rammen, med ukene
-    // og mandagsdatoene ferdig utfylt. Oppgavekodene og navnene skriver man selv.
+    // og mandagsdatoene ferdig utfylt. Oppgavekodene og navnene skriver man
+    // selv, men kodene ligger klare i fane to («Oppgavekoder»), gruppert per
+    // internat, så man slipper å slå dem opp her inne. Bare første fane leses.
     const btn = e.currentTarget; btn.disabled = true; const gammelTekst = btn.textContent; btn.textContent = 'Lager…';
     try {
       const uker = (await api(`${cfg.base}?weeks=20`)).weeks;
@@ -2162,10 +2165,18 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         const [y, m, dag] = w.weekStart.split('-');
         return `${dag}.${m}.${y}`;
       })];
+      // Aktive oppgaver i samme rekkefølge som oppgavelista på siden: DORMS
+      // først, så internat som bare finnes i dataene, og sortOrder innenfor hvert.
+      const internat = [...DORMS, ...[...new Set(tasks.map((t) => t.dorm))].filter((d) => !DORMS.includes(d))];
+      const koder = internat.flatMap((d) => tasks
+        .filter((t) => t.active && t.dorm === d)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((t) => [t.code, t.dorm, t.title]));
       downloadBlob('internatvask-mal.xlsx', buildXlsx({
-        rows: [header.map((v) => ({ v, s: 1 })), datorad],
-        sheetName: 'Internatvask',
-        cols: [16, ...uker.map(() => 13)],
+        sheets: [
+          { name: 'Internatvask', rows: [header.map((v) => ({ v, s: 1 })), datorad], cols: [16, ...uker.map(() => 13)] },
+          { name: 'Oppgavekoder', rows: [['Kode', 'Internat', 'Oppgave'].map((v) => ({ v, s: 1 })), ...koder], cols: [14, 24, 40] },
+        ],
       }));
     } catch (ex) { toast(ex.message); }
     finally { btn.disabled = false; btn.textContent = gammelTekst; }

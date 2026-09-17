@@ -437,7 +437,9 @@ Samme valg som for elevlista, men de to tjenestene har hver sin form:
 
   **«Last ned mal» gir rammen**: overskriftsraden med 20 ukekolonner, og
   `Startdato`-raden med mandagsdatoene. Selve oppgavekodene og navnene skriver
-  man inn selv – malen er tom, og inneholder ingen data fra basen.
+  man inn selv. Fane to, **Oppgavekoder**, lister alle aktive oppgaver med
+  kode, internat og navn, gruppert per internat – bare første fane leses, så
+  den kan bli stående.
 
   - Første celle må hete `Oppgave`, og første kolonne inneholder
     **oppgavekoden**, én per rad. Vil man ha oppgavenavnet synlig i arket, kan
