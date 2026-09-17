@@ -432,8 +432,8 @@ Samme valg som for elevlista, men de to tjenestene har hver sin form:
   | Oppgave | Uke 45 | Uke 46 | Uke 47 |
   | ------- | ------ | ------ | ------ |
   | Startdato | 03.11.2025 | 10.11.2025 | 17.11.2025 |
-  | ØVEST1 | Olivia | Chandra | Signe |
-  | ØVEST2 | Mari |  | Inga |
+  | VESTH80-1 | Olivia | Chandra | Signe |
+  | VESTH80-2 | Mari |  | Inga |
 
   **«Last ned mal» gir rammen**: overskriftsraden med 20 ukekolonner, og
   `Startdato`-raden med mandagsdatoene. Selve oppgavekodene og navnene skriver

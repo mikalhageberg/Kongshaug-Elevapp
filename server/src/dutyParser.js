@@ -165,7 +165,7 @@ export async function parseDutyXlsx(rows, students, ledetekst = 'kjøkkentjenest
 //   | 34  | Ingrid Sæther | 2026-08-17 |
 //   |     | Ola Nordmann  |            |   ← tom «Uke» = samme uke som raden over
 //
-// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (ØVEST1,
+// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (VESTH80-1,
 // se dormTasks.js). Hver rad har sin egen kode – den arves ikke nedover, for en
 // tom celle betyr «vaskeuke uten bestemt oppgave».
 //
@@ -177,7 +177,7 @@ const DUTY_TEMPLATE_HEADERS = {
   name: 'Navn',
   startDate: 'Startdato',
 };
-// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (ØVEST1).
+// Internatvasken har i tillegg en «Oppgave»-kolonne med oppgavekoden (VESTH80-1).
 // Kjøkkentjenesten har ingen oppgaver, og da er kolonnen en ukjent overskrift.
 const DUTY_TEMPLATE_HEADERS_TASKS = { ...DUTY_TEMPLATE_HEADERS, task: 'Oppgave' };
 
@@ -214,8 +214,8 @@ function parseSheetDate(text) {
 // Samme oppsett som vaskelistene som henger på internatene:
 //
 //   | Oppgave  | Beskrivelse | Uke 45 | Uke 46 | Uke 47 |
-//   | ØVEST1   | 80-gongen   | Olivia | Chandra| Signe  |
-//   | ØVEST2   | KJØKKEN     | Mari   |        | Inga   |
+//   | VESTH80-1| 80-gongen   | Olivia | Chandra| Signe  |
+//   | VESTH80-2| KJØKKEN     | Mari   |        | Inga   |
 //
 // «Beskrivelse» er bare til for å lese – den tolkes ikke. «Signer»-rader fra
 // de gamle listene hoppes over, for signaturen ligger i appen nå. Har en uke
@@ -354,7 +354,7 @@ export function parseDutyTemplate(rows, students, { tasks = null } = {}) {
   if (tasks && erMatrise(grid)) return parseDutyMatrix(grid, students, { tasks });
   const headers = tasks ? DUTY_TEMPLATE_HEADERS_TASKS : DUTY_TEMPLATE_HEADERS;
   const { headerRow, cols } = readTemplateHeader(grid, headers, ['week', 'name']);
-  // Oppgavekoder slås opp normalisert, så «øvest1» og «ØVEST1» er samme kode.
+  // Oppgavekoder slås opp normalisert, så «vesth80-1» og «VESTH80-1» er samme kode.
   const koder = new Map((tasks || []).map((t) => [normName(t.code), t]));
 
   const today = todayDate();

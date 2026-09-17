@@ -155,7 +155,7 @@ db.exec(`
 
   -- Internatvaskens oppgaver: hvert internat har sine faste oppgaver («80-gongen
   -- med bøttekott», «KJØKKEN, vaske opp …»), med hele beskrivelsen elevene
-  -- ellers ville lest av arket på veggen. Koden (f.eks. ØVEST1) er det admin
+  -- ellers ville lest av arket på veggen. Koden (f.eks. VESTH80-1) er det admin
   -- skriver i Excel-turnusen, og er unik på tvers av internatene.
   --
   -- Oppgaver deaktiveres framfor å slettes når de har vært i bruk – ellers
@@ -163,7 +163,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS dorm_tasks (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     dorm        TEXT    NOT NULL,              -- internatnavn, som users.dorm
-    code        TEXT    NOT NULL UNIQUE,       -- 'ØVEST1' – brukes i Excel-turnusen
+    code        TEXT    NOT NULL UNIQUE,       -- 'VESTH80-1' – brukes i Excel-turnusen
     title       TEXT    NOT NULL,              -- kort navn: «80-gongen»
     description TEXT    NOT NULL DEFAULT '',   -- hele oppgaveteksten, vist i appen
     active      INTEGER NOT NULL DEFAULT 1,

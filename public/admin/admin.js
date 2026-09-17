@@ -1634,7 +1634,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
             <li><b>Oppgavene nedover, ukene bortover</b> – samme oppsett som vaskelista på veggen. Rad 1 er
                 overskriftsraden: første celle er <b>Oppgave</b>, og deretter én kolonne per uke
                 (<b>Uke 45</b>, <b>Veke 46</b> eller bare <b>47</b>).</li>
-            <li><b>Første kolonne</b> er oppgavekoden (<b>ØVEST1</b>), slik den står i oppgavelista lenger ned på
+            <li><b>Første kolonne</b> er oppgavekoden (<b>VESTH80-1</b>), slik den står i oppgavelista lenger ned på
                 siden – én kode per rad. Vil du ha oppgavenavnet synlig i arket, kan du legge inn en kolonne kalt
                 <b>Beskrivelse</b>; den leses ikke.</li>
             <li><b>I cellene skriver du navnet</b> på den som har oppgaven den uken. Tom celle = ingen satt opp.
@@ -1876,7 +1876,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
           <textarea id="tDesc" class="field" rows="6" style="height:auto;padding:12px;line-height:1.5;font-family:inherit" placeholder="80-gongen med bøttekott, fellesareal toalett og bad. Vaske golv, tømme søppel …">${task ? esc(task.description) : ''}</textarea>
           <label class="field-label" style="margin-top:14px">Kode</label>
           <input id="tCode" class="field" style="height:44px;text-transform:uppercase" placeholder="${ny ? 'Lages automatisk' : ''}" value="${task ? esc(task.code) : ''}" />
-          <div style="font-size:12.5px;color:var(--muted-2);margin-top:6px">Dette er koden du skriver i «Oppgave»-kolonnen i Excel-turnusen. ${ny ? 'La feltet stå tomt, så lages den av internatnavnet (ØVEST1, ØVEST2 …).' : 'Endrer du den, må regnearkene bruke den nye koden.'}</div>
+          <div style="font-size:12.5px;color:var(--muted-2);margin-top:6px">Dette er koden du skriver i «Oppgave»-kolonnen i Excel-turnusen. ${ny ? 'La feltet stå tomt, så lages den av internatnavnet (VESTH80-1, VESTH80-2 …).' : 'Endrer du den, må regnearkene bruke den nye koden.'}</div>
           <p id="tErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">

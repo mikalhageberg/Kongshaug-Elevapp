@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
 router.use(requireAdmin);
 
 // POST /api/dorm-tasks – { dorm, title, description?, code? }
-// Uten `code` lages den automatisk av internatnavnet: ØVEST1, ØVEST2 …
+// Uten `code` lages den automatisk av internatnavnet: VESTH80-1, VESTH80-2 …
 router.post('/', (req, res) => {
   const dorm = String(req.body?.dorm || '').trim();
   const title = String(req.body?.title || '').trim();
