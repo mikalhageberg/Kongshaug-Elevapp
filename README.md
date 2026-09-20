@@ -553,6 +553,11 @@ blir fravær.
 
 Siden elevene sendes til for å laste ned appen: app-ikonet, en kort beskrivelse
 og knapper til butikkene. Butikken telefonen faktisk kan bruke legges øverst.
+Under knappene ligger brukermanualen for elever
+(`/distribusjon/brukermanual.pdf`), slik at elevene finner den selv uten å gå
+via en administrator. Det er den eneste håndboken som ligger åpent –
+adminhåndboken finnes bare bak innlogging, under Håndbøker i admin. Lenken
+vises bare når PDF-en faktisk er bygget (se `docs/README.md`).
 
 Lenkene settes som miljøvariabler (i Railway, eller i `server/.env` lokalt):
 

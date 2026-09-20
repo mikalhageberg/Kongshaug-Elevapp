@@ -56,6 +56,18 @@
       font-weight: 700; text-decoration: none; border-bottom: 1.5px solid rgba(207,217,230,.35);
       padding-bottom: 2px;
     }
+    .manual {
+      display: flex; align-items: center; gap: 14px; width: 100%;
+      margin-top: 30px; padding: 14px 18px; border-radius: 16px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+      color: #fff; text-decoration: none; text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .manual:active { background: rgba(255,255,255,.14); }
+    .manual svg { width: 26px; height: 26px; flex: 0 0 auto; color: #b9c6d8; }
+    .manual-text { line-height: 1.25; min-width: 0; }
+    .manual-text b { display: block; font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+    .manual-text small { display: block; font-size: 12.5px; font-weight: 600; color: #b9c6d8; margin-top: 2px; }
     .foot { padding-top: 40px; color: #8ea0b8; font-size: 12.5px; line-height: 1.6; }
     .foot a { color: #b9c6d8; font-weight: 600; text-decoration: none; }
   </style>
@@ -70,6 +82,8 @@
     {{STORES}}
 
     <a class="web" href="/app/">Eller bruk appen i nettleseren</a>
+
+    {{MANUAL}}
 
     <div class="foot">
       Kongshaug Musikkgymnas · <a href="/personvern/">Personvern</a>

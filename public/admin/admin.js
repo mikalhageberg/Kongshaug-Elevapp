@@ -2927,8 +2927,9 @@ function mountMenuManager(container) {
 // ── Håndbøker ────────────────────────────────────────────────
 // Brukermanualen for elever og håndboken for administrasjonen, som PDF.
 // Filene ligger i docs/ og serveres av /api/handbooks, som krever innlogget
-// administrator – de ligger altså ikke på en åpen URL. «Åpne» viser PDF-en i
-// nettleserens egen leser; «Last ned» gir filen med filnavn.
+// administrator. Adminhåndboken ligger altså ikke på en åpen URL; elevmanualen
+// gjør det også, på /distribusjon/brukermanual.pdf, siden den skal deles ut.
+// «Åpne» viser PDF-en i nettleserens egen leser; «Last ned» gir filen med filnavn.
 function filstørrelse(bytes) {
   if (!bytes) return '';
   const mb = bytes / (1024 * 1024);
@@ -2945,9 +2946,11 @@ async function renderHandbooks(main) {
   header(main, 'Håndbøker', 'Bruksanvisningene for elevappen og for admin');
   const page = el(`<div class="page" style="max-width:760px"><div id="liste"></div>
     <div style="font-size:13px;color:var(--muted-2);line-height:1.55;margin-top:20px">
-      Håndbøkene er bare tilgjengelige for innloggede administratorer – lenkene virker ikke for
-      utenforstående. Elevmanualen er laget for å deles ut: last den ned og skriv den ut, eller send
-      den videre. Kilden til begge ligger i <b>docs/</b> i prosjektet, og PDF-ene bygges derfra.
+      Håndboken for administrasjonen er bare tilgjengelig for innloggede administratorer – lenken
+      virker ikke for utenforstående. Elevmanualen er laget for å deles ut: den ligger også åpent på
+      nedlastingssiden, <a href="/distribusjon" target="_blank" rel="noopener">/distribusjon</a>, så
+      elevene finner den selv. Kilden til begge ligger i <b>docs/</b> i prosjektet, og PDF-ene
+      bygges derfra.
     </div></div>`);
   main.appendChild(page);
 

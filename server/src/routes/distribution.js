@@ -2,7 +2,8 @@ import { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config } from '../config.js';
+import { config, paths } from '../config.js';
+import { HANDBOOKS } from './handbooks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const templatePath = path.join(__dirname, '..', 'views', 'distribusjon.html');
@@ -54,6 +55,24 @@ function renderStores(userAgent) {
   return `<div class="stores">${buttons}</div>`;
 }
 
+// ── Brukermanualen for elever ────────────────────────────────
+// Elevmanualen er laget for å deles ut, så den ligger åpent her, ved siden av
+// appen. Adminhåndboken gjør det ikke: den finnes bare bak innlogging, på
+// /api/handbooks (se routes/handbooks.js – samme liste, samme fil).
+const elevmanual = HANDBOOKS.find((h) => h.slug === 'elever');
+const elevmanualPath = path.join(paths.docs, elevmanual.file);
+const MANUAL_URL = '/distribusjon/brukermanual.pdf';
+
+// Lenken vises bare når PDF-en faktisk ligger der (den bygges fra docs/, se
+// docs/README.md) – ellers ville knappen ført til en feilside.
+function renderManual() {
+  if (!fs.existsSync(elevmanualPath)) return '';
+  return `<a class="manual" href="${MANUAL_URL}" target="_blank" rel="noopener">`
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+    + '<span class="manual-text"><b>Brukermanual for elever</b><small>Slik bruker du appen, steg for steg · PDF</small></span></a>';
+}
+
 const router = Router();
 
 // Enkel landingsside elevene sendes til (lenke eller QR-kode) for å laste ned
@@ -61,7 +80,20 @@ const router = Router();
 router.get('/', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
-  res.send(template.replace('{{STORES}}', renderStores(req.get('user-agent'))));
+  res.send(template
+    .replace('{{STORES}}', renderStores(req.get('user-agent')))
+    .replace('{{MANUAL}}', renderManual()));
+});
+
+// Selve PDF-en, vist i nettleserens egen leser. Den som vil ha filen kan lagre
+// derfra – de fleste åpner den uansett på telefonen for å slå opp noe.
+router.get('/brukermanual.pdf', (req, res) => {
+  if (!fs.existsSync(elevmanualPath)) {
+    return res.status(404).type('text/plain; charset=utf-8').send('Brukermanualen er ikke lagt ut ennå.');
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${elevmanual.file}"`);
+  fs.createReadStream(elevmanualPath).pipe(res);
 });
 
 export default router;

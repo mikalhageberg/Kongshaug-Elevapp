@@ -2,7 +2,9 @@
 
 To bruksanvisninger for systemet, som vises under **Håndbøker** i admin
 (`/api/handbooks`, krever innlogget administrator – de ligger med vilje ikke i
-`public/`, som er åpent for alle).
+`public/`, som er åpent for alle). Elevmanualen ligger i tillegg åpent på
+nedlastingssiden, `/distribusjon/brukermanual.pdf`, siden den skal deles ut til
+elevene; adminhåndboken finnes bare bak innlogging.
 
 | Kilde | Ferdig PDF | For hvem |
 | ----- | ---------- | -------- |

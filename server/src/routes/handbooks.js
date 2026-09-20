@@ -6,6 +6,10 @@
 // kjenner adressen. Håndbøkene inneholder ingen hemmeligheter, men de beskriver
 // hele adminflaten, og det er ingen grunn til at den beskrivelsen skal ligge
 // ute på nett. Ruten krever innlogget administrator.
+//
+// Elevmanualen er unntaket: den er laget for å deles ut, og ligger derfor også
+// åpent på nedlastingssiden, /distribusjon/brukermanual.pdf (routes/
+// distribution.js henter den fra samme liste). Adminhåndboken finnes bare her.
 
 import { Router } from 'express';
 import fs from 'node:fs';
