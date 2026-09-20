@@ -108,7 +108,7 @@ Tre ting følger av at vakten er knyttet til *natten* og ikke til klokka:
 - **Kravet gjelder bare appen.** Adminsiden i nettleseren er urørt: der er
   innloggingen selve tilgangen. Skillet ligger i et `native`-merke i tokenet
   (`auth.js`), ikke i noe klienten sender selv. Administratorens app-sesjon er
-  også kortere enn elevens – 7 dager mot 90 (`NATIVE_ADMIN_SESSION_DAYS`) –
+  også kortere enn elevens – 7 dager mot 365 (`NATIVE_ADMIN_SESSION_DAYS`) –
   fordi kontoen ser hele skolens elevliste.
 
 **«Lag ny kode»** ugyldiggjør alle tidligere koder for natten med én gang, for
@@ -504,7 +504,7 @@ elever som allerede finnes, men ikke opprette eller slette dem.
 
 Skillet håndheves på serveren (`server/src/permissions.js`), ikke bare ved å
 skjule knapper. Flagget slås opp i databasen ved hvert kall, ikke i tokenet: en
-sesjon varer opptil 90 dager i mobilappen, og tas rettigheten fra noen skal det
+sesjon varer opptil ett år i mobilappen, og tas rettigheten fra noen skal det
 gjelde med én gang.
 
 At en vanlig administrator ikke kan **endre** en administratorkonto er en del av

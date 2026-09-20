@@ -88,9 +88,9 @@ export const config = {
   sessionMaxAgeMs: 1000 * 60 * 60 * 12, // 12 timer
 
   // Mobilappen bruker Bearer-token og er låst bak Face ID / kode ved hver
-  // åpning, så den kan ha lang sesjon uten at eleven må skrive passord ofte.
+  // åpning, så den kan ha lang sesjon: eleven logger inn én gang i året.
   // Gjelder KUN native app – aldri nettleser eller admin.
-  nativeSessionDays: Number(process.env.NATIVE_SESSION_DAYS ?? 90),
+  nativeSessionDays: Number(process.env.NATIVE_SESSION_DAYS ?? 365),
 
   // Administratorens app-sesjon. Kortere enn elevens, fordi kontoen ser hele
   // skolens brannliste og kan sette status på hvem som helst. Vakten skanner

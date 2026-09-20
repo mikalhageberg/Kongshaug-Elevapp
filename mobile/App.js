@@ -24,7 +24,7 @@ const TABS = [
   { key: 'internat', label: 'Internat', icon: '🧹' },
 ];
 
-// Sesjonen varer i 90 dager, så appen låses i stedet bak Face ID / telefonkode.
+// Sesjonen varer i ett år, så appen låses i stedet bak Face ID / telefonkode.
 // Vi låser ikke hvis man var borte under et minutt: appen går selv i bakgrunnen
 // når den åpner meny-PDF-er og kamera til QR-skanning, og da ville en streng
 // lås gitt Face ID-spørsmål midt i helt vanlig bruk.

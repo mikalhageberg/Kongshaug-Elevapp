@@ -4,7 +4,7 @@
 // og kan rette opplysninger på elever som allerede finnes.
 //
 // Flagget slås opp i databasen ved hvert kall, ikke i tokenet. En sesjon varer
-// opptil 90 dager i mobilappen; tas rettigheten fra noen, skal det gjelde med
+// opptil ett år i mobilappen; tas rettigheten fra noen, skal det gjelde med
 // én gang og ikke ved neste innlogging.
 
 import db from './db.js';
