@@ -176,6 +176,7 @@ export function buildKitchenEmailHtml(report) {
           ${stat(report.total - report.eating, 'Spiser ikke', '#d64545')}
         </tr></table>
         ${notEating}
+        ${report.homeCount ? `<p style="margin:16px 0 0;font-size:13px;color:#6b7280">Tallene gjelder de ${report.total} elevene som spiser på skolen. ${report.homeCount === 1 ? '1 hjemmeboer' : `${report.homeCount} hjemmeboere`} står utenfor og spiser hjemme hver dag.</p>` : ''}
         <p style="margin:20px 0 0;font-size:12px;color:#8a93a3">Automatisk sendt fra Kongshaug Elevapp.</p>
       </div>
     </div></body></html>`;

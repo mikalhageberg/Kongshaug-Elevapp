@@ -550,7 +550,7 @@ function userModal(existing, onSaved, cfg) {
           <input type="checkbox" name="homeDweller" ${existing?.homeDweller ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" />
           <span>
             <span style="display:block;font-size:14.5px;font-weight:700;color:var(--slate)">Hjemmeboer</span>
-            <span style="display:block;font-size:13px;color:var(--muted-2);margin-top:2px;line-height:1.5">Bor hjemme og sover aldri på internatet. Eleven står permanent som «hjemme», telles ikke med på brannlisten – verken som til stede eller savnet – og får ingen påminnelser om å krysse av.</span>
+            <span style="display:block;font-size:13px;color:var(--muted-2);margin-top:2px;line-height:1.5">Bor hjemme og sover aldri på internatet. Eleven står permanent som «hjemme» og telles ikke med på brannlisten – verken som til stede eller savnet – står som at eleven ikke spiser middag på skolen, og får ingen påminnelser om å krysse av.</span>
           </span>
         </label>` : '';
   // Superbruker gjelder bare administratorer. Vises til superbrukere; en vanlig
@@ -1518,7 +1518,8 @@ async function renderKitchen(main) {
           <span style="flex:1;font-size:14.5px;font-weight:700">${esc(n.name)}</span>
           <span class="pill pill-red">Meldt av</span>
         </div>`).join('') : '<div style="padding:22px;color:var(--muted-2)">Alle spiser middag i dag.</div>'}
-    </div>`;
+    </div>
+    ${d.homeCount ? `<p style="margin:12px 2px 0;font-size:13.5px;color:var(--muted-2);font-weight:600">Tallene gjelder de ${d.total} elevene som spiser på skolen. ${d.homeCount === 1 ? '1 hjemmeboer' : d.homeCount + ' hjemmeboere'} står utenfor og spiser hjemme hver dag.</p>` : ''}`;
 
   mountDutyModule(page, 'kitchen');
   mountMenuManager(page);

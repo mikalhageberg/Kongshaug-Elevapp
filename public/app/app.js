@@ -394,7 +394,7 @@ async function renderBrannliste() {
   // Hjemmeboer først: statusen gjelder hver natt, og skal ikke kunne endres
   // herfra. Serveren sender også status='away' for dem, av hensyn til eldre
   // appversjoner – derfor må denne sjekken stå før den.
-  if (status.homeDweller) fireHome(body, status);
+  if (status.homeDweller) fireHome(body);
   else if (status.status === 'present') fireConfirmed(body, status);
   else if (status.status === 'away') fireAway(body, status);
   else fireForm(body, status);
@@ -516,10 +516,9 @@ function fireConfirmed(body, data) {
 }
 
 // Hjemmeboer: bor hjemme og sover aldri på internatet. Skjermen har ingen
-// knapper som endrer brannliste-statusen – den er den samme hver natt, og
-// settes av internatledelsen på elevkortet. Middagen står igjen, for en
-// hjemmeboer spiser gjerne på skolen selv om hun sover hjemme.
-function fireHome(body, data) {
+// knapper i det hele tatt – både brannliste-statusen og middagen er den samme
+// hver dag, og settes av internatledelsen på elevkortet.
+function fireHome(body) {
   clearFireBody(body);
   body.appendChild(el(`
     <div style="flex:1;display:flex;flex-direction:column">
@@ -527,21 +526,11 @@ function fireHome(body, data) {
         <div style="width:104px;height:104px;border-radius:50%;background:#e7edf5;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
           <div style="width:74px;height:74px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center"><div style="width:40px;height:40px">${icon.home}</div></div></div>
         <div class="h1" style="font-size:26px">Du bor hjemme</div>
-        <p class="sub" style="line-height:1.5;margin:10px 0 8px">Du står registrert som <b>hjemme</b> på brannlisten, hver natt.<br>Du trenger ikke krysse av for noe her.</p>
-        <p class="sub">Skal du likevel sove på internatet en natt, gi beskjed til internatleder.</p>
-        <label style="display:flex;align-items:center;gap:12px;width:100%;margin-top:20px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:14px;cursor:pointer;text-align:left">
-          <input type="checkbox" id="noDinner" ${data.noDinner ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
-          <div><div style="font-weight:800;font-size:15px">Jeg skal ikke ha middag i dag</div><div class="sub" style="font-size:13px">Så slipper kjøkkenet å lage mat til deg.</div></div>
-        </label>
+        <p class="sub" style="line-height:1.5;margin:10px 0 8px">Du står registrert som <b>hjemme</b> på brannlisten og som at du <b>ikke spiser</b> på skolen – hver dag.<br>Du trenger ikke krysse av for noe her.</p>
+        <p class="sub">Skal du likevel sove på internatet eller spise middag på skolen, gi beskjed til internatleder.</p>
       </div>
     </div>`));
   sinkKeptNodes(body);
-  body.querySelector('#noDinner').addEventListener('change', async (e) => {
-    try {
-      await api('/api/dinner/optout', { method: e.target.checked ? 'POST' : 'DELETE' });
-      data.noDinner = e.target.checked;
-    } catch (ex) { toast(ex.message); e.target.checked = !e.target.checked; }
-  });
 }
 
 function fireAway(body, data) {
@@ -831,6 +820,12 @@ async function renderMiddag() {
   async function loadDinner() {
     const s = await api('/api/dinner/status').catch(() => null);
     if (!s) { dinnerEl.innerHTML = ''; return; }
+    if (s.homeDweller) {
+      dinnerEl.innerHTML = `<div class="card" style="border-radius:18px;display:flex;align-items:center;gap:14px">
+        <div style="width:50px;height:50px;border-radius:15px;background:#e7edf5;color:var(--navy);display:flex;align-items:center;justify-content:center"><div style="width:26px;height:26px">${icon.home}</div></div>
+        <div><div style="font-size:16px;font-weight:800">Du spiser hjemme</div><div class="sub">Du er registrert som hjemmeboer, og står som at du ikke spiser på skolen. Gi beskjed til internatleder hvis det har endret seg.</div></div></div>`;
+      return;
+    }
     if (s.fromPeriod) {
       dinnerEl.innerHTML = `<div class="card" style="border-radius:18px;display:flex;align-items:center;gap:14px">
         <div style="width:50px;height:50px;border-radius:15px;background:#e7edf5;color:var(--navy);display:flex;align-items:center;justify-content:center"><div style="width:26px;height:26px">${icon.home}</div></div>

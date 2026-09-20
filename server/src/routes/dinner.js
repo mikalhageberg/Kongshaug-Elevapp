@@ -10,19 +10,36 @@ import { createDutyRouter } from './duty.js';
 const router = Router();
 router.use(requireAuth);
 
+// Hjemmeboeren spiser hjemme, hver dag. Statusen følger av merket på brukeren
+// i stedet for å måtte meldes inn på nytt hver morgen – samme ordning som på
+// brannlisten. Se kitchenReport.js for hvordan kjøkkenets tall regnes.
+const erHjemmeboer = (userId) =>
+  !!db.prepare("SELECT 1 FROM users WHERE id = ? AND home_dweller = 1").get(userId);
+const HJEMMEBOER_MELDING =
+  'Du er registrert som hjemmeboer og står som at du ikke spiser på skolen. '
+  + 'Gi beskjed til internatleder hvis dette har endret seg.';
+
 // ── ELEV: middagsstatus i dag ────────────────────────────────
 router.get('/status', (req, res) => {
   const date = todayDate();
+  const homeDweller = erHjemmeboer(req.auth.sub);
   const manual = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, date);
   const period = !!db.prepare('SELECT 1 FROM fire_away_periods WHERE user_id=? AND no_dinner=1 AND ? BETWEEN start_date AND end_date LIMIT 1').get(req.auth.sub, date);
-  const optedOut = manual || period;
-  // fromPeriod = styrt av en planlagt periode (kan ikke endres per dag i middagsfanen)
-  res.json({ date, optedOut, fromPeriod: period && !manual, eating: !optedOut });
+  const optedOut = homeDweller || manual || period;
+  // fromPeriod = styrt av noe annet enn dagens valg, og kan ikke slås av her.
+  // Hjemmeboeren settes med vilje inn i det samme flagget: appversjonene som er
+  // ute i dag kjenner bare dette, og viser da det låste kortet i stedet for en
+  // knapp som ville lovet noe den ikke kan holde. Nyere klienter ser på
+  // homeDweller først – se app.js.
+  res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut });
 });
 
 // ELEV: meld fra at du IKKE vil ha middag i dag
 router.post('/optout', (req, res) => {
   const date = todayDate();
+  if (erHjemmeboer(req.auth.sub)) {
+    return res.status(403).json({ error: 'home-dweller', message: HJEMMEBOER_MELDING });
+  }
   db.prepare('INSERT OR IGNORE INTO dinner_optouts (user_id, date) VALUES (?, ?)').run(req.auth.sub, date);
   res.json({ date, optedOut: true });
 });
@@ -30,6 +47,9 @@ router.post('/optout', (req, res) => {
 // ELEV: angre – jeg spiser likevel middag i dag
 router.delete('/optout', (req, res) => {
   const date = todayDate();
+  if (erHjemmeboer(req.auth.sub)) {
+    return res.status(403).json({ error: 'home-dweller', message: HJEMMEBOER_MELDING });
+  }
   db.prepare('DELETE FROM dinner_optouts WHERE user_id=? AND date=?').run(req.auth.sub, date);
   res.json({ date, optedOut: false });
 });

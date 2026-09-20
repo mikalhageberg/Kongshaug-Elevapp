@@ -133,18 +133,19 @@ router.post('/checkin', (req, res) => {
 // Kan meldes når som helst – vinduet gjelder bare tilstedeværelse.
 router.post('/away', (req, res) => {
   const night = currentNightDate();
-  // Hjemmeboeren er allerede meldt borte, hver natt, én gang for alle. Raden i
-  // fire_checkins ville ikke gjort noen forskjell, men middagsavmeldingen under
-  // gjelder like fullt: mange hjemmeboere spiser middag på skolen.
+  // Hjemmeboeren er allerede meldt borte og av middagen, hver dag, én gang for
+  // alle. Ingenting her har noe å endre på for henne – verken raden i
+  // fire_checkins eller middagsvalget under.
   const home = isHomeDweller(req.auth.sub);
-  if (!home) {
-    db.prepare(
-      `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
-       VALUES (@uid, @night, 'away', NULL, NULL)
-       ON CONFLICT(user_id, night_date)
-         DO UPDATE SET status = 'away', checked_at = datetime('now'), lat = NULL, lng = NULL`
-    ).run({ uid: req.auth.sub, night });
+  if (home) {
+    return res.json({ status: 'away', nightDate: night, checkedAt: null, noDinner: true, homeDweller: true });
   }
+  db.prepare(
+    `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
+     VALUES (@uid, @night, 'away', NULL, NULL)
+     ON CONFLICT(user_id, night_date)
+       DO UPDATE SET status = 'away', checked_at = datetime('now'), lat = NULL, lng = NULL`
+  ).run({ uid: req.auth.sub, night });
 
   // Valgfritt: meld også av middag for i dag. Middag føres på kalenderdatoen,
   // ikke på natten – natten varer til 07:30, så mellom midnatt og da ville
@@ -160,7 +161,7 @@ router.post('/away', (req, res) => {
     .get(req.auth.sub, night);
   res.json({
     status: 'away', nightDate: night, checkedAt: row?.checked_at || null,
-    noDinner: noDinner === true, homeDweller: home,
+    noDinner: noDinner === true, homeDweller: false,
   });
 });
 
@@ -176,7 +177,7 @@ router.get('/status', (req, res) => {
   let scheduled = false;
   if (!row && isScheduledAway(req.auth.sub, night)) { status = 'away'; scheduled = true; }
   // Middag ligger på kalenderdatoen, ikke på natten – se /away over.
-  const noDinner = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, todayDate());
+  let noDinner = !!db.prepare('SELECT 1 FROM dinner_optouts WHERE user_id=? AND date=?').get(req.auth.sub, todayDate());
   // Hjemmeboeren har samme svar hver natt, uavhengig av hva som måtte ligge i
   // fire_checkins. `status` settes til 'away' og ikke 'home': appversjoner som
   // er ute i dag kjenner bare 'present' | 'away' | null, og med 'away' viser de
@@ -184,7 +185,7 @@ router.get('/status', (req, res) => {
   // hjemmeboer om å melde seg til stede. Klienter som kan mer, ser på
   // homeDweller først – se app.js.
   const homeDweller = isHomeDweller(req.auth.sub);
-  if (homeDweller) { status = 'away'; scheduled = true; }
+  if (homeDweller) { status = 'away'; scheduled = true; noDinner = true; }
   res.json({
     nightDate: night,
     status,                          // 'present' | 'away' | null
