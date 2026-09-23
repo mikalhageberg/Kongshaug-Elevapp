@@ -127,6 +127,10 @@ export function sinceLastClose(now = new Date(), s = getSettings()) {
 // Samme grense som vakten går over på – de to MÅ følges at, se watchNightDate
 // i fireWatch.js.
 export const NIGHT_HANDOVER_MINUTES = 10 * 60;   // 10:00
+// Samme grense som «TT:MM», til klienter som skal skrive den ut. Regnes fra
+// minuttene, så det finnes bare ett sted å endre klokkeslettet.
+export const NIGHT_HANDOVER_HHMM =
+  `${String(Math.floor(NIGHT_HANDOVER_MINUTES / 60)).padStart(2, '0')}:${String(NIGHT_HANDOVER_MINUTES % 60).padStart(2, '0')}`;
 
 // Natten «nå» hører til for registrering – brukes også når vinduet er stengt
 // (f.eks. melde seg borte på dagtid), så til stede/borte alltid lander på samme

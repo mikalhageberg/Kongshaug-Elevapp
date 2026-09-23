@@ -3,7 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
-import { fireWindowNow, currentNightDate } from '../fireWindow.js';
+import { fireWindowNow, currentNightDate, NIGHT_HANDOVER_HHMM } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
 import { buildFireListPdf } from '../pdf.js';
 import { verifyFireListLink } from '../fireLink.js';
@@ -194,8 +194,15 @@ router.get('/status', (req, res) => {
     noDinner,                        // meldt av middag i dag
     checkedIn: status === 'present',
     checkedAt: row?.checked_at || null,
+    // Fram til overgangen (fireWindow.js) hører vi til natten som begynte i
+    // går kveld. En elev som melder seg borte kl. 09 mener nesten alltid natten
+    // som KOMMER, og ville ellers blitt stående borte for en natt som er over.
+    // Appen bruker dette til å spørre hva hun mener før den registrerer.
+    appliesToLastNight: night !== todayDate(),
     // Vinduet for å melde seg til stede: klienten viser nedtelling / stengt.
-    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt },
+    // nightEndsAt: når lista ruller over til neste natt – så appen kan si «før
+    // kl. 10» uten å ha klokkeslettet hardkodet.
+    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, nightEndsAt: NIGHT_HANDOVER_HHMM },
   });
 });
 

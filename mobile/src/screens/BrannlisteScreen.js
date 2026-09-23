@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView, Alert } from 'react-native';
 import { api, resolveCampusStatus, getFreshPosition } from '../api';
-import { C, formatTime, formatDateLong, shiftDate } from '../theme';
+import { C, formatTime, formatDateLong, formatNight, shiftDate } from '../theme';
 import { Button, Banner, Card, campusBanner } from '../ui';
 import PlanleggModal from './PlanleggModal';
 import GjestModal from './GjestModal';
@@ -41,7 +41,10 @@ export default function BrannlisteScreen({ user }) {
   const [info, setInfo] = useState(null); // { checkedAt, nightDate }
   const [scheduled, setScheduled] = useState(false);
   const [msg, setMsg] = useState('Sjekker posisjon…');
-  const [win, setWin] = useState(null); // { isOpen, state, opensAt, closesAt }
+  const [win, setWin] = useState(null); // { isOpen, state, opensAt, closesAt, nightEndsAt }
+  // Satt når en registrering nå ville gjelde natten som begynte i går kveld –
+  // altså fram til lista ruller over om formiddagen. Se markAway.
+  const [tail, setTail] = useState(null); // { nightDate, nightEndsAt } | null
   const [busy, setBusy] = useState(false);
   const [awayBusy, setAwayBusy] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
@@ -85,6 +88,7 @@ export default function BrannlisteScreen({ user }) {
     const status = await api('/api/firelist/status').catch(() => ({ status: null }));
     const w = status.window || { isOpen: true, state: 'open' };
     setWin(w);
+    setTail(status.appliesToLastNight ? { nightDate: status.nightDate, nightEndsAt: w.nightEndsAt } : null);
     if (status.status === 'present') { setInfo({ checkedAt: status.checkedAt, nightDate: status.nightDate }); setScheduled(false); setState('done'); return; }
     if (status.status === 'away') { setInfo({ nightDate: status.nightDate }); setScheduled(!!status.scheduled); setNoDinner(!!status.noDinner); setState('away'); return; }
     // Utenfor vinduet: ikke be om posisjon – vis nedtelling / stengt.
@@ -117,7 +121,28 @@ export default function BrannlisteScreen({ user }) {
     }
   }
 
-  async function markAway() {
+  // «Ikke på skolen i natt» før lista har rullet over om formiddagen gjelder
+  // natten som begynte i går kveld – ikke den som kommer. Kl. 09 mener eleven
+  // nesten alltid den som kommer, og ville blitt stående borte for en natt som
+  // er over, mens hun i kveld sto som ikke gjort rede for. Derfor spør vi, og
+  // peker til planlagt fravær. Men vi sperrer ikke: den som krysset seg til
+  // stede kl. 21 og drar kl. 02 skal kunne rette nettopp denne natten – det er
+  // den rettelsen brannlisten er til for.
+  function markAway() {
+    if (!tail) return doMarkAway();
+    Alert.alert(
+      `Gjelder ${formatNight(tail.nightDate)}`,
+      `Før kl. ${tail.nightEndsAt} gjelder «ikke på skolen» natten som begynte i går kveld – ikke natten som kommer.\n\n`
+      + `Skal du være borte i natt? Legg det inn som planlagt fravær, eller vent til kl. ${tail.nightEndsAt}.`,
+      [
+        { text: 'Planlegg fravær', onPress: () => setPlanOpen(true) },
+        { text: 'Ja, natten som gikk', style: 'destructive', onPress: doMarkAway },
+        { text: 'Avbryt', style: 'cancel' },
+      ],
+    );
+  }
+
+  async function doMarkAway() {
     setAwayBusy(true);
     try {
       const r = await api('/api/firelist/away', { method: 'POST', body: { noDinner: true } });
@@ -216,6 +241,12 @@ export default function BrannlisteScreen({ user }) {
       }</Text>
       <Button title="Jeg er ikke på skolen i natt" color="#fff" textColor={C.slate} loading={awayBusy}
         onPress={markAway} style={{ height: 52, borderWidth: 1.5, borderColor: '#d3dae2' }} />
+      {tail ? (
+        <Text style={styles.hint}>
+          Før kl. {tail.nightEndsAt} gjelder dette {formatNight(tail.nightDate)} – natten som gikk.
+          Borte i natt? Bruk «Planlegg fravær».
+        </Text>
+      ) : null}
       <View style={{ height: 10 }} />
       {planButton}
       <NightGuardsCard guards={nightGuards} />
