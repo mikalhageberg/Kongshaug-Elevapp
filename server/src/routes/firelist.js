@@ -148,7 +148,7 @@ router.post('/away', (req, res) => {
   ).run({ uid: req.auth.sub, night });
 
   // Valgfritt: meld også av middag for i dag. Middag føres på kalenderdatoen,
-  // ikke på natten – natten varer til 07:30, så mellom midnatt og da ville
+  // ikke på natten – natten varer til 10:00, så mellom midnatt og da ville
   // «i dag» ellers blitt gårsdagens middag, som for lengst er servert. Resten
   // av middagshåndteringen bruker todayDate (se routes/dinner.js).
   const dinnerDate = todayDate();

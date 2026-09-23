@@ -20,8 +20,8 @@ import { currentNightDate } from './fireWindow.js';
 // Går vakten over mens elevene fortsatt ligger og sover, står den som faktisk
 // er på jobb uten listen i nettopp de minuttene den betyr mest, og veien
 // tilbake går gjennom en QR-kode på en skjerm hun ikke kommer til hvis det
-// brenner. Overgangen ligger derfor 07:30, etter når elevene er oppe og ute av
-// internatene – se NIGHT_HANDOVER_MINUTES i fireWindow.js.
+// brenner. Overgangen ligger derfor 10:00, etter når elevene er oppe og ute av
+// internatene også i helgen – se NIGHT_HANDOVER_MINUTES i fireWindow.js.
 //
 // Det er MED VILJE nøyaktig samme natt som brannlisten bruker, og ikke en egen
 // utregning: da vakten rullet over kl. 06 og lista ved midnatt, hadde vakten

@@ -93,16 +93,19 @@ varselet under en adressat.
 
 Tre ting følger av at vakten er knyttet til *natten* og ikke til klokka:
 
-- **Vakten varer til kl. 07:30.** Ikke til midnatt, og ikke til
+- **Vakten varer til kl. 10:00.** Ikke til midnatt, og ikke til
   innsjekksvinduet stenger. Dette er en brannsikkerhetsgrense, ikke en praktisk
   avrunding: så lenge vakten står, har hun brannlisten – hvem som sover hvor i
   natt – i lomma. Går vakten over mens elevene fortsatt ligger og sover, står
   den som faktisk er på jobb uten lista i nettopp de minuttene den betyr mest,
   og veien tilbake går gjennom en QR-kode på en skjerm hun ikke kommer til hvis
-  det brenner. Tidspunktet er derfor satt etter når elevene er oppe og ute av
-  internatene. Den nye vakten tas først om kvelden, så et sent skifte tar
-  ingenting fra noen. Grensen står som `WATCH_HANDOVER_MINUTES` i
-  `server/src/fireWatch.js`.
+  det brenner. Tidspunktet er satt etter helgen, ikke skoledagen: på en
+  hverdag er huset tomt fra halv åtte, men lørdag og søndag ligger elevene til
+  langt på formiddagen, og lista må holde like lenge. Den nye vakten tas først
+  om kvelden, så et sent skifte tar ingenting fra noen. Grensen er den samme
+  som brannlisten selv ruller over på – `NIGHT_HANDOVER_MINUTES` i
+  `server/src/fireWindow.js` – og de to skal aldri skilles: da vakten og lista
+  hadde hver sin klokke, kunne vakten ha tilgang til en liste som var tom.
 - **Flere kan ha vakt sammen.** Alle som har skannet står i lista under koden,
   og alle får varselet.
 - **Kravet gjelder bare appen.** Adminsiden i nettleseren er urørt: der er
