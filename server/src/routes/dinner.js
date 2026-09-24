@@ -6,6 +6,7 @@ import { getDinnerReport } from '../kitchenReport.js';
 import { currentWeekStart } from '../isoWeek.js';
 import { dutyWeek } from '../duty.js';
 import { createDutyRouter } from './duty.js';
+import { getSettings } from '../settings.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -31,7 +32,11 @@ router.get('/status', (req, res) => {
   // ute i dag kjenner bare dette, og viser da det låste kortet i stedet for en
   // knapp som ville lovet noe den ikke kan holde. Nyere klienter ser på
   // homeDweller først – se app.js.
-  res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut });
+  // Når går dagens oversikt til kjøkkenet? Appen ber eleven melde seg av før
+  // det. null når utsendingen er skrudd av – da finnes det ingen frist.
+  const s = getSettings();
+  const kitchenEmailAt = s.kitchenEmailEnabled && s.kitchenEmailRecipient ? s.kitchenEmailTime : null;
+  res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut, kitchenEmailAt });
 });
 
 // ELEV: meld fra at du IKKE vil ha middag i dag

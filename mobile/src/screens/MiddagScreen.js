@@ -69,6 +69,8 @@ export default function MiddagScreen({ user }) {
         </Card>
       ))}
 
+      {dinner && !dinner.homeDweller ? <FristBoks kitchenEmailAt={dinner.kitchenEmailAt} /> : null}
+
       <DutyPlan kind="kitchen" user={user} style={{ marginTop: 26 }} />
 
       <Text style={[styles.h1, { fontSize: 19, marginTop: 26 }]}>Ukemeny</Text>
@@ -107,12 +109,40 @@ export default function MiddagScreen({ user }) {
   );
 }
 
+// Kjøkkenet får dagens oversikt på e-post på et fast klokkeslett, og lager
+// mat etter den. En avmelding etter det hjelper lite. Boksen sier når fristen
+// er, og – etter at den har gått – at oversikten alt er sendt, så eleven
+// forstår hvorfor det er for sent for i dag, men melder seg av likevel.
+function FristBoks({ kitchenEmailAt }) {
+  let tekst;
+  if (!kitchenEmailAt) {
+    tekst = 'Meld deg av så tidlig som mulig, helst før lunsj. Da vet kjøkkenet hvor mange som spiser, og vi kaster mindre mat.';
+  } else {
+    const nå = new Date();
+    const nåStr = `${String(nå.getHours()).padStart(2, '0')}:${String(nå.getMinutes()).padStart(2, '0')}`;
+    tekst = nåStr < kitchenEmailAt
+      ? `Meld deg av før kl. ${kitchenEmailAt}. Da går dagens oversikt til kjøkkenet, og de lager mat til dem som står på lista.`
+      : `Dagens oversikt gikk til kjøkkenet kl. ${kitchenEmailAt}. Meld deg av likevel om du ikke skal spise – og helst før kl. ${kitchenEmailAt} neste gang.`;
+  }
+  return (
+    <View style={styles.frist}>
+      <Text style={{ fontSize: 18, lineHeight: 22 }}>ℹ️</Text>
+      <Text style={styles.fristTekst}>{tekst}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   h1: { fontSize: 24, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
   date: { fontSize: 13, fontWeight: '700', color: C.muted2, marginTop: 2 },
   sub: { fontSize: 14, color: C.muted, lineHeight: 20, marginTop: 6 },
   icon: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: C.ink },
+  frist: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12,
+    backgroundColor: '#eef3fa', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
+  },
+  fristTekst: { flex: 1, fontSize: 13.5, lineHeight: 19, color: C.navy, fontWeight: '600' },
   menuCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: C.line, borderRadius: 16, marginTop: 12, overflow: 'hidden' },
   menuHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   pdfBtn: { height: 38, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1.5, borderColor: '#d3dae2', alignItems: 'center', justifyContent: 'center' },
