@@ -1674,14 +1674,17 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
       ${cfg.hasTasks ? `
       <div style="margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-          <div style="font-size:14px;font-weight:800;flex:1">Oppgaver</div>
+          <div style="font-size:14px;font-weight:800;flex:1">Oppgaver <span id="taskCount" style="font-weight:600;color:var(--muted-2);margin-left:4px"></span></div>
+          <button class="btn btn-ghost" id="taskToggle" aria-expanded="true" aria-controls="taskBody" style="height:38px;padding:0 14px;font-size:13.5px">Skjul ▴</button>
           <button class="btn btn-primary" id="taskNew" style="height:38px;padding:0 16px;font-size:13.5px">Ny oppgave</button>
         </div>
-        <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:12px">
-          Beskriv oppgaven slik den står på vaskelista. Eleven får hele teksten opp i appen, og signerer med
-          biometri når jobben er gjort. <b>Koden</b> er den du skriver i «Oppgave»-kolonnen i Excel-turnusen.
+        <div id="taskBody">
+          <div style="font-size:12.5px;color:var(--muted-2);line-height:1.5;margin-bottom:12px">
+            Beskriv oppgaven slik den står på vaskelista. Eleven får hele teksten opp i appen, og signerer med
+            biometri når jobben er gjort. <b>Koden</b> er den du skriver i «Oppgave»-kolonnen i Excel-turnusen.
+          </div>
+          <div id="taskList"></div>
         </div>
-        <div id="taskList"></div>
       </div>` : ''}
       <div id="dutyOversikt">
         <div style="display:flex;align-items:center;gap:12px;margin:22px 0 10px">
@@ -1795,12 +1798,37 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
   let utvidet = false;                      // oversikten i full skjerm
   const taskListEl = card.querySelector('#taskList');
 
+  // Oppgavelista kan bli lang, så den kan foldes sammen. Valget huskes i
+  // nettleseren, og lista foldes ut igjen når en ny oppgave lagres, så den
+  // som nettopp opprettet noe ser at det kom med.
+  const TASK_FOLD_KEY = 'admin.oppgaverSkjult';
+  let oppgaverSkjult = false;
+  try { oppgaverSkjult = localStorage.getItem(TASK_FOLD_KEY) === '1'; } catch { /* privat modus e.l. */ }
+  function visOppgaver(skjult) {
+    if (!cfg.hasTasks) return;
+    oppgaverSkjult = skjult;
+    try { localStorage.setItem(TASK_FOLD_KEY, skjult ? '1' : '0'); } catch { /* ikke viktig */ }
+    const body = card.querySelector('#taskBody');
+    const knapp = card.querySelector('#taskToggle');
+    const teller = card.querySelector('#taskCount');
+    body.hidden = skjult;
+    knapp.textContent = skjult ? 'Vis ▾' : 'Skjul ▴';
+    knapp.setAttribute('aria-expanded', String(!skjult));
+    const aktive = tasks.filter((t) => t.active).length;
+    teller.textContent = skjult && tasks.length ? `· ${aktive} aktiv${aktive === 1 ? '' : 'e'}${aktive !== tasks.length ? ` av ${tasks.length}` : ''}` : '';
+  }
+  if (cfg.hasTasks) {
+    card.querySelector('#taskToggle').addEventListener('click', () => visOppgaver(!oppgaverSkjult));
+    visOppgaver(oppgaverSkjult);
+  }
+
   async function loadTasks() {
     if (!cfg.hasTasks) return;
     const d = await api('/api/dorm-tasks').catch(() => null);
     tasks = d?.tasks || [];
     renderTasks();
     renderTaskPicker();
+    visOppgaver(oppgaverSkjult);            // oppdaterer telleren i overskriften
   }
 
   // Alle internat under hverandre, med internatnavnet som mellomoverskrift.
@@ -1909,6 +1937,7 @@ function mountDutyModule(container, kind, { standalone = false } = {}) {
         close();
         sisteInternat = body.dorm;
         await loadTasks();
+        if (ny) visOppgaver(false);         // vis at den nye kom med
         loadUpcoming();
         toast(ny ? 'Oppgaven er opprettet' : 'Oppgaven er lagret');
       } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = gammelTekst; }
