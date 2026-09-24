@@ -236,11 +236,13 @@ export default function BrannlisteScreen({ user }) {
       <Text style={styles.p}>Kryss av så vi vet hvem som er på skolen i natt ved brann.</Text>
 
       <View style={{ marginTop: 8, gap: 8 }}>
-        {state !== 'closed' && win?.state === 'late'
-          ? <Banner tone="amber" text={win.lateArrival?.isOpen
-              ? `🕘 Ventet ca. kl. ${win.lateArrival.expectedAt} – du kan registrere deg til kl. ${win.lateArrival.until}`
-              : `🕘 Fristen var kl. ${win.closesAt} – sen innsjekk er åpen til kl. ${win.lateUntil}`} />
-          : null}
+        {win?.lateArrival && !win.lateArrival.expired
+          // Vaktens «kommer ca. kl. …» vises hele dagen, også før vinduet
+          // åpner, så eleven ser at avtalen er registrert og hva den gir.
+          ? <Banner tone="amber" text={`🕘 Vakten vet at du kommer ca. kl. ${win.lateArrival.expectedAt} – du kan registrere deg til kl. ${win.lateArrival.until}`} />
+          : state !== 'closed' && win?.state === 'late'
+            ? <Banner tone="amber" text={`🕘 Fristen var kl. ${win.closesAt} – sen innsjekk er åpen til kl. ${win.lateUntil}`} />
+            : null}
         {state === 'closed' && win
           ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
           : <Banner {...campusBanner(geo)} />}
@@ -253,7 +255,7 @@ export default function BrannlisteScreen({ user }) {
           : state === 'closed' && win
             ? (win.state === 'before'
                 ? `Du kan melde deg til stede mellom kl. ${win.opensAt} og ${win.closesAt}.`
-                : win.lateArrival
+                : win.lateArrival?.expired
                   ? `Du var ventet kl. ${win.lateArrival.expectedAt}. Fristen din gikk ut kl. ${win.lateArrival.until} – si ifra til vakten.`
                   : 'Innsjekk for i kveld er stengt.')
             : state === 'blocked' ? msg

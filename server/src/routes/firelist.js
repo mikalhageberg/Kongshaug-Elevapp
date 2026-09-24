@@ -102,7 +102,7 @@ router.post('/checkin', (req, res) => {
   if (!win.isOpen && !reviewBypass && !ext?.isOpen) {
     return res.status(403).json({
       error: 'closed',
-      message: ext
+      message: ext?.expired
         ? `Du var ventet kl. ${ext.expectedAt}, og fristen din gikk ut kl. ${ext.until}. Si ifra til vakten.`
         : win.state === 'before'
           ? `Registreringen åpner kl. ${win.opensAt}.`
@@ -191,11 +191,13 @@ router.get('/status', (req, res) => {
   // homeDweller først – se app.js.
   const homeDweller = isHomeDweller(req.auth.sub);
   if (homeDweller) { status = 'away'; scheduled = true; noDinner = true; }
-  // Utvidet frist fra vaktens «kommer ca. kl. …»-merke. Mens den løper, får
-  // appen vinduet som 'late' med lateUntil = fristen: da sier også appversjoner
-  // som ikke kjenner merket «fristen var kl. 22 – du kan registrere deg til
-  // kl. 23:40». Nyere klienter ser på lateArrival og sier hvorfor.
-  const ext = !win.isOpen && !homeDweller ? lateArrivalWindow(req.auth.sub) : null;
+  // Utvidet frist fra vaktens «kommer ca. kl. …»-merke. Sendes hele dagen, så
+  // appen kan vise den gule boksen fra merket settes – også før vinduet åpner
+  // – og eleven ikke lurer på om avtalen er registrert. Mens fristen løper
+  // etter stengetid, får appen vinduet som 'late' med lateUntil = fristen: da
+  // sier også appversjoner som ikke kjenner merket «fristen var kl. 22 – du
+  // kan registrere deg til kl. 23:40». Nyere klienter ser på lateArrival.
+  const ext = homeDweller ? null : lateArrivalWindow(req.auth.sub);
   const w = ext?.isOpen
     ? { isOpen: true, state: 'late', opensAt: win.opensAt, closesAt: win.closesAt, lateUntil: ext.until }
     : win;
@@ -218,7 +220,7 @@ router.get('/status', (req, res) => {
     // lateUntil er satt bare i tilstanden 'late' (sen innsjekk etter fristen).
     window: {
       isOpen: w.isOpen, state: w.state, opensAt: w.opensAt, closesAt: w.closesAt, lateUntil: w.lateUntil || null, nightEndsAt: nightEndsAt(osloParts().dow),
-      lateArrival: ext ? { expectedAt: ext.expectedAt, until: ext.until, isOpen: ext.isOpen } : null,
+      lateArrival: ext ? { expectedAt: ext.expectedAt, until: ext.until, isOpen: ext.isOpen, expired: ext.expired } : null,
     },
   });
 });

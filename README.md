@@ -159,9 +159,11 @@ gjelder én natt. Slettes automatisk med resten av brannlistehistorikken.
 (`LATE_ARRIVAL_GRACE_MIN` i `fireWindow.js`), selv om vinduet er stengt.
 En registrering eleven gjør selv, med GPS, er den vi helst vil ha på lista;
 uten fristen måtte vakten sette henne til stede for hånd. «Tidspunkt ukjent»
-gir ingen frist. Fristen går aldri lenger enn natten varer, og appen sier
-«ventet ca. kl. 23:30 – du kan registrere deg til kl. 23:40», og etterpå at
-fristen gikk ut. Uavhengig av bryteren for sen innsjekk over.
+gir ingen frist. Fristen går aldri lenger enn natten varer. Appen viser en
+gul boks – «vakten vet at du kommer ca. kl. 23:30 – du kan registrere deg til
+kl. 23:40» – fra merket settes og hele dagen, også før vinduet åpner, så
+eleven ser at avtalen er registrert; etterpå sier den at fristen gikk ut.
+Uavhengig av bryteren for sen innsjekk over.
 
 #### Oppropsmodus
 

@@ -196,7 +196,10 @@ export function currentNightDate(now = new Date(), s = getSettings()) {
 // lenger enn natten varer (nightEndsAt).
 //
 // Returnerer null uten merke med klokkeslett, ellers
-// { nightDate, expectedAt, until, isOpen }.
+// { nightDate, expectedAt, until, isOpen, expired }: isOpen = fristen løper
+// (vinduet har stengt, fristen er ikke gått); expired = fristen er gått. Før
+// vinduet stenger er begge false – da gjelder det vanlige vinduet, og merket
+// er bare en beskjed appen viser.
 export const LATE_ARRIVAL_GRACE_MIN = 10;
 export function lateArrivalWindow(userId, now = new Date(), s = getSettings()) {
   const night = currentNightDate(now, s);
@@ -215,7 +218,14 @@ export function lateArrivalWindow(userId, now = new Date(), s = getSettings()) {
   const deadlineDate = sammeKveld ? night : shiftDateKey(night, 1);
   if (!sammeKveld) deadlineMin = Math.min(deadlineMin, morgenSlutt);
 
+  // Når stengte vinduet for denne natten? Samme dag, eller dagen etter når
+  // vinduet krysser midnatt.
+  const w = windowForDow(nightDow, s);
+  const closeDate = crossesMidnight(w) ? shiftDateKey(night, 1) : night;
+  const closeMin = toMin(w.close);
+
   const t = osloParts(now);
-  const isOpen = t.dateKey < deadlineDate || (t.dateKey === deadlineDate && t.minutes <= deadlineMin);
-  return { nightDate: night, expectedAt: row.expected_at, until: fmtMin(deadlineMin), isOpen };
+  const førFrist = t.dateKey < deadlineDate || (t.dateKey === deadlineDate && t.minutes <= deadlineMin);
+  const etterStengt = t.dateKey > closeDate || (t.dateKey === closeDate && t.minutes > closeMin);
+  return { nightDate: night, expectedAt: row.expected_at, until: fmtMin(deadlineMin), isOpen: etterStengt && førFrist, expired: !førFrist };
 }
