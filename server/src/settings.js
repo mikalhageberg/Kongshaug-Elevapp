@@ -37,6 +37,10 @@ const DEFAULTS = {
   // formiddagen, og lista over hvem som sover hvor må holde like lenge.
   nightEndWeekday: '07:30',        // man–fre morgen
   nightEndWeekend: '10:00',        // lør–søn morgen
+  // Sen innsjekk: la elever som har lov til å komme tilbake etter fristen
+  // registrere seg helt til natten er over. Fristen står fortsatt – den er
+  // det e-posten og vaktvarselet går etter – men lista holdes åpen etterpå.
+  fireLateCheckin: false,
   fireEmailEnabled: false,         // send brannlisten på e-post automatisk
   fireEmailRecipient: '',          // e-post til ansvarlig lærer
   // Brannlisten sendes et gitt antall minutter ETTER at innsjekksvinduet stengte,
@@ -172,6 +176,7 @@ export function getSettings() {
     fireCloseSaturday: s.fireCloseSaturday ?? s.fireDeadlineSaturday ?? DEFAULTS.fireCloseSaturday,
     nightEndWeekday: s.nightEndWeekday ?? DEFAULTS.nightEndWeekday,
     nightEndWeekend: s.nightEndWeekend ?? DEFAULTS.nightEndWeekend,
+    fireLateCheckin: s.fireLateCheckin != null ? s.fireLateCheckin === 'true' : DEFAULTS.fireLateCheckin,
     fireEmailEnabled: s.fireEmailEnabled != null ? s.fireEmailEnabled === 'true' : DEFAULTS.fireEmailEnabled,
     fireEmailRecipient: s.fireEmailRecipient ?? DEFAULTS.fireEmailRecipient,
     // Egen lesing: intOr forkaster 0, og «send med én gang» er et gyldig valg.

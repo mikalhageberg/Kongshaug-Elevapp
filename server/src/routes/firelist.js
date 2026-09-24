@@ -202,7 +202,8 @@ router.get('/status', (req, res) => {
     // Vinduet for å melde seg til stede: klienten viser nedtelling / stengt.
     // nightEndsAt: når lista ruller over til neste natt – så appen kan si «før
     // kl. 10» uten å ha klokkeslettet hardkodet.
-    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, nightEndsAt: nightEndsAt(osloParts().dow) },
+    // lateUntil er satt bare i tilstanden 'late' (sen innsjekk etter fristen).
+    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, lateUntil: win.lateUntil || null, nightEndsAt: nightEndsAt(osloParts().dow) },
   });
 });
 

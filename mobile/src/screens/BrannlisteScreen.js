@@ -56,7 +56,17 @@ export default function BrannlisteScreen({ user }) {
   const cancelGeo = useRef(null);
   useEffect(() => () => cancelGeo.current?.(), []);
 
-  function loadPosition(closesAt) {
+  // Hva som står under knappen når posisjonen er OK. Etter fristen (sen
+  // innsjekk) skal det si «fristen var», ikke «meld deg før» – den fristen er
+  // passert, og eleven skal vite at hun likevel kommer på lista.
+  function klarMelding(w) {
+    if (!w) return 'Gjelder natten som kommer.';
+    if (w.state === 'late') return `Fristen var kl. ${w.closesAt}. Du kan fortsatt registrere deg til kl. ${w.lateUntil}.`;
+    return w.closesAt ? `Meld deg til stede før kl. ${w.closesAt}.` : 'Gjelder natten som kommer.';
+  }
+
+  function loadPosition(w) {
+    const klar = klarMelding(w);
     setState('loading');
     setGeo(null);
     setMsg('Sjekker posisjon…');
@@ -66,7 +76,7 @@ export default function BrannlisteScreen({ user }) {
       if (s.error) { setState('blocked'); setMsg(s.error); return; }
       if (s.ok) {
         setState('ready');
-        setMsg(closesAt ? `Meld deg til stede før kl. ${closesAt}.` : 'Gjelder natten som kommer.');
+        setMsg(klar);
         return;
       }
       // Et foreløpig svar kan rette seg når den ferske fiksen lander – vent.
@@ -93,13 +103,13 @@ export default function BrannlisteScreen({ user }) {
     if (status.status === 'away') { setInfo({ nightDate: status.nightDate }); setScheduled(!!status.scheduled); setNoDinner(!!status.noDinner); setState('away'); return; }
     // Utenfor vinduet: ikke be om posisjon – vis nedtelling / stengt.
     if (!w.isOpen) { setState('closed'); return; }
-    loadPosition(w.closesAt);
+    loadPosition(w);
   }, []);
 
   // Gå til innsjekk (fra «likevel på skolen»): respekter vinduet.
   function goToCheckin() {
     if (win && !win.isOpen) { setState('closed'); return; }
-    loadPosition(win?.closesAt);
+    loadPosition(win);
   }
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -224,7 +234,10 @@ export default function BrannlisteScreen({ user }) {
       <Text style={styles.h1}>Meld deg til stede i kveld</Text>
       <Text style={styles.p}>Kryss av så vi vet hvem som er på skolen i natt ved brann.</Text>
 
-      <View style={{ marginTop: 8 }}>
+      <View style={{ marginTop: 8, gap: 8 }}>
+        {state !== 'closed' && win?.state === 'late'
+          ? <Banner tone="amber" text={`🕘 Fristen var kl. ${win.closesAt} – sen innsjekk er åpen til kl. ${win.lateUntil}`} />
+          : null}
         {state === 'closed' && win
           ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
           : <Banner {...campusBanner(geo)} />}

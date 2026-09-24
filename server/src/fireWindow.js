@@ -53,8 +53,9 @@ export function windowForDow(dow, s = getSettings()) {
 const crossesMidnight = (w) => toMin(w.close) <= toMin(w.open);
 
 // Tilstanden til innsjekk-vinduet akkurat nå:
-//   { isOpen, nightDate, state: 'open'|'before'|'after', opensAt, closesAt }
+//   { isOpen, nightDate, state: 'open'|'late'|'before'|'after', opensAt, closesAt, lateUntil? }
 // nightDate = natten en innsjekk NÅ teller for (null når stengt).
+// 'late' = etter fristen, men lista holdes åpen til natten er over (se under).
 export function fireWindowNow(now = new Date(), s = getSettings()) {
   const t = osloParts(now);
   const wToday = windowForDow(t.dow, s);
@@ -75,8 +76,32 @@ export function fireWindowNow(now = new Date(), s = getSettings()) {
     return { isOpen: true, nightDate: y.dateKey, state: 'open', opensAt: wY.open, closesAt: wY.close };
   }
 
-  // 3) Stengt. Før dagens åpning = venter på åpning; ellers stengt for kvelden.
+  // 3) Stengt etter vanlige regler. Før dagens åpning = venter; ellers stengt.
   const state = t.minutes < oT ? 'before' : 'after';
+
+  // 4) Sen innsjekk. Noen elever har lov til å komme tilbake etter fristen, og
+  // uten dette hadde de ingen måte å komme på lista – vakten sto med et navn
+  // å lete etter, på et rom der eleven faktisk lå. Med bryteren på holdes
+  // lista åpen fra fristen og helt til natten er over (nightEndsAt).
+  //
+  // Fristen står fortsatt: e-posten og varselet til vakten går etter den, og
+  // det er riktig – vakten skal vite hvem som mangler ved fristen, og så se
+  // dem forsvinne fra lista etter hvert som de kommer. Det er derfor en egen
+  // tilstand og ikke bare 'open': appen skal si «fristen var kl. 22» og ikke
+  // «meld deg før kl. 22».
+  //
+  // Gjelder kvelden etter stengetid (state 'after'), og morgenhalen fram til
+  // overgangen, der natten «nå» fortsatt er gårsdagens. Ikke i dagslyset
+  // mellom overgangen og kveldens åpning – da har ingen natt begynt.
+  if (s.fireLateCheckin) {
+    const night = currentNightDate(now, s);
+    const morgenHale = night !== t.dateKey;
+    if (state === 'after' || morgenHale) {
+      const w = morgenHale ? wY : wToday;
+      const morgenDow = morgenHale ? t.dow : (t.dow + 1) % 7;
+      return { isOpen: true, nightDate: night, state: 'late', opensAt: w.open, closesAt: w.close, lateUntil: nightEndsAt(morgenDow, s) };
+    }
+  }
   return { isOpen: false, nightDate: null, state, opensAt: wToday.open, closesAt: wToday.close };
 }
 

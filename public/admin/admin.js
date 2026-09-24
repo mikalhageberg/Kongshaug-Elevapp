@@ -3193,6 +3193,10 @@ async function renderSettings(main) {
       ${windowRow('Hverdag (søn–tor)', 'fireOpenWeekday', s.fireOpenWeekday, 'fireCloseWeekday', s.fireCloseWeekday, 'Skoledag neste dag.')}
       ${windowRow('Fredag', 'fireOpenFriday', s.fireOpenFriday, 'fireCloseFriday', s.fireCloseFriday, 'Kan stenge etter midnatt.')}
       ${windowRow('Lørdag', 'fireOpenSaturday', s.fireOpenSaturday, 'fireCloseSaturday', s.fireCloseSaturday, 'Kan stenge etter midnatt.')}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0">
+        <div><div style="font-size:15px;font-weight:700">Åpent for sen innsjekk</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Elever som har lov til å komme tilbake etter lukketiden kan registrere seg helt til natten er over. Lukketiden er fortsatt fristen: e-posten og varselet til vakten går etter den, og de som kommer senere forsvinner fra «mangler» etter hvert som de registrerer seg. Appen sier «fristen var kl. …» i stedet for «stengt».</div></div>
+        <input type="checkbox" name="fireLateCheckin" ${s.fireLateCheckin ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
+      </div>
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Brannliste – hvor lenge natten varer</div>
@@ -3284,6 +3288,7 @@ async function renderSettings(main) {
       fireCloseSaturday: val('fireCloseSaturday').value,
       nightEndWeekday: val('nightEndWeekday').value,
       nightEndWeekend: val('nightEndWeekend').value,
+      fireLateCheckin: val('fireLateCheckin').checked,
       fireEmailEnabled: val('fireEmailEnabled').checked,
       fireEmailRecipient: val('fireEmailRecipient').value.trim(),
       fireEmailDelayMinutes: Number(val('fireEmailDelayMinutes').value),

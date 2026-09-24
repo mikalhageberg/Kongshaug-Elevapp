@@ -120,6 +120,20 @@ Tre ting følger av at vakten er knyttet til *natten* og ikke til klokka:
 koden som er blitt avfotografert eller delt videre. De som allerede har tatt
 vakten beholder den; de har jo møtt opp.
 
+#### Sen innsjekk
+
+Noen elever har lov til å komme tilbake etter at innsjekken har stengt. Med
+**Innstillinger → Brannliste – innsjekksvindu → «Åpent for sen innsjekk»**
+holdes lista åpen fra lukketiden og helt til natten er over, som en egen
+tilstand `late` i `fireWindowNow()`. Av som standard.
+
+Lukketiden står fortsatt som *fristen*: brannliste-e-posten og varselet til
+vakten går etter den, og det er riktig – vakten skal vite hvem som mangler ved
+fristen, og så se dem forsvinne fra lista etter hvert som de kommer. Derfor en
+egen tilstand og ikke bare «åpent»: appen sier «fristen var kl. 22» i stedet
+for «meld deg før kl. 22». Merk at PDF-en i e-posten er et øyeblikksbilde fra
+utsendingen; sene registreringer står bare i den levende lista.
+
 #### Oppropsmodus
 
 **Opprop er en evakueringsrutine, ikke en gjennomgang av lista.** Hvert trykk på
