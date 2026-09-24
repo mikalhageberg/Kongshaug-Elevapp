@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { api } from '../../api';
-import { C, formatTime, formatDateLong, shiftDate } from '../../theme';
+import { C, formatTime, formatDateLong, shiftDate, senAnkomstTekst } from '../../theme';
 import { Button, Card } from '../../ui';
 import OppropScreen from './OppropScreen';
 
@@ -28,6 +28,8 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   // Eleven knappen ble trykket på, mens serveren svarer. Uten den ser raden
   // uendret ut i det halve sekundet kallet tar, og man trykker en gang til.
   const [venter, setVenter] = useState(null);
+  // Eleven dialogen «kommer etter fristen» står åpen for, eller null.
+  const [sen, setSen] = useState(null);
 
   const last = useCallback(async () => {
     try { setD(await api('/api/firelist/overview')); setFeil(''); }
@@ -113,6 +115,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
         </View>
 
         <Button title="Opprop ved evakuering" onPress={startOpprop} style={{ marginTop: 16, height: 60 }} fontSize={19} />
+        <Text style={styles.hint}>Trykk på et navn for å merke at eleven kommer etter fristen.</Text>
 
         {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 
@@ -139,7 +142,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
               </View>
               {dorm.students.map((s) => (
                 <View key={s.id}>
-                  <ElevRad elev={s} venter={venter === s.id} onSett={settStatus} />
+                  <ElevRad elev={s} venter={venter === s.id} onSett={settStatus} onSen={setSen} />
                   {gjester.filter((g) => g.hostId === s.id).map((g) => <GjestRad key={g.id} gjest={g} sammeInternat />)}
                 </View>
               ))}
@@ -148,23 +151,26 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
           );
         })}
       </ScrollView>
+      <SenAnkomstModal elev={sen} onClose={() => setSen(null)} onLagret={async () => { setSen(null); await last(); }} />
     </View>
   );
 }
 
-function ElevRad({ elev, venter, onSett }) {
+function ElevRad({ elev, venter, onSett, onSen }) {
   const farge = elev.status === 'present' ? C.green : elev.status === 'away' ? C.navy : C.red;
   const bg = elev.status === 'missing' ? '#fdf5f4' : elev.status === 'away' ? '#f6f8fb' : '#fff';
+  const senTekst = senAnkomstTekst(elev.lateArrival);
   return (
     <View style={[styles.rad, { backgroundColor: bg, opacity: venter ? 0.5 : 1 }]}>
       <View style={[styles.prikk, { backgroundColor: farge }]} />
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => onSen(elev)} hitSlop={{ top: 8, bottom: 8 }}>
         <Text style={styles.navn} numberOfLines={2}>{elev.fullName}</Text>
         <Text style={styles.under}>
           Rom {elev.room ?? '–'}
           {elev.status === 'present' && elev.checkedAt ? ` · ${formatTime(elev.checkedAt)}` : ''}
         </Text>
-      </View>
+        {senTekst ? <Text style={styles.sen}>🕘 {senTekst}</Text> : null}
+      </Pressable>
       <View style={styles.knapper}>
         {STATUSER.map((k) => {
           // «Fjern» er den aktive knappen når eleven ikke er registrert – da er
@@ -200,6 +206,104 @@ function GjestRad({ gjest, sammeInternat }) {
   );
 }
 
+// «Kommer etter fristen»: vakten vet at eleven har lov til å komme sent, og
+// vil slippe å lete. To valg – et klokkeslett, eller ukjent – og «Fjern
+// merket» når det alt står ett. Merket er en beskjed på raden, ikke en status:
+// eleven står som mangler til hun faktisk registrerer seg.
+//
+// Klokkeslettet skrives i et vanlig tekstfelt, ikke en tidsvelger: den ville
+// krevd en ny innebygd modul, og dermed en ny appversjon i butikkene. «2330»
+// og «23.30» rettes til «23:30» ved lagring.
+function normTid(s) {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length === 3) return `0${d[0]}:${d.slice(1)}`;
+  if (d.length === 4) return `${d.slice(0, 2)}:${d.slice(2)}`;
+  return String(s || '').trim();
+}
+function SenAnkomstModal({ elev, onClose, onLagret }) {
+  const har = !!elev?.lateArrival;
+  const [modus, setModus] = useState('time');
+  const [tid, setTid] = useState('');
+  const [feil, setFeil] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!elev) return;
+    setModus(har && !elev.lateArrival.expectedAt ? 'unknown' : 'time');
+    setTid(elev.lateArrival?.expectedAt || '');
+    setFeil(''); setBusy(false);
+  }, [elev, har]);
+
+  async function send(body) {
+    setBusy(true); setFeil('');
+    try {
+      if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: elev.id, ...body } });
+      else await api(`/api/firelist/late-arrival/${elev.id}`, { method: 'DELETE' });
+      await onLagret();
+    } catch (ex) { setFeil(ex.message); setBusy(false); }
+  }
+  function lagre() {
+    if (modus === 'unknown') return send({ expectedAt: null });
+    const v = normTid(tid);
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { setFeil('Skriv klokkeslettet som 23:30, eller velg «Tidspunkt ukjent».'); return; }
+    send({ expectedAt: v });
+  }
+
+  return (
+    <Modal visible={!!elev} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBg}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={busy ? undefined : onClose} />
+        <View style={styles.modal}>
+          <Text style={styles.modalH}>Kommer etter fristen</Text>
+          <Text style={styles.modalUnder}>{elev?.fullName} · Rom {elev?.room ?? '–'}</Text>
+          <Text style={styles.modalP}>Eleven står som «mangler» til registreringen er gjort, men lista viser at eleven er ventet.</Text>
+
+          <Valg verdi="time" modus={modus} onVelg={setModus} tittel="Oppgi tidspunkt">
+            <TextInput
+              value={tid}
+              onChangeText={(t) => { setTid(t); setModus('time'); }}
+              onFocus={() => setModus('time')}
+              placeholder="23:30"
+              placeholderTextColor="#aab1bd"
+              keyboardType="numbers-and-punctuation"
+              returnKeyType="done"
+              onSubmitEditing={lagre}
+              style={styles.tidFelt}
+            />
+          </Valg>
+          <Valg verdi="unknown" modus={modus} onVelg={setModus} tittel="Tidspunkt ukjent" />
+
+          {feil ? <Text style={styles.feil}>{feil}</Text> : null}
+
+          <Button title="Lagre" onPress={lagre} loading={busy} style={{ marginTop: 18 }} />
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+            {har ? (
+              <Button title="Fjern merket" onPress={() => send(null)} disabled={busy} color="#fff" textColor={C.redInk} style={{ flex: 1, borderWidth: 1.5, borderColor: C.line2 }} />
+            ) : null}
+            <Button title="Avbryt" onPress={onClose} disabled={busy} color="#fff" textColor={C.slate} style={{ flex: 1, borderWidth: 1.5, borderColor: C.line2 }} />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// Ett av de to valgene i dialogen. Egen komponent på toppnivå – definert inne
+// i modalen ville den fått ny identitet for hver tast, og feltet mistet fokus.
+function Valg({ verdi, modus, onVelg, tittel, children }) {
+  const valgt = modus === verdi;
+  return (
+    <Pressable onPress={() => onVelg(verdi)} style={[styles.valg, valgt && { borderColor: C.navy, backgroundColor: '#f4f7fb' }]}>
+      <View style={[styles.radio, valgt && { borderColor: C.navy }]}>
+        {valgt ? <View style={styles.radioFyll} /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.valgTittel}>{tittel}</Text>
+        {children}
+      </View>
+    </Pressable>
+  );
+}
+
 function Tall({ tekst, under, bg, fg, stor }) {
   return (
     <View style={[styles.tallBoks, { backgroundColor: bg, flex: stor ? 1.5 : 1 }]}>
@@ -216,6 +320,24 @@ const styles = StyleSheet.create({
   pc: { fontSize: 15, color: C.muted, textAlign: 'center', lineHeight: 22, marginTop: 12 },
   date: { fontSize: 14, color: C.muted, marginTop: 5 },
   feil: { color: C.redInk, fontSize: 14, fontWeight: '600', marginTop: 14 },
+  hint: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 12, textAlign: 'center' },
+  sen: { fontSize: 13, color: C.amberInk, fontWeight: '700', marginTop: 3 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 22 },
+  modal: { width: '100%', maxWidth: 440, backgroundColor: '#fff', borderRadius: 22, padding: 22 },
+  modalH: { fontSize: 21, fontWeight: '800', color: C.ink, letterSpacing: -0.4 },
+  modalUnder: { fontSize: 14, color: C.muted, fontWeight: '600', marginTop: 3 },
+  modalP: { fontSize: 14, color: C.muted, lineHeight: 20, marginTop: 12, marginBottom: 4 },
+  valg: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14, marginTop: 10,
+    borderWidth: 1.5, borderColor: C.line2, borderRadius: 14, backgroundColor: '#fff',
+  },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.line2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  radioFyll: { width: 12, height: 12, borderRadius: 6, backgroundColor: C.navy },
+  valgTittel: { fontSize: 16, fontWeight: '700', color: C.ink },
+  tidFelt: {
+    marginTop: 8, height: 46, borderWidth: 1.5, borderColor: C.line2, borderRadius: 12, paddingHorizontal: 14,
+    fontSize: 18, fontWeight: '700', color: C.ink, backgroundColor: '#fff', maxWidth: 140,
+  },
   tall: { flexDirection: 'row', gap: 9, marginTop: 18 },
   tallBoks: { borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center' },
   tallStor: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },

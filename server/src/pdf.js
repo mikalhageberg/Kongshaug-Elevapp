@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { nightLabel, formatCheckedAt } from './fireReport.js';
+import { nightLabel, formatCheckedAt, lateArrivalText } from './fireReport.js';
 
 const STATUS = { present: 'Til stede', away: 'Borte', missing: 'MANGLER' };
 
@@ -54,14 +54,23 @@ export function buildFireListPdf(overview) {
       };
 
       for (const s of dorm.students) {
-        if (y + 18 > bottom()) { doc.addPage(); y = 50; }
+        // «Kommer etter fristen» står som en liten undertittel under navnet,
+        // så raden blir litt høyere. Sjekkes før raden tegnes, så den ikke
+        // deles over et sideskift.
+        const sen = lateArrivalText(s.lateArrival);
+        const radH = sen ? 29 : 17;
+        if (y + radH + 1 > bottom()) { doc.addPage(); y = 50; }
         const miss = s.status === 'missing';
         doc.font(miss ? 'Helvetica-Bold' : 'Helvetica').fontSize(11).fillColor('#000');
         doc.text(s.fullName, cols.name, y, { width: cols.room - cols.name - 8, ellipsis: true, lineBreak: false });
         doc.text(String(s.room ?? '–'), cols.room, y, { lineBreak: false });
         doc.text(STATUS[s.status] || '', cols.status, y, { lineBreak: false });
         doc.text(s.status === 'present' ? formatCheckedAt(s.checkedAt) : '', cols.time, y, { lineBreak: false });
-        y += 17;
+        if (sen) {
+          doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#7a5c00');
+          doc.text(sen, cols.name, y + 13, { width: right - cols.name, ellipsis: true, lineBreak: false });
+        }
+        y += radH;
         doc.moveTo(left, y - 4).lineTo(right, y - 4).lineWidth(0.4).strokeColor('#e2e2e2').stroke();
         for (const g of guests.filter((g) => g.hostId === s.id)) renderGuest(g, true);
       }

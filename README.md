@@ -134,6 +134,24 @@ egen tilstand og ikke bare «åpent»: appen sier «fristen var kl. 22» i stede
 for «meld deg før kl. 22». Merk at PDF-en i e-posten er et øyeblikksbilde fra
 utsendingen; sene registreringer står bare i den levende lista.
 
+#### Kommer etter fristen
+
+Vakten kan merke en elev med **«kommer etter fristen»** – i appen ved å trykke
+på navnet, på adminsiden med klokke-knappen på raden. Dialogen gir to valg:
+et **klokkeslett** eleven er ventet, eller **tidspunkt ukjent**. Merket står
+som en liten undertittel under navnet på brannlisten i appen og på adminsiden,
+i PDF-en, i brannliste-e-posten og i varselet til vakten («Ola Norman (kommer
+ca. kl. 23:30)»).
+
+Merket er en *beskjed på raden*, ikke en status. Eleven står fortsatt som
+«mangler» til hun faktisk registrerer seg – den som leser lista ved en brann
+skal vite at eleven ikke er gjort rede for, og samtidig se at hun er ventet i
+stedet for å sende noen ut for å lete. Derfor ligger det i sin egen tabell
+(`fire_late_arrivals`) ved siden av `fire_checkins`, og forsvinner ikke når
+eleven kommer: da står raden grønn med undertittelen fortsatt, og forteller
+at avtalen ble holdt. Merket fjernes med «Fjern merket» i samme dialog, og
+gjelder én natt. Slettes automatisk med resten av brannlistehistorikken.
+
 #### Oppropsmodus
 
 **Opprop er en evakueringsrutine, ikke en gjennomgang av lista.** Hvert trykk på

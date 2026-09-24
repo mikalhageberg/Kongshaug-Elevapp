@@ -364,6 +364,49 @@ router.post('/admin-checkin', requireAdmin, requireWatchOnNative, (req, res) => 
   res.json({ ok: true, status });
 });
 
+// ── ADMIN/VAKT: merk at en elev kommer etter fristen ──
+// Vakten vet at eleven har lov til å komme sent, og vil slippe å lete. Merket
+// er en beskjed på raden – eleven står som «mangler» til hun registrerer seg –
+// og står i PDF-en og e-posten også, så den som leser lista utenfor appen ser
+// det samme. expectedAt er 'HH:MM', eller null når tidspunktet er ukjent.
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+function findListedStudent(uid, res) {
+  const u = db.prepare("SELECT id, full_name, home_dweller FROM users WHERE id = ? AND role = 'student'").get(uid);
+  if (!u) { res.status(404).json({ error: 'Fant ikke eleven' }); return null; }
+  if (u.home_dweller) {
+    res.status(400).json({
+      error: 'home-dweller',
+      message: `${u.full_name} er registrert som hjemmeboer og står ikke på brannlisten.`,
+    });
+    return null;
+  }
+  return u;
+}
+router.post('/late-arrival', requireAdmin, requireWatchOnNative, (req, res) => {
+  const uid = Number(req.body?.userId);
+  if (!findListedStudent(uid, res)) return;
+  const raw = req.body?.expectedAt;
+  let expectedAt = null;
+  if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+    expectedAt = String(raw).trim();
+    if (!TIME_RE.test(expectedAt)) return res.status(400).json({ error: 'Ugyldig klokkeslett. Skriv det som 23:30.' });
+  }
+  const night = currentNightDate();
+  db.prepare(
+    `INSERT INTO fire_late_arrivals (user_id, night_date, expected_at, set_by)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, night_date)
+       DO UPDATE SET expected_at = excluded.expected_at, set_by = excluded.set_by, created_at = datetime('now')`
+  ).run(uid, night, expectedAt, req.auth.sub);
+  res.json({ ok: true, nightDate: night, lateArrival: { expectedAt } });
+});
+router.delete('/late-arrival/:userId', requireAdmin, requireWatchOnNative, (req, res) => {
+  const uid = Number(req.params.userId);
+  if (!findListedStudent(uid, res)) return;
+  db.prepare('DELETE FROM fire_late_arrivals WHERE user_id = ? AND night_date = ?').run(uid, currentNightDate());
+  res.json({ ok: true });
+});
+
 // ── ADMIN: oversikt over kveldens brannliste, gruppert på internat ──
 router.get('/overview', requireAdmin, requireWatchOnNative, (req, res) => {
   res.json(getFireOverview(currentNightDate()));

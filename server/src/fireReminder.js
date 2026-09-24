@@ -46,6 +46,13 @@ function navneliste(navn) {
   return `${navn.slice(0, NAVN_I_VARSEL).join(', ')} og ${navn.length - NAVN_I_VARSEL} til`;
 }
 
+// Elever vakten selv har merket «kommer etter fristen» står med det i varselet,
+// så navnet ikke sender noen ut for å lete etter en som er ventet.
+function navnMedSenAnkomst(s) {
+  if (!s.lateArrival) return s.fullName;
+  return `${s.fullName} (kommer ${s.lateArrival.expectedAt ? `ca. kl. ${s.lateArrival.expectedAt}` : 'sent'})`;
+}
+
 export async function sendWatchMissingPush(nightDate = watchNightDate()) {
   const overview = getFireOverview(nightDate);
   const missing = overview.dorms
@@ -66,7 +73,7 @@ export async function sendWatchMissingPush(nightDate = watchNightDate()) {
   const melding = missing.length
     ? {
         title: `${missing.length} mangler på brannlisten`,
-        body: `${navneliste(missing.map((s) => s.fullName))} er ikke gjort rede for (${natt}).`,
+        body: `${navneliste(missing.map(navnMedSenAnkomst))} er ikke gjort rede for (${natt}).`,
       }
     : {
         title: 'Brannlisten er komplett',

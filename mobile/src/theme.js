@@ -115,3 +115,11 @@ export function greeting(d = new Date()) {
   if (h < 18) return 'God ettermiddag';
   return 'God kveld';
 }
+
+// Undertittelen for et «kommer etter fristen»-merke på brannlisten. Samme
+// ordlyd som på adminsiden, i PDF-en og i e-posten (lateArrivalText i
+// server/src/fireReport.js).
+export function senAnkomstTekst(la) {
+  if (!la) return '';
+  return la.expectedAt ? `Kommer etter fristen – ca. kl. ${la.expectedAt}` : 'Kommer etter fristen – tidspunkt ukjent';
+}

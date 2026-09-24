@@ -1,6 +1,6 @@
 import { config } from './config.js';
 import { getSettings } from './settings.js';
-import { getFireOverview, reportNightDate, nightLabel } from './fireReport.js';
+import { getFireOverview, reportNightDate, nightLabel, lateArrivalText } from './fireReport.js';
 import { getDinnerReport } from './kitchenReport.js';
 import { buildFireListPdf } from './pdf.js';
 import { fireListLink, LINK_TTL_HOURS } from './fireLink.js';
@@ -65,7 +65,7 @@ export function buildFireEmailHtml(overview, link = fireListLink(overview.nightD
          <div style="background:#fdf0ef;color:#a12a1f;font-weight:bold;padding:12px 16px;font-size:15px">
            ⚠ Ikke gjort rede for (${missing.length})</div>
          ${missing.map((s) => `<div style="padding:10px 16px;border-top:1px solid #f5d6d2;font-size:14px">
-           <b>${esc(s.fullName)}</b> <span style="color:#8a93a3">· ${esc(s.dorm)}${s.room ? ' · rom ' + esc(s.room) : ''}</span></div>`).join('')}
+           <b>${esc(s.fullName)}</b> <span style="color:#8a93a3">· ${esc(s.dorm)}${s.room ? ' · rom ' + esc(s.room) : ''}</span>${s.lateArrival ? `<div style="font-size:13px;color:#8a6300;margin-top:3px">${esc(lateArrivalText(s.lateArrival))}</div>` : ''}</div>`).join('')}
        </div>`
     : `<div style="margin-top:20px;padding:14px 16px;background:#e6f4ec;color:#0f6b43;border-radius:10px;font-weight:bold">
          ✓ Alle elever er gjort rede for.</div>`;

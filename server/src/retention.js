@@ -30,6 +30,7 @@ const LAST_RUN_KEY = 'retentionLastRun';
 // skal ikke slettes fordi den startet for lenge siden.
 const EXPIRING = [
   ['fire_checkins', 'night_date', 'brannliste'],
+  ['fire_late_arrivals', 'night_date', 'sen ankomst'],
   ['andakt_checkins', 'session_date', 'andakt'],
   ['fire_away_periods', 'end_date', 'planlagt fravær'],
   ['dinner_optouts', 'date', 'middagsavmelding'],

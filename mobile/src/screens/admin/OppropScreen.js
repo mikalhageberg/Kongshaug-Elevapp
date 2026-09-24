@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { api } from '../../api';
-import { C } from '../../theme';
+import { C, senAnkomstTekst } from '../../theme';
 import { Button, Pill } from '../../ui';
 
 // Oppropsmodus: én elev av gangen, i samme rekkefølge som brannlisten – internat
@@ -187,6 +187,7 @@ export default function OppropScreen({ overview, onClose, onDone }) {
         <Text style={styles.internat}>{elev.dorm}</Text>
         <Text style={styles.navn} numberOfLines={3} adjustsFontSizeToFit>{elev.fullName}</Text>
         <Text style={styles.rom}>Rom {elev.room ?? '–'}</Text>
+        {elev.lateArrival ? <Text style={styles.sen}>🕘 {senAnkomstTekst(elev.lateArrival)}</Text> : null}
         <View style={{ height: 16 }} />
         {alleredeRegistrert ? (
           <Pill
@@ -248,6 +249,7 @@ const styles = StyleSheet.create({
   internat: { fontSize: 14, fontWeight: '800', color: C.muted2, letterSpacing: 0.6, textTransform: 'uppercase' },
   navn: { fontSize: 38, fontWeight: '800', color: C.ink, textAlign: 'center', letterSpacing: -1, marginTop: 10 },
   rom: { fontSize: 18, color: C.muted, fontWeight: '600', marginTop: 10 },
+  sen: { fontSize: 15, color: C.amberInk, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   feil: { color: C.redInk, fontSize: 14, fontWeight: '600', textAlign: 'center', paddingHorizontal: 26, marginBottom: 8 },
   bunn: { padding: 22, paddingTop: 0 },
   hopp: { alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 20 },

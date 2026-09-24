@@ -83,6 +83,7 @@ const nav = {
   dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/></svg>',
   flame: icon.flame,
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20v.01M17 20h.01M20 17h.01"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>',
@@ -3693,6 +3694,13 @@ function vaktQrModal() {
 
 const homeLabel = (n) => `${n} ${n === 1 ? 'hjemmeboer' : 'hjemmeboere'}`;
 
+// Undertittelen for et «kommer etter fristen»-merke. Samme ordlyd som i PDF-en
+// og e-posten (lateArrivalText i server/src/fireReport.js).
+function lateArrivalText(la) {
+  if (!la) return '';
+  return la.expectedAt ? `Kommer etter fristen – ca. kl. ${la.expectedAt}` : 'Kommer etter fristen – tidspunkt ukjent';
+}
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
@@ -3790,6 +3798,9 @@ async function renderBrannliste(main) {
         const dot = s.status === 'present' ? 'var(--green)' : s.status === 'away' ? 'var(--navy)' : 'var(--red)';
         const rowBg = s.status === 'missing' ? 'background:#fdf5f4' : (s.status === 'away' ? 'background:#f4f6fa' : '');
         const timeTitle = s.status === 'present' && s.checkedAt ? ' · ' + formatTime(s.checkedAt) : '';
+        // «Kommer etter fristen»: en liten undertittel under rommet, satt av
+        // vakten. Eleven står fortsatt som mangler til hun registrerer seg.
+        const sen = lateArrivalText(s.lateArrival);
         // Gjester hvis vert er denne eleven (samme internat) – rett under.
         const own = guests.filter((g) => g.hostId === s.id).map((g) => guestRowHTML(g, true)).join('');
         return `
@@ -3798,11 +3809,13 @@ async function renderBrannliste(main) {
             <div style="flex:1;min-width:0">
               <div style="font-size:19px;font-weight:700;line-height:1.25">${esc(s.fullName)}</div>
               <div style="font-size:14px;color:var(--muted-2);font-weight:600;margin-top:2px">Rom ${esc(s.room ?? '–')}</div>
+              ${sen ? `<div style="display:flex;align-items:center;gap:5px;font-size:13.5px;color:var(--amber-ink);font-weight:700;margin-top:3px"><span style="width:14px;height:14px;display:block;flex:0 0 auto">${nav.clock}</span>${esc(sen)}</div>` : ''}
             </div>
             <div style="display:flex;gap:8px;flex:0 0 auto">
               ${statusBtn(s.id, 'present', icon.check, 'var(--green)', s.status === 'present', 'Sett til stede' + timeTitle)}
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
               ${statusBtn(s.id, 'clear', icon.x, 'var(--red)', s.status === 'missing', 'Fjern (ikke registrert)')}
+              ${statusBtn(s.id, 'late', nav.clock, 'var(--amber-ink)', !!s.lateArrival, s.lateArrival ? 'Kommer etter fristen – endre eller fjern' : 'Merk at eleven kommer etter fristen')}
             </div>
           </div>${own}`;
       }).join('');
@@ -3814,7 +3827,76 @@ async function renderBrannliste(main) {
         ${studentRows}${orphanRows}
       </div>`;
     }).join('') + (activeFilter === 'Alle' ? homeCardHTML() : '');
-    grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => setStatus(Number(b.dataset.uid), b.dataset.set)));
+    grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
+      const uid = Number(b.dataset.uid);
+      if (b.dataset.set === 'late') return lateArrivalModal(d.dorms.flatMap((x) => x.students).find((s) => s.id === uid));
+      setStatus(uid, b.dataset.set);
+    }));
+  }
+
+  // Dialogen for «kommer etter fristen»: enten et klokkeslett, eller ukjent.
+  // Merket er en beskjed på raden, ikke en status – eleven står som mangler
+  // til hun faktisk registrerer seg – så det har sin egen rute, ikke status.
+  function lateArrivalModal(s) {
+    if (!s) return;
+    const har = !!s.lateArrival;
+    const ukjent = har && !s.lateArrival.expectedAt;
+    const valg = (verdi, tittel, ekstra = '') => `
+      <label style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1.5px solid var(--line-2);border-radius:14px;cursor:pointer;margin-top:10px">
+        <input type="radio" name="laMode" value="${verdi}" ${(verdi === 'unknown') === ukjent ? 'checked' : ''} style="width:20px;height:20px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
+        <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700">${tittel}</div>${ekstra}</div>
+      </label>`;
+    const bg = el(`
+      <div class="modal-bg"><div class="modal" style="width:480px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 18px;border-bottom:1px solid #eef0f3">
+          <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Kommer etter fristen</div>
+            <div style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.fullName)} · Rom ${esc(s.room ?? '–')}</div></div>
+          <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+        </div>
+        <div style="padding:18px 26px 22px">
+          <p style="margin:0;font-size:14px;color:var(--muted-2);line-height:1.5">Eleven står som «mangler» til registreringen er gjort, men lista, PDF-en og e-posten viser at eleven er ventet.</p>
+          ${valg('time', 'Oppgi tidspunkt', `<input type="time" id="laTime" class="field" value="${esc(s.lateArrival?.expectedAt || '')}" style="height:44px;margin-top:8px;max-width:160px" />`)}
+          ${valg('unknown', 'Tidspunkt ukjent')}
+          <p id="laErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+          ${har ? '<button id="remove" class="btn btn-ghost" style="height:46px;padding:0 18px;font-size:14.5px;color:var(--red-ink);margin-right:auto">Fjern merket</button>' : ''}
+          <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+          <button id="save" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Lagre</button>
+        </div>
+      </div></div>`);
+    document.body.appendChild(bg);
+    const close = () => bg.remove();
+    bg.querySelector('#close').addEventListener('click', close);
+    bg.querySelector('#cancel').addEventListener('click', close);
+    bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+    // Å skrive i klokkeslettet velger «Oppgi tidspunkt» av seg selv.
+    const tid = bg.querySelector('#laTime');
+    tid.addEventListener('focus', () => { bg.querySelector('input[value="time"]').checked = true; });
+    if (!ukjent) setTimeout(() => tid.focus(), 50);
+
+    async function lagre(body) {
+      const err = bg.querySelector('#laErr'); err.style.display = 'none';
+      const knapper = bg.querySelectorAll('button'); knapper.forEach((k) => { k.disabled = true; });
+      try {
+        if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: s.id, ...body } });
+        else await api(`/api/firelist/late-arrival/${s.id}`, { method: 'DELETE' });
+        d = await api('/api/firelist/overview');
+        updateHeaderCounts();
+        draw();
+        close();
+      } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; knapper.forEach((k) => { k.disabled = false; }); }
+    }
+    bg.querySelector('#save').addEventListener('click', () => {
+      const modus = bg.querySelector('input[name="laMode"]:checked')?.value;
+      if (modus === 'time') {
+        const v = tid.value.trim();
+        if (!v) { const err = bg.querySelector('#laErr'); err.textContent = 'Oppgi et klokkeslett, eller velg «Tidspunkt ukjent».'; err.style.display = 'block'; return; }
+        return lagre({ expectedAt: v });
+      }
+      lagre({ expectedAt: null });
+    });
+    bg.querySelector('#remove')?.addEventListener('click', () => lagre(null));
   }
   chips.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
     activeFilter = c.dataset.f;
@@ -3973,7 +4055,7 @@ function buildFireListPrintHTML(d) {
     const guests = dorm.guests || [];
     const hostIds = new Set(dorm.students.map((s) => s.id));
     const rows = dorm.students.map((s) => `<tr class="${s.status === 'missing' ? 'miss' : ''}">
-            <td>${esc(s.fullName)}</td>
+            <td>${esc(s.fullName)}${s.lateArrival ? `<div class="sen">${esc(lateArrivalText(s.lateArrival))}</div>` : ''}</td>
             <td>${esc(s.room ?? '–')}</td>
             <td>${statusText[s.status] || ''}</td>
             <td>${s.status === 'present' ? formatTime(s.checkedAt) : ''}</td>
@@ -4016,6 +4098,7 @@ function buildFireListPrintHTML(d) {
   th,td{text-align:left;padding:5px 6px;border-bottom:1px solid #bbb;vertical-align:top}
   th{font-size:10.5px;text-transform:uppercase;color:#555;letter-spacing:.03em}
   .c-room{width:56px}.c-status{width:104px}.c-time{width:64px}
+  .sen{font-size:10.5px;font-weight:600;font-style:italic;color:#7a5c00;margin-top:2px}
   tr.guest td{font-style:italic;color:#6b4e00}
   tr.miss td{font-weight:bold}
   .home,.home td{color:#555}

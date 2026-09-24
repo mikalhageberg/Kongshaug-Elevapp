@@ -30,6 +30,12 @@ export function getFireOverview(nightDate = todayDate()) {
     db.prepare('SELECT DISTINCT user_id FROM fire_away_periods WHERE ? BETWEEN start_date AND end_date').all(nightDate).map((r) => r.user_id)
   );
 
+  // «Kommer etter fristen»-merkene vakten har satt for natten. Én per elev.
+  const late = new Map(
+    db.prepare('SELECT user_id, expected_at FROM fire_late_arrivals WHERE night_date = ?').all(nightDate)
+      .map((r) => [r.user_id, { expectedAt: r.expected_at || null }])
+  );
+
   const dorms = {};
   const ensureDorm = (name) => (dorms[name] ||= { dorm: name, total: 0, present: 0, students: [], guests: [] });
   let present = 0, away = 0, missing = 0;
@@ -41,7 +47,7 @@ export function getFireOverview(nightDate = todayDate()) {
     if (status === 'present') { dorm.present++; present++; }
     else if (status === 'away') away++;
     else missing++;
-    dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at });
+    dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at, lateArrival: late.get(s.id) || null });
   }
 
   // Godkjente gjester som sover på internatet denne natten. De listes i internatet
@@ -102,6 +108,12 @@ export function nightLabel(nightDate) {
   const [y, m, d] = nightDate.split('-').map(Number);
   const next = new Date(y, m - 1, d + 1);
   return `${WEEKDAYS[next.getDay()]} ${next.getDate()}. ${MONTHS[next.getMonth()]} ${next.getFullYear()}`;
+}
+// Undertittelen for et «kommer etter fristen»-merke, lik i app, nettside, PDF
+// og e-post. Tar elevens lateArrival-felt; null gir tom streng.
+export function lateArrivalText(la) {
+  if (!la) return '';
+  return la.expectedAt ? `Kommer etter fristen – ca. kl. ${la.expectedAt}` : 'Kommer etter fristen – tidspunkt ukjent';
 }
 export function formatCheckedAt(iso) {
   if (!iso) return '';

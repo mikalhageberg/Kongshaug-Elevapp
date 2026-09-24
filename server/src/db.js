@@ -47,6 +47,20 @@ db.exec(`
     UNIQUE (user_id, night_date)
   );
 
+  -- Elever vakten har merket «kommer etter fristen» en gitt natt. Raden er en
+  -- beskjed til den som leser lista, ikke en status: eleven står fortsatt som
+  -- «mangler» til hun faktisk registrerer seg. Ligger derfor ved siden av
+  -- fire_checkins, ikke i den – da hadde merket forsvunnet i det eleven kom.
+  CREATE TABLE IF NOT EXISTS fire_late_arrivals (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    night_date  TEXT    NOT NULL,
+    expected_at TEXT,                     -- 'HH:MM' i skolens tidssone, NULL = tidspunkt ukjent
+    set_by      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, night_date)
+  );
+
   -- Dagens andakts-økt. QR-token roterer, se andakt-ruten.
   CREATE TABLE IF NOT EXISTS andakt_sessions (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
