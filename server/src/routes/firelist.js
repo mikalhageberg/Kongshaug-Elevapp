@@ -3,7 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
-import { fireWindowNow, currentNightDate, NIGHT_HANDOVER_HHMM } from '../fireWindow.js';
+import { fireWindowNow, currentNightDate, nightEndsAt, osloParts } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
 import { buildFireListPdf } from '../pdf.js';
 import { verifyFireListLink } from '../fireLink.js';
@@ -202,7 +202,7 @@ router.get('/status', (req, res) => {
     // Vinduet for å melde seg til stede: klienten viser nedtelling / stengt.
     // nightEndsAt: når lista ruller over til neste natt – så appen kan si «før
     // kl. 10» uten å ha klokkeslettet hardkodet.
-    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, nightEndsAt: NIGHT_HANDOVER_HHMM },
+    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, nightEndsAt: nightEndsAt(osloParts().dow) },
   });
 });
 
@@ -296,7 +296,9 @@ router.post('/watch/register', requireAdmin, (req, res) => {
     });
   }
   takeWatch(req.auth.sub, v.nightDate);
-  res.status(201).json({ ok: true, nightDate: v.nightDate, watchers: watchers(v.nightDate) });
+  const [y, m, d] = v.nightDate.split('-').map(Number);
+  const morgenDow = new Date(Date.UTC(y, m - 1, d + 1)).getUTCDay();
+  res.status(201).json({ ok: true, nightDate: v.nightDate, nightEndsAt: nightEndsAt(morgenDow), watchers: watchers(v.nightDate) });
 });
 
 // ADMIN: har jeg vakten nå? Appen spør ved hver oppstart.
@@ -307,8 +309,13 @@ router.get('/watch/status', requireAdmin, (req, res) => {
   // kan si det rett ut i stedet for å vise en grønn «du har vakten» som ikke
   // stemmer med lista under. Gjelder kun reviewer-kontoen.
   const bypass = isAppReviewUser(req.auth.username);
+  // Når vakten går over – regnet for MORGENEN etter natten som gjelder nå, så
+  // fredag kveld får helgetiden selv om det ennå er fredag.
+  const [y, m, d] = nightDate.split('-').map(Number);
+  const morgenDow = new Date(Date.UTC(y, m - 1, d + 1)).getUTCDay();
   res.json({
     nightDate,
+    nightEndsAt: nightEndsAt(morgenDow),
     active: bypass || list.some((w) => w.id === req.auth.sub),
     bypass,
     watchers: list,

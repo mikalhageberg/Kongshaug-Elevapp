@@ -3195,6 +3195,12 @@ async function renderSettings(main) {
       ${windowRow('Lørdag', 'fireOpenSaturday', s.fireOpenSaturday, 'fireCloseSaturday', s.fireCloseSaturday, 'Kan stenge etter midnatt.')}
     </div>
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Brannliste – hvor lenge natten varer</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Klokkeslettet neste morgen da nattens brannliste ruller over til neste natt – og vakten i mobilappen går ut. Fram til da viser lista natten som gikk, og vakten har den i lomma. Sett det etter når elevene er oppe og ute av internatene.</div>
+      ${timeRow('nightEndWeekday', 'Hverdagsmorgen (man–fre)', s.nightEndWeekday, 'Skoledag – huset er tomt fra halv åtte.')}
+      ${timeRow('nightEndWeekend', 'Helgemorgen (lør–søn)', s.nightEndWeekend, 'Elevene ligger til langt på formiddagen. Gjelder natt til lørdag og natt til søndag.')}
+    </div>
+    <div class="kpi" style="padding:8px 24px 20px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: gjesteforespørsler</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send en e-post med én gang en elev melder gjest, med direktelenke til godkjenning.</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
@@ -3276,6 +3282,8 @@ async function renderSettings(main) {
       fireCloseFriday: val('fireCloseFriday').value,
       fireOpenSaturday: val('fireOpenSaturday').value,
       fireCloseSaturday: val('fireCloseSaturday').value,
+      nightEndWeekday: val('nightEndWeekday').value,
+      nightEndWeekend: val('nightEndWeekend').value,
       fireEmailEnabled: val('fireEmailEnabled').checked,
       fireEmailRecipient: val('fireEmailRecipient').value.trim(),
       fireEmailDelayMinutes: Number(val('fireEmailDelayMinutes').value),

@@ -48,7 +48,7 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
     setBusy(true);
     try {
       const r = await api('/api/firelist/watch/register', { method: 'POST', body: { token: data } });
-      setStatus({ nightDate: r.nightDate, active: true, watchers: r.watchers });
+      setStatus({ nightDate: r.nightDate, nightEndsAt: r.nightEndsAt, active: true, watchers: r.watchers });
       setFeil('');
       onChanged?.();
     } catch (ex) {
@@ -140,7 +140,10 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
             Du ser brannlisten og kan kjøre opprop. Etter at innsjekken stenger får du
             et varsel med navnene på dem som ikke er gjort rede for.
           </Text>
-          <Text style={styles.kortSmått}>Vakten gjelder til kl. 10:00 i morgen – du har brannlisten så lenge elevene sover, også i helgen. I morgen kveld må koden skannes på nytt.</Text>
+          <Text style={styles.kortSmått}>
+            Vakten gjelder til kl. {status.nightEndsAt || '–'} i morgen – du har brannlisten så lenge elevene sover.
+            I morgen kveld må koden skannes på nytt.
+          </Text>
         </Card>
       ) : (
         <Card>

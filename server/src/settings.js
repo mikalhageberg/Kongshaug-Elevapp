@@ -31,6 +31,12 @@ const DEFAULTS = {
   fireCloseFriday: '00:00',
   fireOpenSaturday: '20:00',
   fireCloseSaturday: '00:00',
+  // Hvor lenge nattens brannliste – og vakten – står utover neste morgen.
+  // Nøkkelen er MORGENEN: lørdag og søndag morgen får helgetiden. På en
+  // skoledag er huset tomt fra halv åtte; i helgen ligger elevene til langt på
+  // formiddagen, og lista over hvem som sover hvor må holde like lenge.
+  nightEndWeekday: '07:30',        // man–fre morgen
+  nightEndWeekend: '10:00',        // lør–søn morgen
   fireEmailEnabled: false,         // send brannlisten på e-post automatisk
   fireEmailRecipient: '',          // e-post til ansvarlig lærer
   // Brannlisten sendes et gitt antall minutter ETTER at innsjekksvinduet stengte,
@@ -164,6 +170,8 @@ export function getSettings() {
     fireCloseFriday: s.fireCloseFriday ?? s.fireDeadlineWeekday ?? DEFAULTS.fireCloseFriday,
     fireOpenSaturday: s.fireOpenSaturday ?? DEFAULTS.fireOpenSaturday,
     fireCloseSaturday: s.fireCloseSaturday ?? s.fireDeadlineSaturday ?? DEFAULTS.fireCloseSaturday,
+    nightEndWeekday: s.nightEndWeekday ?? DEFAULTS.nightEndWeekday,
+    nightEndWeekend: s.nightEndWeekend ?? DEFAULTS.nightEndWeekend,
     fireEmailEnabled: s.fireEmailEnabled != null ? s.fireEmailEnabled === 'true' : DEFAULTS.fireEmailEnabled,
     fireEmailRecipient: s.fireEmailRecipient ?? DEFAULTS.fireEmailRecipient,
     // Egen lesing: intOr forkaster 0, og «send med én gang» er et gyldig valg.

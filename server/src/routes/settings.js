@@ -37,6 +37,7 @@ router.put('/', (req, res) => {
     fireOpenWeekday: b.fireOpenWeekday, fireCloseWeekday: b.fireCloseWeekday,
     fireOpenFriday: b.fireOpenFriday, fireCloseFriday: b.fireCloseFriday,
     fireOpenSaturday: b.fireOpenSaturday, fireCloseSaturday: b.fireCloseSaturday,
+    nightEndWeekday: b.nightEndWeekday, nightEndWeekend: b.nightEndWeekend,
     kitchenEmailTime: b.kitchenEmailTime,
   };
   for (const [k, v] of Object.entries(times)) {

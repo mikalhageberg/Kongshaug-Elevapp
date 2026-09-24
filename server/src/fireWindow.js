@@ -117,20 +117,18 @@ export function sinceLastClose(now = new Date(), s = getSettings()) {
 // ville ikke fått kveldens opprop, men en tom liste for natten som ennå ikke
 // har begynt, der hver eneste elev står som ikke gjort rede for.
 //
-// 10:00 er satt etter når elevene er oppe og ute av internatene – I HELGENE,
-// for det er da grensen betyr noe. På en skoledag er huset tomt fra halv åtte,
-// men lørdag og søndag ligger elevene til langt på formiddagen, og da må lista
-// over hvem som sover hvor holde like lenge. Én grense for alle dager, satt
-// etter den dagen som trenger mest: en grense som holdt på hverdager og sviktet
-// i helgen ville sviktet nettopp når huset er fullest.
+// Grensen er satt etter når elevene er oppe og ute av internatene, og det er
+// ulikt: på en skoledag er huset tomt fra halv åtte, men lørdag og søndag
+// ligger elevene til langt på formiddagen, og da må lista over hvem som sover
+// hvor holde like lenge. Skolen setter begge under Innstillinger.
 //
-// Samme grense som vakten går over på – de to MÅ følges at, se watchNightDate
-// i fireWatch.js.
-export const NIGHT_HANDOVER_MINUTES = 10 * 60;   // 10:00
-// Samme grense som «TT:MM», til klienter som skal skrive den ut. Regnes fra
-// minuttene, så det finnes bare ett sted å endre klokkeslettet.
-export const NIGHT_HANDOVER_HHMM =
-  `${String(Math.floor(NIGHT_HANDOVER_MINUTES / 60)).padStart(2, '0')}:${String(NIGHT_HANDOVER_MINUTES % 60).padStart(2, '0')}`;
+// Nøkkelen er MORGENEN vi står i, ikke kvelden natten begynte: natt til lørdag
+// og natt til søndag får helgetiden, natt til mandag får hverdagstiden – da
+// er det skole. Samme grense som vakten går over på; de to MÅ følges at, se
+// watchNightDate i fireWatch.js.
+export function nightEndsAt(dow, s = getSettings()) {
+  return dow === 0 || dow === 6 ? s.nightEndWeekend : s.nightEndWeekday;
+}
 
 // Natten «nå» hører til for registrering – brukes også når vinduet er stengt
 // (f.eks. melde seg borte på dagtid), så til stede/borte alltid lander på samme
@@ -140,12 +138,12 @@ export const NIGHT_HANDOVER_HHMM =
 // oppslag (vaktens oversikt) og registrering: melder en elev seg borte kl. 03,
 // mener hun natten hun står i, ikke den som kommer.
 //
-// Unntaket er en skole som har satt innsjekken til å åpne før 10:00. Da har
-// kvelden allerede begynt, og vi følger den – ellers ville et åpent vindu og
-// lista pekt på hver sin natt.
+// Unntaket er en skole som har satt innsjekken til å åpne før overgangen. Da
+// har kvelden allerede begynt, og vi følger den – ellers ville et åpent vindu
+// og lista pekt på hver sin natt.
 export function currentNightDate(now = new Date(), s = getSettings()) {
   const t = osloParts(now);
-  if (t.minutes < NIGHT_HANDOVER_MINUTES && t.minutes < toMin(windowForDow(t.dow, s).open)) {
+  if (t.minutes < toMin(nightEndsAt(t.dow, s)) && t.minutes < toMin(windowForDow(t.dow, s).open)) {
     return dayBefore(t).dateKey;
   }
   return t.dateKey;
