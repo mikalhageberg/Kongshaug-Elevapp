@@ -154,6 +154,15 @@ eleven kommer: da står raden grønn med undertittelen fortsatt, og forteller
 at avtalen ble holdt. Merket fjernes med «Fjern merket» i samme dialog, og
 gjelder én natt. Slettes automatisk med resten av brannlistehistorikken.
 
+**Et klokkeslett gir eleven en utvidet frist.** Er hun merket «kommer ca. kl.
+23:30», kan hun registrere seg selv til kl. 23:40 – ti minutter etter
+(`LATE_ARRIVAL_GRACE_MIN` i `fireWindow.js`), selv om vinduet er stengt.
+En registrering eleven gjør selv, med GPS, er den vi helst vil ha på lista;
+uten fristen måtte vakten sette henne til stede for hånd. «Tidspunkt ukjent»
+gir ingen frist. Fristen går aldri lenger enn natten varer, og appen sier
+«ventet ca. kl. 23:30 – du kan registrere deg til kl. 23:40», og etterpå at
+fristen gikk ut. Uavhengig av bryteren for sen innsjekk over.
+
 #### Oppropsmodus
 
 **Opprop er en evakueringsrutine, ikke en gjennomgang av lista.** Hvert trykk på

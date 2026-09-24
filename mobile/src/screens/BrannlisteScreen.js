@@ -61,6 +61,7 @@ export default function BrannlisteScreen({ user }) {
   // passert, og eleven skal vite at hun likevel kommer på lista.
   function klarMelding(w) {
     if (!w) return 'Gjelder natten som kommer.';
+    if (w.lateArrival?.isOpen) return `Vakten vet at du kommer ca. kl. ${w.lateArrival.expectedAt}. Du kan registrere deg til kl. ${w.lateArrival.until}.`;
     if (w.state === 'late') return `Fristen var kl. ${w.closesAt}. Du kan fortsatt registrere deg til kl. ${w.lateUntil}.`;
     return w.closesAt ? `Meld deg til stede før kl. ${w.closesAt}.` : 'Gjelder natten som kommer.';
   }
@@ -236,7 +237,9 @@ export default function BrannlisteScreen({ user }) {
 
       <View style={{ marginTop: 8, gap: 8 }}>
         {state !== 'closed' && win?.state === 'late'
-          ? <Banner tone="amber" text={`🕘 Fristen var kl. ${win.closesAt} – sen innsjekk er åpen til kl. ${win.lateUntil}`} />
+          ? <Banner tone="amber" text={win.lateArrival?.isOpen
+              ? `🕘 Ventet ca. kl. ${win.lateArrival.expectedAt} – du kan registrere deg til kl. ${win.lateArrival.until}`
+              : `🕘 Fristen var kl. ${win.closesAt} – sen innsjekk er åpen til kl. ${win.lateUntil}`} />
           : null}
         {state === 'closed' && win
           ? <Banner text={`🕘 ${win.state === 'before' ? `Registrering åpner kl. ${win.opensAt}` : `Registreringen stengte kl. ${win.closesAt}`} · åpent ${win.opensAt}–${win.closesAt}`} />
@@ -248,7 +251,11 @@ export default function BrannlisteScreen({ user }) {
       <Text style={styles.hint}>{
         state === 'ready' ? msg
           : state === 'closed' && win
-            ? (win.state === 'before' ? `Du kan melde deg til stede mellom kl. ${win.opensAt} og ${win.closesAt}.` : 'Innsjekk for i kveld er stengt.')
+            ? (win.state === 'before'
+                ? `Du kan melde deg til stede mellom kl. ${win.opensAt} og ${win.closesAt}.`
+                : win.lateArrival
+                  ? `Du var ventet kl. ${win.lateArrival.expectedAt}. Fristen din gikk ut kl. ${win.lateArrival.until} – si ifra til vakten.`
+                  : 'Innsjekk for i kveld er stengt.')
             : state === 'blocked' ? msg
               : 'Sjekker posisjon…'
       }</Text>

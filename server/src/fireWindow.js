@@ -11,6 +11,7 @@
 // Alt regnes i skolens tidssone. Serveren kjører UTC i drift, så uten dette
 // ville vinduet ligget to timer feil om sommeren.
 
+import db from './db.js';
 import { config } from './config.js';
 import { getSettings } from './settings.js';
 
@@ -35,6 +36,12 @@ export function osloParts(now = new Date()) {
     y, m, d, dow,
   };
 }
+
+const fmtMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const shiftDateKey = (dateKey, days) => {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+};
 
 // Dagen før, som { dateKey, dow }.
 function dayBefore({ y, m, d }) {
@@ -172,4 +179,43 @@ export function currentNightDate(now = new Date(), s = getSettings()) {
     return dayBefore(t).dateKey;
   }
   return t.dateKey;
+}
+
+// ── Utvidet frist for «kommer ca. kl. …» ──────────────────────
+// Har vakten merket at eleven kommer ca. kl. 23:30, kan eleven registrere seg
+// selv til ti minutter etter det, selv om vinduet er stengt. Uten dette måtte
+// vakten sette henne til stede for hånd – og en registrering eleven gjør selv,
+// med GPS, er den vi helst vil ha på lista.
+//
+// Bare merker med klokkeslett teller. «Tidspunkt ukjent» gir ingen frist å
+// legge ti minutter på; da er det vakten som krysser av.
+//
+// Klokkeslettet hører til natten: ligger det før morgenovergangen (00:30 når
+// natten slutter 07:30), er det etter midnatt og dagen etter; ellers er det
+// samme kveld (23:30 – eller et 19:39 som alt er passert). Fristen går aldri
+// lenger enn natten varer (nightEndsAt).
+//
+// Returnerer null uten merke med klokkeslett, ellers
+// { nightDate, expectedAt, until, isOpen }.
+export const LATE_ARRIVAL_GRACE_MIN = 10;
+export function lateArrivalWindow(userId, now = new Date(), s = getSettings()) {
+  const night = currentNightDate(now, s);
+  const row = db.prepare(
+    'SELECT expected_at FROM fire_late_arrivals WHERE user_id = ? AND night_date = ? AND expected_at IS NOT NULL'
+  ).get(userId, night);
+  if (!row) return null;
+
+  const [ny, nm, nd] = night.split('-').map(Number);
+  const nightDow = new Date(Date.UTC(ny, nm - 1, nd)).getUTCDay();
+  const morgenSlutt = toMin(nightEndsAt((nightDow + 1) % 7, s));
+  const expMin = toMin(row.expected_at);
+  let deadlineMin = expMin + LATE_ARRIVAL_GRACE_MIN;
+  let sammeKveld = expMin >= morgenSlutt;
+  if (deadlineMin >= 1440) { deadlineMin -= 1440; sammeKveld = false; }
+  const deadlineDate = sammeKveld ? night : shiftDateKey(night, 1);
+  if (!sammeKveld) deadlineMin = Math.min(deadlineMin, morgenSlutt);
+
+  const t = osloParts(now);
+  const isOpen = t.dateKey < deadlineDate || (t.dateKey === deadlineDate && t.minutes <= deadlineMin);
+  return { nightDate: night, expectedAt: row.expected_at, until: fmtMin(deadlineMin), isOpen };
 }

@@ -3,7 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
-import { fireWindowNow, currentNightDate, nightEndsAt, osloParts } from '../fireWindow.js';
+import { fireWindowNow, currentNightDate, nightEndsAt, osloParts, lateArrivalWindow } from '../fireWindow.js';
 import { getFireOverview } from '../fireReport.js';
 import { buildFireListPdf } from '../pdf.js';
 import { verifyFireListLink } from '../fireLink.js';
@@ -96,12 +96,17 @@ router.post('/checkin', (req, res) => {
   // Tidsvindu: til stede kan bare meldes i kveldens vindu. App-review-kontoen
   // hopper over (den kan verken være på skolen eller treffe vinduet).
   const win = fireWindowNow();
-  if (!win.isOpen && !reviewBypass) {
+  // Merket «kommer ca. kl. …» fra vakten gir eleven ti minutter etter det
+  // klokkeslettet, selv om vinduet er stengt. Se lateArrivalWindow.
+  const ext = !win.isOpen && !reviewBypass ? lateArrivalWindow(req.auth.sub) : null;
+  if (!win.isOpen && !reviewBypass && !ext?.isOpen) {
     return res.status(403).json({
       error: 'closed',
-      message: win.state === 'before'
-        ? `Registreringen åpner kl. ${win.opensAt}.`
-        : `Registreringen stengte kl. ${win.closesAt}.`,
+      message: ext
+        ? `Du var ventet kl. ${ext.expectedAt}, og fristen din gikk ut kl. ${ext.until}. Si ifra til vakten.`
+        : win.state === 'before'
+          ? `Registreringen åpner kl. ${win.opensAt}.`
+          : `Registreringen stengte kl. ${win.closesAt}.`,
       windowState: win.state, opensAt: win.opensAt, closesAt: win.closesAt,
     });
   }
@@ -114,7 +119,7 @@ router.post('/checkin', (req, res) => {
       distance: campus.distance,
     });
   }
-  const night = win.nightDate ?? currentNightDate();
+  const night = win.nightDate ?? ext?.nightDate ?? currentNightDate();
   // Overskriver også en tidligere "borte"-melding hvis eleven likevel er på skolen.
   db.prepare(
     `INSERT INTO fire_checkins (user_id, night_date, status, lat, lng)
@@ -186,6 +191,14 @@ router.get('/status', (req, res) => {
   // homeDweller først – se app.js.
   const homeDweller = isHomeDweller(req.auth.sub);
   if (homeDweller) { status = 'away'; scheduled = true; noDinner = true; }
+  // Utvidet frist fra vaktens «kommer ca. kl. …»-merke. Mens den løper, får
+  // appen vinduet som 'late' med lateUntil = fristen: da sier også appversjoner
+  // som ikke kjenner merket «fristen var kl. 22 – du kan registrere deg til
+  // kl. 23:40». Nyere klienter ser på lateArrival og sier hvorfor.
+  const ext = !win.isOpen && !homeDweller ? lateArrivalWindow(req.auth.sub) : null;
+  const w = ext?.isOpen
+    ? { isOpen: true, state: 'late', opensAt: win.opensAt, closesAt: win.closesAt, lateUntil: ext.until }
+    : win;
   res.json({
     nightDate: night,
     status,                          // 'present' | 'away' | null
@@ -203,7 +216,10 @@ router.get('/status', (req, res) => {
     // nightEndsAt: når lista ruller over til neste natt – så appen kan si «før
     // kl. 10» uten å ha klokkeslettet hardkodet.
     // lateUntil er satt bare i tilstanden 'late' (sen innsjekk etter fristen).
-    window: { isOpen: win.isOpen, state: win.state, opensAt: win.opensAt, closesAt: win.closesAt, lateUntil: win.lateUntil || null, nightEndsAt: nightEndsAt(osloParts().dow) },
+    window: {
+      isOpen: w.isOpen, state: w.state, opensAt: w.opensAt, closesAt: w.closesAt, lateUntil: w.lateUntil || null, nightEndsAt: nightEndsAt(osloParts().dow),
+      lateArrival: ext ? { expectedAt: ext.expectedAt, until: ext.until, isOpen: ext.isOpen } : null,
+    },
   });
 });
 

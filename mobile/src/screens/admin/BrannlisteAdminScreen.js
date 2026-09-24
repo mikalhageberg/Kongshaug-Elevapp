@@ -294,7 +294,7 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
         <View style={styles.modal}>
           <Text style={styles.modalH}>Kommer etter fristen</Text>
           <Text style={styles.modalUnder}>{elev?.fullName} · Rom {elev?.room ?? '–'}</Text>
-          <Text style={styles.modalP}>Eleven står som «mangler» til registreringen er gjort, men lista viser at eleven er ventet.</Text>
+          <Text style={styles.modalP}>Eleven står som «mangler» til registreringen er gjort, men lista viser at eleven er ventet. Med et klokkeslett kan eleven registrere seg selv til 10 minutter etter det.</Text>
 
           <Valg verdi="time" modus={modus} onVelg={setModus} tittel="Oppgi tidspunkt">
             <TextInput

@@ -3888,7 +3888,7 @@ async function renderBrannliste(main) {
           <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
         </div>
         <div style="padding:18px 26px 22px">
-          <p style="margin:0;font-size:14px;color:var(--muted-2);line-height:1.5">Eleven står som «mangler» til registreringen er gjort, men lista, PDF-en og e-posten viser at eleven er ventet.</p>
+          <p style="margin:0;font-size:14px;color:var(--muted-2);line-height:1.5">Eleven står som «mangler» til registreringen er gjort, men lista, PDF-en og e-posten viser at eleven er ventet. Oppgir du et klokkeslett, kan eleven registrere seg selv til 10 minutter etter det.</p>
           ${valg('time', 'Oppgi tidspunkt', `<input type="time" id="laTime" class="field" value="${esc(s.lateArrival?.expectedAt || '')}" style="height:44px;margin-top:8px;max-width:160px" />`)}
           ${valg('unknown', 'Tidspunkt ukjent')}
           <p id="laErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
