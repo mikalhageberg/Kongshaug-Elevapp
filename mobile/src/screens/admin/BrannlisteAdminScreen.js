@@ -23,6 +23,8 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   const [d, setD] = useState(null);
   const [feil, setFeil] = useState('');
   const [filter, setFilter] = useState('Alle');
+  // Søk på navn eller rom, på tvers av internatfilteret.
+  const [sok, setSok] = useState('');
   const [opprop, setOpprop] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Eleven knappen ble trykket på, mens serveren svarer. Uten den ser raden
@@ -97,7 +99,15 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   }
 
   const internater = ['Alle', ...d.dorms.map((x) => x.dorm)];
-  const vist = filter === 'Alle' ? d.dorms : d.dorms.filter((x) => x.dorm === filter);
+  const q = sok.trim().toLocaleLowerCase('nb');
+  const treffElev = (s) => !q || s.fullName.toLocaleLowerCase('nb').includes(q) || String(s.room ?? '').toLocaleLowerCase('nb') === q;
+  const treffGjest = (g) => !q || g.name.toLocaleLowerCase('nb').includes(q) || (g.hostName || '').toLocaleLowerCase('nb').includes(q);
+  let vist = filter === 'Alle' || q ? d.dorms : d.dorms.filter((x) => x.dorm === filter);
+  if (q) {
+    vist = vist
+      .map((x) => ({ ...x, students: x.students.filter(treffElev), guests: (x.guests || []).filter(treffGjest) }))
+      .filter((x) => x.students.length || x.guests.length);
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
@@ -119,7 +129,19 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
 
         {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 20, marginHorizontal: -18 }}
+        <TextInput
+          value={sok}
+          onChangeText={setSok}
+          placeholder="Søk etter elev eller rom …"
+          placeholderTextColor="#aab1bd"
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+          style={styles.sok}
+        />
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginHorizontal: -18 }}
           contentContainerStyle={{ paddingHorizontal: 18, gap: 9 }}>
           {internater.map((f) => (
             <Pressable key={f} onPress={() => setFilter(f)}
@@ -129,6 +151,10 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
           ))}
         </ScrollView>
 
+        {q && !vist.length ? (
+          <Text style={styles.ingenTreff}>Ingen elever eller gjester passer til «{sok.trim()}».</Text>
+        ) : null}
+
         {vist.map((dorm) => {
           const gjester = dorm.guests || [];
           const vertIder = new Set(dorm.students.map((s) => s.id));
@@ -137,7 +163,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
               <View style={styles.dormTopp}>
                 <Text style={styles.dormNavn}>{dorm.dorm}</Text>
                 <Text style={styles.dormTall}>
-                  {dorm.present} av {dorm.total}{gjester.length ? ` · ${gjester.length} gjest${gjester.length > 1 ? 'er' : ''}` : ''}
+                  {q ? `${dorm.students.length + gjester.length} treff` : `${dorm.present} av ${dorm.total}${gjester.length ? ` · ${gjester.length} gjest${gjester.length > 1 ? 'er' : ''}` : ''}`}
                 </Text>
               </View>
               {dorm.students.map((s) => (
@@ -344,6 +370,11 @@ const styles = StyleSheet.create({
   tallStor: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   tallUnder: { fontSize: 12.5, fontWeight: '700', marginTop: 3, opacity: 0.85 },
   tallMerk: { fontSize: 11, fontWeight: '700', color: C.amberInk, marginTop: 2 },
+  sok: {
+    marginTop: 18, height: 48, borderWidth: 1.5, borderColor: C.line2, borderRadius: 14, paddingHorizontal: 16,
+    fontSize: 16, color: C.ink, backgroundColor: '#fff',
+  },
+  ingenTreff: { marginTop: 22, textAlign: 'center', color: C.muted2, fontSize: 15, fontWeight: '600' },
   chip: {
     height: 44, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: C.line2,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',

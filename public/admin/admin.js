@@ -83,6 +83,7 @@ const nav = {
   dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/></svg>',
   flame: icon.flame,
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20v.01M17 20h.01M20 17h.01"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg>',
@@ -3727,6 +3728,14 @@ async function renderBrannliste(main) {
 
   const filters = ['Alle', ...d.dorms.map((x) => x.dorm)];
   let activeFilter = 'Alle';
+  // Søk på navn eller rom. Går på tvers av internatfilteret: den som leter
+  // etter én elev skal ikke først måtte vite hvilket internat hun bor i.
+  let query = '';
+  const search = el(`<div style="position:relative;margin-bottom:14px;max-width:420px">
+    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted-2);pointer-events:none">${nav.search}</span>
+    <input id="fireSearch" class="field" type="search" placeholder="Søk etter elev eller rom …" autocomplete="off" style="height:46px;padding-left:42px;font-size:15px" />
+  </div>`);
+  page.appendChild(search);
   const chips = el(`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">${filters.map((f) => `<button class="chip" data-f="${esc(f)}" style="height:46px;padding:0 22px;border-radius:99px;font-size:15px;font-weight:700;border:1.5px solid var(--line-2);background:#fff;color:var(--slate);cursor:pointer;touch-action:manipulation">${esc(f)}</button>`).join('')}</div>`);
   // Bredere minstebredde enn før: radene rommer nå 48px-knapper uten å bli trange.
   // min() gjør at kolonnen krymper i stedet for å stikke utenfor på smale skjermer.
@@ -3775,7 +3784,7 @@ async function renderBrannliste(main) {
   // den samme hver natt og settes på elevkortet, ikke her. Kortet er med for at
   // vakten skal se at elevene er gjort rede for – ikke bare mangle på lista.
   function homeCardHTML() {
-    const home = d.homeDwellers || [];
+    const home = (d.homeDwellers || []).filter(treffElev);
     if (!home.length) return '';
     const rows = home.map((s) => `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6;background:#fafbfc">
@@ -3796,8 +3805,23 @@ async function renderBrannliste(main) {
       </div>`;
   }
 
+  // Treff på elev: navnet inneholder søket, eller rommet er nøyaktig det.
+  // Gjester søkes på navn, og verten deres, så «hos hvem» også kan finnes.
+  const q = () => query.trim().toLocaleLowerCase('nb');
+  const treffElev = (s) => !q() || s.fullName.toLocaleLowerCase('nb').includes(q()) || String(s.room ?? '').toLocaleLowerCase('nb') === q();
+  const treffGjest = (g) => !q() || g.name.toLocaleLowerCase('nb').includes(q()) || (g.hostName || '').toLocaleLowerCase('nb').includes(q());
+
   function draw() {
-    const dorms = activeFilter === 'Alle' ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
+    let dorms = activeFilter === 'Alle' || q() ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
+    if (q()) {
+      dorms = dorms
+        .map((x) => ({ ...x, students: x.students.filter(treffElev), guests: (x.guests || []).filter(treffGjest) }))
+        .filter((x) => x.students.length || x.guests.length);
+    }
+    if (q() && !dorms.length && !(d.homeDwellers || []).some(treffElev)) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:28px 0;color:var(--muted-2);font-size:15px;font-weight:600">Ingen elever eller gjester passer til «${esc(query.trim())}».</div>`;
+      return;
+    }
     grid.innerHTML = dorms.map((dorm) => {
       const guests = dorm.guests || [];
       const hostIds = new Set(dorm.students.map((s) => s.id));
@@ -3828,12 +3852,15 @@ async function renderBrannliste(main) {
       }).join('');
       // Gjester som sover her, men hvor verten bor i et annet internat – nederst.
       const orphanRows = guests.filter((g) => !hostIds.has(g.hostId)).map((g) => guestRowHTML(g, false)).join('');
+      // Under søk teller overskriften treffene, ikke hele internatet – tallet
+      // «3 av 12» ville ellers stått ved siden av én rad.
+      const teller = q() ? `${dorm.students.length + guests.length} treff` : `${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}`;
       return `
       <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${teller}</span></div>
         ${studentRows}${orphanRows}
       </div>`;
-    }).join('') + (activeFilter === 'Alle' ? homeCardHTML() : '');
+    }).join('') + (activeFilter === 'Alle' || q() ? homeCardHTML() : '');
     grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
       const uid = Number(b.dataset.uid);
       if (b.dataset.set === 'late') return lateArrivalModal(d.dorms.flatMap((x) => x.students).find((s) => s.id === uid));
@@ -3905,6 +3932,9 @@ async function renderBrannliste(main) {
     });
     bg.querySelector('#remove')?.addEventListener('click', () => lagre(null));
   }
+  const searchInput = search.querySelector('#fireSearch');
+  searchInput.addEventListener('input', () => { query = searchInput.value; draw(); });
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchInput.value = ''; query = ''; draw(); } });
   chips.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
     activeFilter = c.dataset.f;
     chips.querySelectorAll('.chip').forEach((x) => { x.style.background = '#fff'; x.style.color = 'var(--slate)'; x.style.border = '1px solid var(--line-2)'; });
