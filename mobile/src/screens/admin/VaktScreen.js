@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../api';
 import { C, formatTime, formatDateLong, shiftDate } from '../../theme';
@@ -57,7 +57,25 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
     setBusy(false);
   }
 
-  async function giFraSeg() {
+  // Å gi fra seg vakten er ett trykk – og et uhell koster brannlisten,
+  // oppropet og varselet, med veien tilbake gjennom en QR-kode på adminsiden.
+  // Derfor en dialog som sier hva som forsvinner. Skarpere når man er alene
+  // på vakt: da står ingen igjen til å få varselet om hvem som mangler.
+  function giFraSeg() {
+    const alene = (status?.watchers || []).filter((w) => w.id !== user.id).length === 0;
+    Alert.alert(
+      'Gi fra deg vakten?',
+      'Du mister brannlisten, oppropet og varselet om hvem som mangler. '
+      + 'For å få vakten tilbake må du skanne vakt-koden på adminsiden på nytt.'
+      + (alene ? '\n\nDu er den eneste på vakt i natt. Gir du den fra deg, får ingen varselet.' : ''),
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Gi fra meg vakten', style: 'destructive', onPress: doGiFraSeg },
+      ],
+    );
+  }
+
+  async function doGiFraSeg() {
     setBusy(true);
     try { await api('/api/firelist/watch', { method: 'DELETE' }); await last(); onChanged?.(); }
     catch (ex) { setFeil(ex.message); }
