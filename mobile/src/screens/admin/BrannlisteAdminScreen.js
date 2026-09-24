@@ -125,7 +125,6 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
         </View>
 
         <Button title="Opprop ved evakuering" onPress={startOpprop} style={{ marginTop: 16, height: 60 }} fontSize={19} />
-        <Text style={styles.hint}>Trykk på et navn for å merke at eleven kommer etter fristen.</Text>
 
         {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 
@@ -185,18 +184,29 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
 function ElevRad({ elev, venter, onSett, onSen }) {
   const farge = elev.status === 'present' ? C.green : elev.status === 'away' ? C.navy : C.red;
   const bg = elev.status === 'missing' ? '#fdf5f4' : elev.status === 'away' ? '#f6f8fb' : '#fff';
-  const senTekst = senAnkomstTekst(elev.lateArrival);
+  // «Kommer etter fristen» er en egen liten knapp under rommet, ikke en fjerde
+  // statusknapp: tre 52 px-knapper er alt raden tåler ved siden av et navn.
+  // Vises på dem som mangler, og på alle som alt har merket, så det kan
+  // endres eller fjernes. Med merke viser knappen tidspunktet.
+  const la = elev.lateArrival;
+  const visSen = la || elev.status === 'missing';
+  const senTekst = la ? (la.expectedAt ? `Kommer ca. kl. ${la.expectedAt}` : 'Kommer sent – tid ukjent') : 'Kommer etter fristen';
   return (
     <View style={[styles.rad, { backgroundColor: bg, opacity: venter ? 0.5 : 1 }]}>
       <View style={[styles.prikk, { backgroundColor: farge }]} />
-      <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => onSen(elev)} hitSlop={{ top: 8, bottom: 8 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.navn} numberOfLines={2}>{elev.fullName}</Text>
         <Text style={styles.under}>
           Rom {elev.room ?? '–'}
           {elev.status === 'present' && elev.checkedAt ? ` · ${formatTime(elev.checkedAt)}` : ''}
         </Text>
-        {senTekst ? <Text style={styles.sen}>🕘 {senTekst}</Text> : null}
-      </Pressable>
+        {visSen ? (
+          <Pressable onPress={() => onSen(elev)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            style={[styles.senKnapp, la && styles.senKnappSatt]}>
+            <Text style={[styles.senKnappTekst, la && { color: '#fff' }]} numberOfLines={1}>🕘 {senTekst}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <View style={styles.knapper}>
         {STATUSER.map((k) => {
           // «Fjern» er den aktive knappen når eleven ikke er registrert – da er
@@ -347,8 +357,12 @@ const styles = StyleSheet.create({
   pc: { fontSize: 15, color: C.muted, textAlign: 'center', lineHeight: 22, marginTop: 12 },
   date: { fontSize: 14, color: C.muted, marginTop: 5 },
   feil: { color: C.redInk, fontSize: 14, fontWeight: '600', marginTop: 14 },
-  hint: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 12, textAlign: 'center' },
-  sen: { fontSize: 13, color: C.amberInk, fontWeight: '700', marginTop: 3 },
+  senKnapp: {
+    alignSelf: 'flex-start', marginTop: 7, height: 32, paddingHorizontal: 11, borderRadius: 9,
+    borderWidth: 1.5, borderColor: C.amber, backgroundColor: C.amberBg, justifyContent: 'center',
+  },
+  senKnappSatt: { backgroundColor: C.amberInk, borderColor: C.amberInk },
+  senKnappTekst: { fontSize: 13, fontWeight: '800', color: C.amberInk },
   modalBg: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 22 },
   modal: { width: '100%', maxWidth: 440, backgroundColor: '#fff', borderRadius: 22, padding: 22 },
   modalH: { fontSize: 21, fontWeight: '800', color: C.ink, letterSpacing: -0.4 },

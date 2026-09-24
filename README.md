@@ -136,8 +136,9 @@ utsendingen; sene registreringer står bare i den levende lista.
 
 #### Kommer etter fristen
 
-Vakten kan merke en elev med **«kommer etter fristen»** – i appen ved å trykke
-på navnet, på adminsiden med klokke-knappen på raden. Dialogen gir to valg:
+Vakten kan merke en elev med **«kommer etter fristen»** – i appen med den
+gule knappen under rommet på dem som mangler, på adminsiden med
+klokke-knappen på raden. Dialogen gir to valg:
 et **klokkeslett** eleven er ventet, eller **tidspunkt ukjent**. Merket står
 som en liten undertittel under navnet på brannlisten i appen og på adminsiden,
 i PDF-en, i brannliste-e-posten og i varselet til vakten («Ola Norman (kommer
