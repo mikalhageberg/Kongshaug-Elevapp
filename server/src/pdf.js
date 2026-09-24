@@ -23,7 +23,7 @@ export function buildFireListPdf(overview) {
       .text(`Kongshaug Musikkgymnas · generert ${new Date().toLocaleString('nb-NO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Oslo' })}`);
     doc.moveDown(0.7);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#000')
-      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}${overview.guestCount ? `       Gjester: ${overview.guestCount}` : ''}${overview.homeCount ? `       Hjemmeboere: ${overview.homeCount}` : ''}`);
+      .text(`Til stede: ${overview.present} / ${overview.total}       Borte: ${overview.away}       Mangler: ${overview.missing}${overview.lateCount ? ` (${overview.lateCount} kommer sent)` : ''}${overview.guestCount ? `       Gjester: ${overview.guestCount}` : ''}${overview.homeCount ? `       Hjemmeboere: ${overview.homeCount}` : ''}`);
     doc.moveDown(0.3);
 
     for (const dorm of overview.dorms) {

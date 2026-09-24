@@ -38,7 +38,7 @@ export function getFireOverview(nightDate = todayDate()) {
 
   const dorms = {};
   const ensureDorm = (name) => (dorms[name] ||= { dorm: name, total: 0, present: 0, students: [], guests: [] });
-  let present = 0, away = 0, missing = 0;
+  let present = 0, away = 0, missing = 0, lateCount = 0;
   for (const s of students) {
     const key = s.dorm || 'Uten internat';
     const dorm = ensureDorm(key);
@@ -46,7 +46,7 @@ export function getFireOverview(nightDate = todayDate()) {
     const status = s.status || (scheduledAway.has(s.id) ? 'away' : 'missing');
     if (status === 'present') { dorm.present++; present++; }
     else if (status === 'away') away++;
-    else missing++;
+    else { missing++; if (late.has(s.id)) lateCount++; }
     dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at, lateArrival: late.get(s.id) || null });
   }
 
@@ -72,6 +72,9 @@ export function getFireOverview(nightDate = todayDate()) {
     present,
     away,
     missing,
+    // Hvor mange av de som mangler vakten har merket «kommer etter fristen».
+    // Elever som alt er kommet telles ikke – de mangler jo ikke lenger.
+    lateCount,
     guestCount: guests.length,
     dorms: Object.values(dorms),
     // Egen liste, med vilje utenfor `dorms`: eldre klienter som ikke kjenner

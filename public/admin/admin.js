@@ -3701,13 +3701,20 @@ function lateArrivalText(la) {
   return la.expectedAt ? `Kommer etter fristen – ca. kl. ${la.expectedAt}` : 'Kommer etter fristen – tidspunkt ukjent';
 }
 
+// «6 mangler · 2 kommer sent» – de som er ventet sent er fortsatt med i
+// mangler-tallet, men vakten ser med én gang hvor mange som faktisk må letes
+// etter.
+function missingLabel(d) {
+  return `${d.missing} mangler${d.lateCount ? ` · ${d.lateCount} kommer sent` : ''}`;
+}
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
     d ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="hcPresent" class="pill" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px;white-space:nowrap">Til stede: ${d.present} / ${d.total}</span>
         <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px;white-space:nowrap">${d.away} borte</span>
-        <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${d.missing} mangler</span>
+        <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${missingLabel(d)}</span>
         ${d.homeCount ? `<span id="hcHome" class="pill" style="background:#f2f4f6;color:var(--muted-2);padding:10px 16px;white-space:nowrap">${homeLabel(d.homeCount)}</span>` : ''}
         <button class="btn btn-ghost" id="exportPdf" style="height:40px;padding:0 16px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter PDF</button>
         <button class="btn btn-ghost" id="vaktQr" style="height:40px;padding:0 16px;font-size:14px"><span style="width:16px;height:16px;display:block">${nav.qr}</span>Vakt-kode</button>
@@ -3730,7 +3737,7 @@ async function renderBrannliste(main) {
     const set = (id, t) => { const e = main.querySelector(id); if (e) e.textContent = t; };
     set('#hcPresent', `Til stede: ${d.present} / ${d.total}`);
     set('#hcAway', `${d.away} borte`);
-    set('#hcMissing', `${d.missing} mangler`);
+    set('#hcMissing', missingLabel(d));
     set('#hcHome', homeLabel(d.homeCount));
   }
 
@@ -4111,7 +4118,7 @@ function buildFireListPrintHTML(d) {
 <body>
   <h1>Brannliste — natt til ${esc(nightLabel)}</h1>
   <div class="meta">Kongshaug Musikkgymnas · skrevet ut ${esc(printedAt)}</div>
-  <div class="summary">Til stede: ${d.present} / ${d.total} &nbsp;·&nbsp; Borte: ${d.away} &nbsp;·&nbsp; Mangler: ${d.missing}${d.homeCount ? ` &nbsp;·&nbsp; Hjemmeboere: ${d.homeCount}` : ''}</div>
+  <div class="summary">Til stede: ${d.present} / ${d.total} &nbsp;·&nbsp; Borte: ${d.away} &nbsp;·&nbsp; Mangler: ${d.missing}${d.lateCount ? ` (${d.lateCount} kommer sent)` : ''}${d.homeCount ? ` &nbsp;·&nbsp; Hjemmeboere: ${d.homeCount}` : ''}</div>
   ${dorms}
   ${homeBlock}
   <div class="toolbar"><button onclick="window.print()">Skriv ut / lagre som PDF</button></div>

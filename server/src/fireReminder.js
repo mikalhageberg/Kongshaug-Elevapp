@@ -72,7 +72,7 @@ export async function sendWatchMissingPush(nightDate = watchNightDate()) {
   const natt = `natt til ${nightLabel(nightDate)}`;
   const melding = missing.length
     ? {
-        title: `${missing.length} mangler på brannlisten`,
+        title: `${missing.length} mangler på brannlisten${overview.lateCount ? ` · ${overview.lateCount} kommer sent` : ''}`,
         body: `${navneliste(missing.map(navnMedSenAnkomst))} er ikke gjort rede for (${natt}).`,
       }
     : {

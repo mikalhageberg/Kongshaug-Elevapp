@@ -55,10 +55,10 @@ export function buildFireEmailHtml(overview, link = fireListLink(overview.nightD
   const missing = [];
   for (const d of overview.dorms) for (const s of d.students) if (s.status === 'missing') missing.push({ ...s, dorm: d.dorm });
 
-  const stat = (n, txt, color) =>
+  const stat = (n, txt, color, under = '') =>
     `<td align="center" style="padding:14px 8px;background:#f7f8fa;border-radius:10px">
        <div style="font-size:30px;font-weight:bold;color:${color}">${n}</div>
-       <div style="font-size:12px;color:#6b7280;font-weight:bold">${txt}</div></td>`;
+       <div style="font-size:12px;color:#6b7280;font-weight:bold">${txt}</div>${under ? `<div style="font-size:11px;color:#8a6300;font-weight:bold;margin-top:2px">${under}</div>` : ''}</td>`;
 
   const missingBlock = missing.length
     ? `<div style="margin-top:20px;border:1px solid #f0c4c0;border-radius:10px;overflow:hidden">
@@ -80,7 +80,7 @@ export function buildFireEmailHtml(overview, link = fireListLink(overview.nightD
         <table width="100%" cellspacing="8" cellpadding="0" style="border-collapse:separate"><tr>
           ${stat(overview.present + ' / ' + overview.total, 'Til stede', '#1f8a5b')}
           ${stat(overview.away, 'Borte', '#1e3a5f')}
-          ${stat(overview.missing, 'Mangler', '#d64545')}
+          ${stat(overview.missing, 'Mangler', '#d64545', overview.lateCount ? `${overview.lateCount} kommer sent` : '')}
         </tr></table>
         ${missingBlock}
 

@@ -111,7 +111,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
         <View style={styles.tall}>
           <Tall stor tekst={`${d.present} / ${d.total}`} under="til stede" bg={C.navy} fg="#fff" />
           <Tall tekst={String(d.away)} under="borte" bg="#e7edf5" fg={C.navy} />
-          <Tall tekst={String(d.missing)} under="mangler" bg={d.missing ? C.redBg : '#e7edf5'} fg={d.missing ? C.redInk : C.navy} />
+          <Tall tekst={String(d.missing)} under="mangler" merk={d.lateCount ? `${d.lateCount} kommer sent` : ''} bg={d.missing ? C.redBg : '#e7edf5'} fg={d.missing ? C.redInk : C.navy} />
         </View>
 
         <Button title="Opprop ved evakuering" onPress={startOpprop} style={{ marginTop: 16, height: 60 }} fontSize={19} />
@@ -304,11 +304,12 @@ function Valg({ verdi, modus, onVelg, tittel, children }) {
   );
 }
 
-function Tall({ tekst, under, bg, fg, stor }) {
+function Tall({ tekst, under, merk, bg, fg, stor }) {
   return (
     <View style={[styles.tallBoks, { backgroundColor: bg, flex: stor ? 1.5 : 1 }]}>
       <Text style={[styles.tallStor, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit>{tekst}</Text>
       <Text style={[styles.tallUnder, { color: fg }]}>{under}</Text>
+      {merk ? <Text style={styles.tallMerk} numberOfLines={1} adjustsFontSizeToFit>{merk}</Text> : null}
     </View>
   );
 }
@@ -342,6 +343,7 @@ const styles = StyleSheet.create({
   tallBoks: { borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center' },
   tallStor: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   tallUnder: { fontSize: 12.5, fontWeight: '700', marginTop: 3, opacity: 0.85 },
+  tallMerk: { fontSize: 11, fontWeight: '700', color: C.amberInk, marginTop: 2 },
   chip: {
     height: 44, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: C.line2,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',

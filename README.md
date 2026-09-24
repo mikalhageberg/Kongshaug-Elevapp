@@ -141,7 +141,8 @@ på navnet, på adminsiden med klokke-knappen på raden. Dialogen gir to valg:
 et **klokkeslett** eleven er ventet, eller **tidspunkt ukjent**. Merket står
 som en liten undertittel under navnet på brannlisten i appen og på adminsiden,
 i PDF-en, i brannliste-e-posten og i varselet til vakten («Ola Norman (kommer
-ca. kl. 23:30)»).
+ca. kl. 23:30)»). Mangler-telleren sier samtidig hvor mange av dem som er
+ventet sent: «6 mangler · 2 kommer sent».
 
 Merket er en *beskjed på raden*, ikke en status. Eleven står fortsatt som
 «mangler» til hun faktisk registrerer seg – den som leser lista ved en brann
