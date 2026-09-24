@@ -242,10 +242,15 @@ export default function BrannlisteScreen({ user }) {
       <Button title="Jeg er ikke på skolen i natt" color="#fff" textColor={C.slate} loading={awayBusy}
         onPress={markAway} style={{ height: 52, borderWidth: 1.5, borderColor: '#d3dae2' }} />
       {tail ? (
-        <Text style={styles.hint}>
-          Før kl. {tail.nightEndsAt} gjelder dette {formatNight(tail.nightDate)} – natten som gikk.
-          Borte i natt? Bruk «Planlegg fravær».
-        </Text>
+        // Samme gule boks som advarselen før oppropet. Som en grå fotnote
+        // druknet den ved siden av «Sjekker posisjon…» – og dette er beskjeden
+        // som avgjør om eleven melder seg borte for riktig natt.
+        <View style={styles.advarsel}>
+          <Text style={styles.advarselTittel}>Før kl. {tail.nightEndsAt} gjelder dette natten som gikk</Text>
+          <Text style={styles.advarselTekst}>
+            Altså {formatNight(tail.nightDate)}. Skal du være borte i natt? Bruk «Planlegg fravær».
+          </Text>
+        </View>
       ) : null}
       <View style={{ height: 10 }} />
       {planButton}
@@ -260,6 +265,12 @@ const styles = StyleSheet.create({
   h1: { fontSize: 25, fontWeight: '800', color: C.ink, letterSpacing: -0.5 },
   p: { fontSize: 15, color: C.muted, lineHeight: 22, marginTop: 10 },
   hint: { fontSize: 13, color: C.muted2, textAlign: 'center', marginTop: 14, marginBottom: 10 },
+  advarsel: {
+    backgroundColor: C.amberBg, borderWidth: 1, borderColor: '#f0dca0',
+    borderRadius: 14, padding: 15, marginTop: 12,
+  },
+  advarselTittel: { fontSize: 15, fontWeight: '800', color: C.amberInk, marginBottom: 4 },
+  advarselTekst: { fontSize: 14, fontWeight: '600', color: C.amberInk, lineHeight: 20 },
   center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 34 },
   guardCard: { alignSelf: 'stretch', marginTop: 20, padding: 18 },
   guardHeader: { fontSize: 12.5, fontWeight: '800', color: C.muted2, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 4 },
