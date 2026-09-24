@@ -191,8 +191,11 @@ function ElevRad({ elev, venter, onSett, onSen }) {
   const la = elev.lateArrival;
   const visSen = la || elev.status === 'missing';
   const senTekst = la ? (la.expectedAt ? `Kommer ca. kl. ${la.expectedAt}` : 'Kommer sent – tid ukjent') : 'Kommer etter fristen';
+  // Knappen ligger under hele raden, ikke inne i navnekolonnen – der fikk den
+  // bare navnets bredde og ble til «Ko…».
   return (
     <View style={[styles.rad, { backgroundColor: bg, opacity: venter ? 0.5 : 1 }]}>
+      <View style={styles.radTopp}>
       <View style={[styles.prikk, { backgroundColor: farge }]} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.navn} numberOfLines={2}>{elev.fullName}</Text>
@@ -200,12 +203,6 @@ function ElevRad({ elev, venter, onSett, onSen }) {
           Rom {elev.room ?? '–'}
           {elev.status === 'present' && elev.checkedAt ? ` · ${formatTime(elev.checkedAt)}` : ''}
         </Text>
-        {visSen ? (
-          <Pressable onPress={() => onSen(elev)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            style={[styles.senKnapp, la && styles.senKnappSatt]}>
-            <Text style={[styles.senKnappTekst, la && { color: '#fff' }]} numberOfLines={1}>🕘 {senTekst}</Text>
-          </Pressable>
-        ) : null}
       </View>
       <View style={styles.knapper}>
         {STATUSER.map((k) => {
@@ -224,13 +221,19 @@ function ElevRad({ elev, venter, onSett, onSen }) {
           );
         })}
       </View>
+      </View>
+      {visSen ? (
+        <Pressable onPress={() => onSen(elev)} style={[styles.senKnapp, la && styles.senKnappSatt]}>
+          <Text style={[styles.senKnappTekst, la && { color: '#fff' }]} numberOfLines={1}>🕘 {senTekst}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 function GjestRad({ gjest, sammeInternat }) {
   return (
-    <View style={[styles.rad, { backgroundColor: '#fbf6ee' }]}>
+    <View style={[styles.rad, styles.radTopp, { backgroundColor: '#fbf6ee' }]}>
       <View style={[styles.prikk, { backgroundColor: C.amber }]} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.navn} numberOfLines={2}>{gjest.name}</Text>
@@ -358,11 +361,11 @@ const styles = StyleSheet.create({
   date: { fontSize: 14, color: C.muted, marginTop: 5 },
   feil: { color: C.redInk, fontSize: 14, fontWeight: '600', marginTop: 14 },
   senKnapp: {
-    alignSelf: 'flex-start', marginTop: 7, height: 32, paddingHorizontal: 11, borderRadius: 9,
+    marginTop: 9, marginLeft: 20, height: 40, paddingHorizontal: 14, borderRadius: 11,
     borderWidth: 1.5, borderColor: C.amber, backgroundColor: C.amberBg, justifyContent: 'center',
   },
   senKnappSatt: { backgroundColor: C.amberInk, borderColor: C.amberInk },
-  senKnappTekst: { fontSize: 13, fontWeight: '800', color: C.amberInk },
+  senKnappTekst: { fontSize: 14.5, fontWeight: '800', color: C.amberInk },
   modalBg: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 22 },
   modal: { width: '100%', maxWidth: 440, backgroundColor: '#fff', borderRadius: 22, padding: 22 },
   modalH: { fontSize: 21, fontWeight: '800', color: C.ink, letterSpacing: -0.4 },
@@ -401,9 +404,9 @@ const styles = StyleSheet.create({
   dormNavn: { fontSize: 17, fontWeight: '800', color: C.ink },
   dormTall: { fontSize: 13.5, fontWeight: '700', color: C.muted2 },
   rad: {
-    flexDirection: 'row', alignItems: 'center', gap: 11,
     paddingLeft: 15, paddingRight: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f2f4f6',
   },
+  radTopp: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   prikk: { width: 9, height: 9, borderRadius: 5 },
   navn: { fontSize: 17, fontWeight: '700', color: C.ink, lineHeight: 22 },
   under: { fontSize: 13, color: C.muted2, fontWeight: '600', marginTop: 2 },
