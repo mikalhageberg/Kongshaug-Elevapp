@@ -1,6 +1,16 @@
 import React from 'react';
-import { Text, View, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text, View, Pressable, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from './theme';
+
+// Polstring for et fullskjerms-ark (<Modal presentationStyle="pageSheet">).
+// Android tegner arket edge-to-edge, så innholdet må dyttes ned fra
+// statuslinjen og opp fra navigasjonslinjen. På iOS ligger arket allerede
+// under statuslinjen, men går helt ned til hjem-indikatoren.
+export function useSheetInsets() {
+  const insets = useSafeAreaInsets();
+  return { paddingTop: Platform.OS === 'android' ? insets.top : 0, paddingBottom: insets.bottom };
+}
 
 export function Button({ title, onPress, disabled, loading, color = C.navy, textColor = '#fff', style, fontSize = 17 }) {
   return (

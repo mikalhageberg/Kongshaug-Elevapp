@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, Pressable, Platform, ScrollView, StyleSheet } from 'react-native';
 import { api } from './api';
 import { C, formatWeekRange } from './theme';
-import { Button, Pill } from './ui';
+import { Button, Pill, useSheetInsets } from './ui';
 import { authenticate, biometriNavn } from './screens/LockScreen';
 
 // Én oppgave i internatvasken: hele beskrivelsen slik den står på vaskelista,
@@ -30,6 +30,7 @@ export default function OppgaveModal({ visible, onClose, duty, week, base, erMin
   // Gjett ut fra plattformen med én gang, så knappen aldri står tom, og rett
   // den opp når telefonen har svart på hva den faktisk støtter.
   const [biometri, setBiometri] = useState(Platform.OS === 'ios' ? 'Face ID' : 'fingeravtrykk');
+  const sheetInsets = useSheetInsets();
 
   useEffect(() => { biometriNavn().then(setBiometri).catch(() => {}); }, []);
   useEffect(() => { if (visible) setErr(null); }, [visible]);
@@ -63,7 +64,7 @@ export default function OppgaveModal({ visible, onClose, duty, week, base, erMin
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.wrap}>
+      <View style={[styles.wrap, sheetInsets]}>
         <View style={styles.head}>
           <Text style={styles.title}>{task ? task.title : 'Internatvask'}</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={styles.close}>Lukk</Text></Pressable>

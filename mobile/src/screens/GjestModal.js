@@ -2,12 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { api } from '../api';
 import { C, ymd, todayStr, formatNightRange, countNights } from '../theme';
-import { Button } from '../ui';
+import { Button, useSheetInsets } from '../ui';
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const WD = ['ma', 'ti', 'on', 'to', 'fr', 'lø', 'sø'];
 
-function monthCells(y, m) {
+function monthWeeks(y, m) {
   const first = new Date(y, m, 1);
   const lead = (first.getDay() + 6) % 7;
   const dim = new Date(y, m + 1, 0).getDate();
@@ -15,7 +15,9 @@ function monthCells(y, m) {
   for (let i = 0; i < lead; i++) cells.push(null);
   for (let d = 1; d <= dim; d++) cells.push(ymd(new Date(y, m, d)));
   while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
 }
 
 // Melde gjest på internatet. Sendes til admin som forespørsel (pending).
@@ -29,6 +31,7 @@ export default function GjestModal({ visible, onClose, user }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
+  const sheetInsets = useSheetInsets();
   const today = todayStr();
 
   const load = useCallback(async () => {
@@ -86,7 +89,7 @@ export default function GjestModal({ visible, onClose, user }) {
     load();
   }
 
-  const cells = monthCells(view.y, view.m);
+  const weeks = monthWeeks(view.y, view.m);
   const nights = start ? countNights(start, end || start) : 0;
   const summary = !start
     ? 'Ingen netter valgt'
@@ -94,7 +97,7 @@ export default function GjestModal({ visible, onClose, user }) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.wrap, sheetInsets]}>
         <View style={styles.head}>
           <Text style={styles.title}>Meld gjest</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
@@ -127,19 +130,21 @@ export default function GjestModal({ visible, onClose, user }) {
             <Pressable onPress={() => shift(1)} hitSlop={10} style={{ paddingHorizontal: 12, paddingVertical: 4 }}><Text style={styles.nav}>›</Text></Pressable>
           </View>
           <View style={styles.weekRow}>{WD.map((w) => <Text key={w} style={styles.wd}>{w}</Text>)}</View>
-          <View style={styles.grid}>
-            {cells.map((d, i) => {
-              const disabled = !d || d < today;
-              const edge = d && (d === start || d === end);
-              return (
-                <Pressable key={i} disabled={disabled} onPress={() => tapDay(d)} style={styles.cell}>
-                  <View style={[styles.cellInner, cellBg(d)]}>
-                    {d ? <Text style={[styles.cellText, disabled && { color: '#c8ced8' }, edge && { color: '#fff' }]}>{Number(d.slice(8))}</Text> : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          {weeks.map((week, w) => (
+            <View key={w} style={styles.grid}>
+              {week.map((d, i) => {
+                const disabled = !d || d < today;
+                const edge = d && (d === start || d === end);
+                return (
+                  <Pressable key={i} disabled={disabled} onPress={() => tapDay(d)} style={styles.cell}>
+                    <View style={[styles.cellInner, cellBg(d)]}>
+                      {d ? <Text style={[styles.cellText, disabled && { color: '#c8ced8' }, edge && { color: '#fff' }]}>{Number(d.slice(8))}</Text> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
 
           {guests.length > 0 && (
             <>
@@ -204,9 +209,9 @@ const styles = StyleSheet.create({
   monthLabel: { fontSize: 17, fontWeight: '800', color: C.ink, textTransform: 'capitalize' },
   nav: { fontSize: 28, fontWeight: '700', color: C.navy, lineHeight: 30 },
   weekRow: { flexDirection: 'row', marginBottom: 4 },
-  wd: { width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '700', color: C.muted2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 3 },
+  wd: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: C.muted2 },
+  grid: { flexDirection: 'row' },
+  cell: { flex: 1, aspectRatio: 1, padding: 3 },
   cellInner: { flex: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   cellText: { fontSize: 15.5, fontWeight: '700', color: C.ink },
   section: { fontSize: 11, fontWeight: '800', color: C.muted2, letterSpacing: 0.5, marginTop: 22, marginBottom: 8 },
