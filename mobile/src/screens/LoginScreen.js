@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, ScrollView, Platform, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, KeyboardAvoidingView, Linking } from 'react-native';
 import { api, setToken, BASE_URL } from '../api';
 import { registerForPushNotifications } from '../push';
 import { C } from '../theme';
 import { Button } from '../ui';
+import { KeyboardScrollView, TextField } from '../keyboard';
 
 export default function LoginScreen({ onLoggedIn }) {
   const [username, setUsername] = useState('');
@@ -29,13 +30,12 @@ export default function LoginScreen({ onLoggedIn }) {
   }
 
   return (
-    // ScrollView inni KeyboardAvoidingView: innholdet sentreres når tastaturet
-    // er lukket, og kan rulles slik at det fokuserte feltet løftes over
-    // tastaturet på Android (der adjustResize ikke er til å stole på med
-    // edge-to-edge). keyboardShouldPersistTaps lar «Logg inn» trykkes på
-    // første trykk mens tastaturet er oppe.
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    // KeyboardScrollView inni KeyboardAvoidingView: innholdet sentreres når
+    // tastaturet er lukket. Når det kommer opp, krymper KeyboardAvoidingView
+    // flaten (også på Android, der edge-to-edge gjør at vinduet ikke krymper
+    // selv), og KeyboardScrollView ruller det fokuserte feltet til syne.
+    <KeyboardAvoidingView behavior="padding" style={styles.wrap}>
+      <KeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoRow}>
         <View style={styles.logo}><Text style={{ color: '#fff', fontSize: 22 }}>🏫</Text></View>
         <View>
@@ -48,7 +48,7 @@ export default function LoginScreen({ onLoggedIn }) {
       <Text style={styles.sub}>Brannliste og andakt · elever og brannvakt</Text>
 
       <Text style={styles.label}>Brukernavn</Text>
-      <TextInput
+      <TextField
         style={styles.input}
         autoCapitalize="none"
         autoCorrect={false}
@@ -58,7 +58,7 @@ export default function LoginScreen({ onLoggedIn }) {
         placeholderTextColor={C.muted2}
       />
       <Text style={[styles.label, { marginTop: 16 }]}>Passord</Text>
-      <TextInput
+      <TextField
         style={styles.input}
         secureTextEntry
         value={password}
@@ -76,7 +76,7 @@ export default function LoginScreen({ onLoggedIn }) {
       <Pressable onPress={() => Linking.openURL(`${BASE_URL}/personvern/`)} hitSlop={8}>
         <Text style={styles.privacyLink}>Personvernerklæring</Text>
       </Pressable>
-      </ScrollView>
+      </KeyboardScrollView>
     </KeyboardAvoidingView>
   );
 }

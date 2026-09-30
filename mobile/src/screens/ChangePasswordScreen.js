@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView } from 'react-native';
 import { api } from '../api';
 import { C } from '../theme';
 import { Button } from '../ui';
+import { KeyboardScrollView, TextField } from '../keyboard';
 
 export default function ChangePasswordScreen({ onDone }) {
   const [p1, setP1] = useState('');
@@ -26,10 +27,10 @@ export default function ChangePasswordScreen({ onDone }) {
   }
 
   return (
-    // ScrollView inni KeyboardAvoidingView, samme mønster som innloggingen:
-    // holder feltet synlig over tastaturet på Android med edge-to-edge.
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    // Samme mønster som innloggingen: KeyboardAvoidingView krymper flaten, og
+    // KeyboardScrollView ruller det fokuserte feltet til syne over tastaturet.
+    <KeyboardAvoidingView behavior="padding" style={styles.wrap}>
+      <KeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <View style={styles.icon}><Text style={{ fontSize: 26 }}>🔒</Text></View>
       <Text style={styles.h1}>Velg ditt eget passord</Text>
       <Text style={styles.sub}>
@@ -37,14 +38,14 @@ export default function ChangePasswordScreen({ onDone }) {
       </Text>
 
       <Text style={styles.label}>Nytt passord</Text>
-      <TextInput style={styles.input} secureTextEntry value={p1} onChangeText={setP1} />
+      <TextField style={styles.input} secureTextEntry value={p1} onChangeText={setP1} />
       <Text style={[styles.label, { marginTop: 16 }]}>Gjenta nytt passord</Text>
-      <TextInput style={styles.input} secureTextEntry value={p2} onChangeText={setP2} onSubmitEditing={submit} />
+      <TextField style={styles.input} secureTextEntry value={p2} onChangeText={setP2} onSubmitEditing={submit} />
       <Text style={{ fontSize: 13, color: C.muted2, marginTop: 10 }}>Minst 8 tegn.</Text>
 
       {err ? <Text style={styles.err}>{err}</Text> : null}
       <Button title="Lagre og fortsett" onPress={submit} loading={loading} style={{ marginTop: 22 }} />
-      </ScrollView>
+      </KeyboardScrollView>
     </KeyboardAvoidingView>
   );
 }

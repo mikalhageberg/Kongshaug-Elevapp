@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Modal, KeyboardAvoidingView } from 'react-native';
 import { api } from '../../api';
 import { C, formatTime, formatDateLong, shiftDate, senAnkomstTekst } from '../../theme';
 import { Button, Card } from '../../ui';
+import { KeyboardScrollView, TextField } from '../../keyboard';
 import OppropScreen from './OppropScreen';
 
 // Brannlisten på telefonen: samme oversikt som adminsiden viser, gruppert på
@@ -111,7 +112,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={{ padding: 18, paddingBottom: 30 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -128,7 +129,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
 
         {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 
-        <TextInput
+        <TextField
           value={sok}
           onChangeText={setSok}
           placeholder="Søk etter elev eller rom …"
@@ -175,7 +176,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
             </Card>
           );
         })}
-      </ScrollView>
+      </KeyboardScrollView>
       <SenAnkomstModal elev={sen} onClose={() => setSen(null)} onLagret={async () => { setSen(null); await last(); }} />
     </View>
   );
@@ -289,7 +290,7 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
 
   return (
     <Modal visible={!!elev} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBg}>
+      <KeyboardAvoidingView behavior="padding" style={styles.modalBg}>
         <Pressable style={StyleSheet.absoluteFill} onPress={busy ? undefined : onClose} />
         <View style={styles.modal}>
           <Text style={styles.modalH}>Kommer etter fristen</Text>
@@ -297,7 +298,7 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
           <Text style={styles.modalP}>Eleven står som «mangler» til registreringen er gjort, men lista viser at eleven er ventet. Med et klokkeslett kan eleven registrere seg selv til 10 minutter etter det.</Text>
 
           <Valg verdi="time" modus={modus} onVelg={setModus} tittel="Oppgi tidspunkt">
-            <TextInput
+            <TextField
               value={tid}
               onChangeText={(t) => { setTid(t); setModus('time'); }}
               onFocus={() => setModus('time')}

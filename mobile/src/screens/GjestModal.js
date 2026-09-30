@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { api } from '../api';
 import { C, ymd, todayStr, formatNightRange, countNights } from '../theme';
 import { Button, useSheetInsets } from '../ui';
+import { KeyboardScrollView, TextField } from '../keyboard';
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const WD = ['ma', 'ti', 'on', 'to', 'fr', 'lø', 'sø'];
@@ -97,7 +98,7 @@ export default function GjestModal({ visible, onClose, user }) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.wrap, sheetInsets]}>
+      <KeyboardAvoidingView behavior="padding" style={[styles.wrap, sheetInsets]}>
         <View style={styles.head}>
           <Text style={styles.title}>Meld gjest</Text>
           <Pressable onPress={onClose} hitSlop={12}><Text style={{ fontSize: 22, color: C.muted2 }}>✕</Text></Pressable>
@@ -106,7 +107,7 @@ export default function GjestModal({ visible, onClose, user }) {
         {/* Hele innholdet – forklaring, skjema, kalender og listen – ligger i
             samme ScrollView, slik at det fokuserte feltet alltid kan rulles
             opp over tastaturet, uansett hvor langt ned det står. */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+        <KeyboardScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           <Text style={styles.hint}>Send en forespørsel til administrasjonen. De tildeler internat og rom til gjesten. Trykk kvelden gjesten kommer, deretter den siste kvelden. Én natt = trykk samme dag to ganger.</Text>
           <View style={styles.nightNote}>
             <Text style={styles.nightNoteText}>
@@ -116,10 +117,10 @@ export default function GjestModal({ visible, onClose, user }) {
           <View style={styles.warnBox}><Text style={styles.warnText}>⚠ Du kan ikke ta imot gjesten før besøket er godkjent.</Text></View>
 
           <Text style={styles.label}>Gjestens navn</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Fullt navn" placeholderTextColor={C.muted2} />
+          <TextField style={styles.input} value={name} onChangeText={setName} placeholder="Fullt navn" placeholderTextColor={C.muted2} />
 
           <Text style={[styles.label, { marginTop: 16 }]}>Kommentar (valgfritt)</Text>
-          <TextInput style={styles.input} value={note} onChangeText={setNote} placeholder="F.eks. foreldre, søsken…" placeholderTextColor={C.muted2} />
+          <TextField style={styles.input} value={note} onChangeText={setNote} placeholder="F.eks. foreldre, søsken…" placeholderTextColor={C.muted2} />
 
           <Text style={[styles.label, { marginTop: 16 }]}>Nett(er) gjesten blir</Text>
           <View style={styles.monthNav}>
@@ -169,7 +170,7 @@ export default function GjestModal({ visible, onClose, user }) {
               ))}
             </>
           )}
-        </ScrollView>
+        </KeyboardScrollView>
 
         <View style={styles.footer}>
           {confirmation ? (
