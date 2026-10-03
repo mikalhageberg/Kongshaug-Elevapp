@@ -145,13 +145,14 @@ i PDF-en, i brannliste-e-posten og i varselet til vakten («Ola Norman (kommer
 ca. kl. 23:30)»). Mangler-telleren sier samtidig hvor mange av dem som er
 ventet sent: «6 mangler · 2 kommer sent».
 
-**Flere på én gang.** På adminsiden har dialogen en avkrysningsboks, **«Gjelder
-flere elever»**, som åpner en velger: hele klasser, hele internat eller
+**Flere på én gang.** Dialogen har en avkrysningsboks, **«Gjelder flere
+elever»**, både på adminsiden og i vaktappen. Den åpner en velger: hele klasser, hele internat eller
 enkeltelever via søk. Alle får samme klokkeslett som eleven dialogen ble åpnet
 for, gjennom `POST /api/firelist/late-arrival/bulk` – én transaksjon, så en
 gruppe aldri blir halvveis merket. Bare elever som *mangler* kan velges; et
 «kommer sent»-merke på en som er til stede eller meldt borte ville sagt to ting
-om samme elev. Velgeren finnes ikke i vaktappen ennå.
+om samme elev. I appen er velgeren en andre side i samme modal, ikke en ny
+modal: to React Native-modaler oppå hverandre er upålitelig på iOS.
 
 Merket er en *beskjed på raden*, ikke en status. Eleven står fortsatt som
 «mangler» til hun faktisk registrerer seg – den som leser lista ved en brann

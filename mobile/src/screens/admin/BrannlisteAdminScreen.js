@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Modal, KeyboardAvoidingView } from 'react-native';
 import { api } from '../../api';
 import { C, formatTime, formatDateLong, shiftDate, senAnkomstTekst } from '../../theme';
@@ -177,7 +177,12 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
           );
         })}
       </KeyboardScrollView>
-      <SenAnkomstModal elev={sen} onClose={() => setSen(null)} onLagret={async () => { setSen(null); await last(); }} />
+      <SenAnkomstModal
+        elev={sen}
+        alle={d.dorms.flatMap((x) => x.students.map((e) => ({ ...e, dorm: x.dorm })))}
+        onClose={() => setSen(null)}
+        onLagret={async () => { setSen(null); await last(); }}
+      />
     </View>
   );
 }
@@ -260,27 +265,39 @@ function normTid(s) {
   if (d.length === 4) return `${d.slice(0, 2)}:${d.slice(2)}`;
   return String(s || '').trim();
 }
-function SenAnkomstModal({ elev, onClose, onLagret }) {
+function SenAnkomstModal({ elev, alle, onClose, onLagret }) {
   const har = !!elev?.lateArrival;
   const [modus, setModus] = useState('time');
   const [tid, setTid] = useState('');
   const [feil, setFeil] = useState('');
   const [busy, setBusy] = useState(false);
+  // «Gjelder flere elever»: de andre som skal få samme merke. Den åpne eleven
+  // er alltid med og står ikke her.
+  const [ekstra, setEkstra] = useState([]);
+  // Velgeren er en andre side i SAMME modal, ikke en ny. To RN-modaler oppå
+  // hverandre er upålitelig på iOS – den andre kan la være å vises.
+  const [side, setSide] = useState('dialog');
   useEffect(() => {
     if (!elev) return;
     setModus(har && !elev.lateArrival.expectedAt ? 'unknown' : 'time');
     setTid(elev.lateArrival?.expectedAt || '');
-    setFeil(''); setBusy(false);
+    setFeil(''); setBusy(false); setEkstra([]); setSide('dialog');
   }, [elev, har]);
 
   async function send(body) {
     setBusy(true); setFeil('');
     try {
-      if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: elev.id, ...body } });
+      if (body && ekstra.length) {
+        const r = await api('/api/firelist/late-arrival/bulk', { method: 'POST', body: { userIds: [elev.id, ...ekstra], ...body } });
+        if (r.skipped?.length) Alert.alert('Lagret', `Merket ${r.saved} elever. ${r.skipped.length} ble hoppet over fordi de ikke står på lista lenger.`);
+      } else if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: elev.id, ...body } });
       else await api(`/api/firelist/late-arrival/${elev.id}`, { method: 'DELETE' });
       await onLagret();
     } catch (ex) { setFeil(ex.message); setBusy(false); }
   }
+  // Tilbake fra velgeren først; ellers lukk.
+  const tilbakeEllerLukk = () => (side === 'velger' ? setSide('dialog') : !busy && onClose());
+  const ekstraNavn = alle.filter((e) => ekstra.includes(e.id)).map((e) => e.fullName);
   function lagre() {
     if (modus === 'unknown') return send({ expectedAt: null });
     const v = normTid(tid);
@@ -289,9 +306,18 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
   }
 
   return (
-    <Modal visible={!!elev} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={!!elev} transparent animationType="fade" onRequestClose={tilbakeEllerLukk}>
       <KeyboardAvoidingView behavior="padding" style={styles.modalBg}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={busy ? undefined : onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={tilbakeEllerLukk} />
+        {side === 'velger' && elev ? (
+          <FlereVelger
+            hoved={elev}
+            alle={alle}
+            startValg={ekstra}
+            onAvbryt={() => setSide('dialog')}
+            onFerdig={(ids) => { setEkstra(ids); setSide('dialog'); }}
+          />
+        ) : (
         <View style={styles.modal}>
           <Text style={styles.modalH}>Kommer etter fristen</Text>
           <Text style={styles.modalUnder}>{elev?.fullName} · Rom {elev?.room ?? '–'}</Text>
@@ -312,6 +338,28 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
           </Valg>
           <Valg verdi="unknown" modus={modus} onVelg={setModus} tittel="Tidspunkt ukjent" />
 
+          <Pressable
+            onPress={() => (ekstra.length ? setEkstra([]) : setSide('velger'))}
+            style={styles.flereRad}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: ekstra.length > 0 }}
+          >
+            <Sjekk på={ekstra.length > 0} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.valgTittel}>Gjelder flere elever</Text>
+              <Text style={styles.flereHint}>Samme klokkeslett for flere – enkeltelever, en hel klasse eller et internat.</Text>
+            </View>
+          </Pressable>
+          {ekstra.length ? (
+            <Pressable onPress={() => setSide('velger')} style={styles.flereSammendrag}>
+              <Text style={styles.flereSammendragTekst}>
+                <Text style={{ fontWeight: '800' }}>+ {ekstra.length} {ekstra.length === 1 ? 'elev' : 'elever'}: </Text>
+                {ekstraNavn.length <= 3 ? ekstraNavn.join(', ') : `${ekstraNavn.slice(0, 3).join(', ')} og ${ekstraNavn.length - 3} til`}
+                <Text style={{ fontWeight: '800', color: C.navy }}>  Endre</Text>
+              </Text>
+            </Pressable>
+          ) : null}
+
           {feil ? <Text style={styles.feil}>{feil}</Text> : null}
 
           <Button title="Lagre" onPress={lagre} loading={busy} style={{ marginTop: 18 }} />
@@ -322,8 +370,133 @@ function SenAnkomstModal({ elev, onClose, onLagret }) {
             <Button title="Avbryt" onPress={onClose} disabled={busy} color="#fff" textColor={C.slate} style={{ flex: 1, borderWidth: 1.5, borderColor: C.line2 }} />
           </View>
         </View>
+        )}
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+// Avkrysningsboks. Tegnet selv – React Native har ingen innebygd.
+function Sjekk({ på, av }) {
+  return (
+    <View style={[styles.sjekk, på && styles.sjekkPå, av && { opacity: 0.4 }]}>
+      {på ? <Text style={styles.sjekkTegn}>✓</Text> : null}
+    </View>
+  );
+}
+
+// Velgeren bak «Gjelder flere elever»: hele klasser og hele internat med ett
+// trykk, eller enkeltelever via søk. Samme regler som på adminsiden.
+//
+// Bare elever som MANGLER kan velges. En som allerede er til stede eller meldt
+// borte, skal ikke få «kommer etter fristen» – da sier lista to ting om samme
+// elev, og vakten kan ende med å lete etter en som sover hjemme. De vises
+// likevel, grået ut med statusen, så det er tydelig hvorfor de ble utelatt.
+//
+// Egen toppnivåkomponent: definert inne i dialogen ville søkefeltet fått ny
+// identitet for hver tast og mistet fokus.
+function FlereVelger({ hoved, alle, startValg, onAvbryt, onFerdig }) {
+  const kan = (e) => e.status === 'missing' && e.id !== hoved.id;
+  const [valgt, setValgt] = useState(() => new Set(startValg.filter((id) => alle.some((e) => e.id === id && kan(e)))));
+  const [sok, setSok] = useState('');
+  const [bareValgte, setBareValgte] = useState(false);
+  const klasser = useMemo(
+    () => [...new Set(alle.map((e) => e.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb')),
+    [alle],
+  );
+  const internater = useMemo(() => [...new Set(alle.map((e) => e.dorm))], [alle]);
+  const gruppe = (type, navn) => alle.filter((e) => kan(e) && (type === 'klasse' ? e.className === navn : e.dorm === navn));
+
+  const veksle = (id) => setValgt((før) => {
+    const n = new Set(før);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  // En gruppe velges hel, eller velges bort hel hvis alle allerede er med.
+  const veksleGruppe = (g) => setValgt((før) => {
+    const n = new Set(før);
+    const alleMed = g.every((e) => n.has(e.id));
+    g.forEach((e) => (alleMed ? n.delete(e.id) : n.add(e.id)));
+    return n;
+  });
+
+  const q = sok.trim().toLowerCase();
+  const rader = alle.filter((e) => {
+    if (bareValgte && !valgt.has(e.id) && e.id !== hoved.id) return false;
+    if (!q) return true;
+    return [e.fullName, e.className, e.dorm, e.room].some((v) => String(v ?? '').toLowerCase().includes(q));
+  });
+  const merknad = (e) => (e.id === hoved.id ? 'Denne eleven'
+    : e.status === 'present' ? 'Til stede'
+      : e.status === 'away' ? 'Borte'
+        : e.lateArrival && !valgt.has(e.id) ? 'Merket fra før' : '');
+
+  const Chip = ({ type, navn }) => {
+    const g = gruppe(type, navn);
+    const på = g.length > 0 && g.every((e) => valgt.has(e.id));
+    return (
+      <Pressable
+        disabled={!g.length}
+        onPress={() => veksleGruppe(g)}
+        style={[styles.velgChip, på && { backgroundColor: C.navy, borderColor: C.navy }, !g.length && { opacity: 0.4 }]}
+      >
+        <Text style={[styles.velgChipTekst, på && { color: '#fff' }]}>
+          {navn} <Text style={{ fontWeight: '600', opacity: 0.7 }}>{g.length}</Text>
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={styles.velger}>
+      <View style={styles.velgerTopp}>
+        <Text style={styles.modalH}>Velg flere elever</Text>
+        <Text style={styles.modalUnder}>Får samme merke som {hoved.fullName}</Text>
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
+        <View style={{ paddingHorizontal: 20 }}>
+          {klasser.length ? (
+            <>
+              <Text style={styles.velgSeksjon}>HELE KLASSER</Text>
+              <View style={styles.velgChips}>{klasser.map((n) => <Chip key={n} type="klasse" navn={n} />)}</View>
+            </>
+          ) : null}
+          <Text style={styles.velgSeksjon}>HELE INTERNAT</Text>
+          <View style={styles.velgChips}>{internater.map((n) => <Chip key={n} type="internat" navn={n} />)}</View>
+          <TextField
+            value={sok}
+            onChangeText={setSok}
+            placeholder="Søk etter elev, klasse eller rom"
+            placeholderTextColor="#aab1bd"
+            autoCorrect={false}
+            style={[styles.sok, { marginTop: 14 }]}
+          />
+          <Pressable onPress={() => setBareValgte(!bareValgte)} style={styles.bareValgte}>
+            <Sjekk på={bareValgte} />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: C.slate }}>Vis bare valgte</Text>
+          </Pressable>
+        </View>
+        {rader.length ? rader.map((e) => {
+          const av = !kan(e);
+          const m = merknad(e);
+          return (
+            <Pressable key={e.id} disabled={av} onPress={() => veksle(e.id)} style={[styles.velgRad, av && { opacity: 0.5 }]}>
+              <Sjekk på={valgt.has(e.id) || e.id === hoved.id} av={av} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.velgNavn} numberOfLines={1}>{e.fullName}</Text>
+                <Text style={styles.under} numberOfLines={1}>{[e.className, e.dorm, `Rom ${e.room ?? '–'}`].filter(Boolean).join(' · ')}</Text>
+              </View>
+              {m ? <Text style={styles.velgMerk}>{m}</Text> : null}
+            </Pressable>
+          );
+        }) : <Text style={styles.ingenTreff}>Ingen treff.</Text>}
+      </ScrollView>
+      <View style={styles.velgerBunn}>
+        <Text style={styles.velgAntall}>{valgt.size ? `${valgt.size} valgt` : 'Ingen valgt'}</Text>
+        <Button title="Avbryt" onPress={onAvbryt} color="#fff" textColor={C.slate} style={{ flex: 1, height: 48, borderWidth: 1.5, borderColor: C.line2 }} fontSize={15} />
+        <Button title="Ferdig" onPress={() => onFerdig([...valgt])} style={{ flex: 1, height: 48 }} fontSize={15} />
+      </View>
+    </View>
   );
 }
 
@@ -383,6 +556,42 @@ const styles = StyleSheet.create({
     marginTop: 8, height: 46, borderWidth: 1.5, borderColor: C.line2, borderRadius: 12, paddingHorizontal: 14,
     fontSize: 18, fontWeight: '700', color: C.ink, backgroundColor: '#fff', maxWidth: 140,
   },
+  sjekk: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: C.line2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', marginTop: 1,
+  },
+  sjekkPå: { backgroundColor: C.navy, borderColor: C.navy },
+  sjekkTegn: { color: '#fff', fontSize: 14, fontWeight: '900', lineHeight: 16 },
+  flereRad: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 16, paddingHorizontal: 2 },
+  flereHint: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 18 },
+  flereSammendrag: {
+    marginTop: 10, marginLeft: 34, padding: 12, borderRadius: 12,
+    backgroundColor: '#f7f8fa', borderWidth: 1, borderColor: C.line,
+  },
+  flereSammendragTekst: { fontSize: 14, color: C.ink, lineHeight: 20 },
+  velger: {
+    width: '100%', maxWidth: 520, height: '88%', backgroundColor: '#fff', borderRadius: 22, overflow: 'hidden',
+  },
+  velgerTopp: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line },
+  velgSeksjon: { fontSize: 12, fontWeight: '800', color: C.muted2, letterSpacing: 0.4, marginTop: 16, marginBottom: 8 },
+  velgChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  velgChip: {
+    height: 40, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5, borderColor: C.line2,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+  },
+  velgChipTekst: { fontSize: 14, fontWeight: '700', color: C.slate },
+  bareValgte: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 8 },
+  velgRad: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: '#f2f4f6',
+  },
+  velgNavn: { fontSize: 16, fontWeight: '700', color: C.ink },
+  velgMerk: { fontSize: 12.5, fontWeight: '700', color: C.muted2 },
+  velgerBunn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16,
+    borderTopWidth: 1, borderTopColor: C.line, backgroundColor: '#fff',
+  },
+  velgAntall: { fontSize: 14, fontWeight: '800', color: C.ink, minWidth: 74 },
   tall: { flexDirection: 'row', gap: 9, marginTop: 18 },
   tallBoks: { borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center' },
   tallStor: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
