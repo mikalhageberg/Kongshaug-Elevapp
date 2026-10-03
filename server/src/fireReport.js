@@ -47,7 +47,7 @@ export function getFireOverview(nightDate = todayDate()) {
     if (status === 'present') { dorm.present++; present++; }
     else if (status === 'away') away++;
     else { missing++; if (late.has(s.id)) lateCount++; }
-    dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, status, checkedAt: s.checked_at, lateArrival: late.get(s.id) || null });
+    dorm.students.push({ id: s.id, fullName: s.full_name, room: s.room, className: s.class_name || null, status, checkedAt: s.checked_at, lateArrival: late.get(s.id) || null });
   }
 
   // Godkjente gjester som sover på internatet denne natten. De listes i internatet

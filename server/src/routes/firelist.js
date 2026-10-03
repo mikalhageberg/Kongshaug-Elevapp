@@ -400,23 +400,60 @@ function findListedStudent(uid, res) {
   }
   return u;
 }
+// 'HH:MM' eller null (ukjent). Tom streng regnes som ukjent, ikke som feil.
+function parseExpectedAt(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return { value: null };
+  const v = String(raw).trim();
+  return TIME_RE.test(v) ? { value: v } : { error: 'Ugyldig klokkeslett. Skriv det som 23:30.' };
+}
+const upsertLate = db.prepare(
+  `INSERT INTO fire_late_arrivals (user_id, night_date, expected_at, set_by)
+   VALUES (?, ?, ?, ?)
+   ON CONFLICT(user_id, night_date)
+     DO UPDATE SET expected_at = excluded.expected_at, set_by = excluded.set_by, created_at = datetime('now')`
+);
+
 router.post('/late-arrival', requireAdmin, requireWatchOnNative, (req, res) => {
   const uid = Number(req.body?.userId);
   if (!findListedStudent(uid, res)) return;
-  const raw = req.body?.expectedAt;
-  let expectedAt = null;
-  if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
-    expectedAt = String(raw).trim();
-    if (!TIME_RE.test(expectedAt)) return res.status(400).json({ error: 'Ugyldig klokkeslett. Skriv det som 23:30.' });
-  }
+  const { value: expectedAt, error } = parseExpectedAt(req.body?.expectedAt);
+  if (error) return res.status(400).json({ error });
   const night = currentNightDate();
-  db.prepare(
-    `INSERT INTO fire_late_arrivals (user_id, night_date, expected_at, set_by)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(user_id, night_date)
-       DO UPDATE SET expected_at = excluded.expected_at, set_by = excluded.set_by, created_at = datetime('now')`
-  ).run(uid, night, expectedAt, req.auth.sub);
+  upsertLate.run(uid, night, expectedAt, req.auth.sub);
   res.json({ ok: true, nightDate: night, lateArrival: { expectedAt } });
+});
+
+// Samme merke på mange elever på én gang – en hel klasse på konsert, et
+// internat på tur. Alle får nøyaktig samme klokkeslett (eller «ukjent»).
+//
+// Alt i én transaksjon: enten står merket på hele gruppa, eller på ingen. En
+// halvveis lagret gruppe ville sett lagret ut for vakten, mens noen av elevene
+// manglet merket og ville blitt lett etter.
+//
+// Elever som ikke står på lista (hjemmeboere, slettede kontoer) hoppes over og
+// rapporteres tilbake, i stedet for å velte hele lagringen – de kan ha blitt
+// valgt i en liste som var et par minutter gammel.
+const BULK_MAX = 500;
+router.post('/late-arrival/bulk', requireAdmin, requireWatchOnNative, (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body?.userIds) ? req.body.userIds : []).map(Number).filter(Number.isInteger))];
+  if (!ids.length) return res.status(400).json({ error: 'Ingen elever valgt.' });
+  if (ids.length > BULK_MAX) return res.status(400).json({ error: `Maks ${BULK_MAX} elever om gangen.` });
+  const { value: expectedAt, error } = parseExpectedAt(req.body?.expectedAt);
+  if (error) return res.status(400).json({ error });
+
+  const night = currentNightDate();
+  const finn = db.prepare("SELECT id, full_name, home_dweller FROM users WHERE id = ? AND role = 'student' AND active = 1");
+  const saved = [], skipped = [];
+  db.transaction(() => {
+    for (const id of ids) {
+      const u = finn.get(id);
+      if (!u) { skipped.push({ id, reason: 'not-found' }); continue; }
+      if (u.home_dweller) { skipped.push({ id, name: u.full_name, reason: 'home-dweller' }); continue; }
+      upsertLate.run(id, night, expectedAt, req.auth.sub);
+      saved.push(id);
+    }
+  })();
+  res.json({ ok: true, nightDate: night, expectedAt, saved: saved.length, skipped });
 });
 router.delete('/late-arrival/:userId', requireAdmin, requireWatchOnNative, (req, res) => {
   const uid = Number(req.params.userId);

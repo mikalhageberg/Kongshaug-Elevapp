@@ -3868,6 +3868,118 @@ async function renderBrannliste(main) {
     }));
   }
 
+  // Velgeren bak «Gjelder flere elever»: søk opp enkeltelever, eller ta en hel
+  // klasse eller et helt internat med ett trykk.
+  //
+  // Bare elever som MANGLER kan velges. En som allerede er til stede eller
+  // meldt borte, skal ikke få «kommer etter fristen» – da sier lista to ting om
+  // samme elev, og vakten kan ende med å lete etter en som sover hjemme. De
+  // vises likevel, grået ut med statusen, så det er tydelig hvorfor de ikke
+  // ble med når en hel klasse ble valgt.
+  //
+  // onDone(Set) ved «Ferdig», onDone(null) ved avbryt.
+  function velgFlereElever(hoved, startValg, onDone) {
+    const alle = d.dorms.flatMap((x) => x.students.map((e) => ({ ...e, dorm: x.dorm })));
+    const kan = (e) => e.status === 'missing' && e.id !== hoved.id;
+    const valgt = new Set([...startValg].filter((id) => alle.some((e) => e.id === id && kan(e))));
+    const klasser = [...new Set(alle.map((e) => e.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb'));
+    const internater = d.dorms.map((x) => x.dorm);
+    const gruppe = (type, navn) => alle.filter((e) => kan(e) && (type === 'klasse' ? e.className === navn : e.dorm === navn));
+    let sok = '', bareValgte = false;
+
+    const pg = el(`
+      <div class="modal-bg"><div class="modal" style="width:600px;max-width:calc(100vw - 32px)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
+          <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Velg flere elever</div>
+            <div style="font-size:13px;color:var(--muted-2);font-weight:600">Får samme merke som ${esc(hoved.fullName)}</div></div>
+          <button id="vgClose" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+        </div>
+        <div style="padding:16px 26px 0">
+          ${klasser.length ? '<div style="font-size:12.5px;font-weight:800;color:var(--muted-2);letter-spacing:.4px;margin-bottom:8px">HELE KLASSER</div><div id="vgKlasser" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>' : ''}
+          <div style="font-size:12.5px;font-weight:800;color:var(--muted-2);letter-spacing:.4px;margin-bottom:8px">HELE INTERNAT</div>
+          <div id="vgInternat" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+          <input id="vgSok" class="field" placeholder="Søk etter elev, klasse eller rom" autocomplete="off" style="height:44px;width:100%;box-sizing:border-box" />
+          <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--slate);margin:10px 0 8px;cursor:pointer">
+            <input type="checkbox" id="vgBare" style="width:16px;height:16px;accent-color:var(--navy)" /> Vis bare valgte
+          </label>
+        </div>
+        <div id="vgListe" style="max-height:340px;overflow:auto;border-top:1px solid #eef0f3;border-bottom:1px solid #eef0f3"></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:16px 26px 22px">
+          <span id="vgAntall" style="font-size:14.5px;font-weight:700;margin-right:auto"></span>
+          <button id="vgAvbryt" class="btn btn-ghost" style="height:46px;padding:0 20px;font-size:14.5px">Avbryt</button>
+          <button id="vgFerdig" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Ferdig</button>
+        </div>
+      </div></div>`);
+    document.body.appendChild(pg);
+
+    const chip = (type, navn) => {
+      const g = gruppe(type, navn);
+      const alleValgt = g.length > 0 && g.every((e) => valgt.has(e.id));
+      return `<button data-type="${type}" data-navn="${esc(navn)}" ${g.length ? '' : 'disabled'} title="${g.length ? `${g.length} mangler` : 'Ingen som mangler'}"
+        style="height:38px;padding:0 14px;border-radius:99px;font-size:14px;font-weight:700;cursor:${g.length ? 'pointer' : 'default'};
+        border:1.5px solid ${alleValgt ? 'var(--navy)' : 'var(--line-2)'};background:${alleValgt ? 'var(--navy)' : '#fff'};color:${alleValgt ? '#fff' : 'var(--slate)'};opacity:${g.length ? 1 : 0.45}">
+        ${esc(navn)} <span style="opacity:.7;font-weight:600">${g.length}</span></button>`;
+    };
+    function tegnChips() {
+      const k = pg.querySelector('#vgKlasser');
+      if (k) k.innerHTML = klasser.map((n) => chip('klasse', n)).join('');
+      pg.querySelector('#vgInternat').innerHTML = internater.map((n) => chip('internat', n)).join('');
+      pg.querySelector('#vgAntall').textContent = valgt.size ? `${valgt.size} valgt` : 'Ingen valgt';
+    }
+    function tegnListe() {
+      const q = sok.trim().toLowerCase();
+      const rader = alle.filter((e) => {
+        if (bareValgte && !valgt.has(e.id) && e.id !== hoved.id) return false;
+        if (!q) return true;
+        return [e.fullName, e.className, e.dorm, e.room].some((v) => String(v ?? '').toLowerCase().includes(q));
+      });
+      const merknad = (e) => e.id === hoved.id ? 'Denne eleven'
+        : e.status === 'present' ? 'Til stede'
+        : e.status === 'away' ? 'Borte'
+        : e.lateArrival && !valgt.has(e.id) ? 'Merket fra før' : '';
+      pg.querySelector('#vgListe').innerHTML = rader.length ? rader.map((e) => {
+        const av = !kan(e);
+        const m = merknad(e);
+        return `<label style="display:flex;align-items:center;gap:12px;padding:10px 26px;border-bottom:1px solid #f2f4f6;cursor:${av ? 'default' : 'pointer'};${av ? 'opacity:.5' : ''}">
+          <input type="checkbox" data-id="${e.id}" ${valgt.has(e.id) || e.id === hoved.id ? 'checked' : ''} ${av ? 'disabled' : ''} style="width:18px;height:18px;flex:0 0 auto;accent-color:var(--navy)" />
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:700">${esc(e.fullName)}</div>
+            <div style="font-size:13px;color:var(--muted-2);font-weight:600">${[e.className, e.dorm, `Rom ${e.room ?? '–'}`].filter(Boolean).map(esc).join(' · ')}</div>
+          </div>
+          ${m ? `<span style="font-size:12.5px;font-weight:700;color:var(--muted-2);flex:0 0 auto">${m}</span>` : ''}
+        </label>`;
+      }).join('') : '<div style="padding:22px 26px;color:var(--muted-2);font-size:14px">Ingen treff.</div>';
+    }
+    tegnChips(); tegnListe();
+
+    pg.querySelector('#vgListe').addEventListener('change', (e) => {
+      const id = Number(e.target.dataset.id);
+      if (!id) return;
+      if (e.target.checked) valgt.add(id); else valgt.delete(id);
+      tegnChips();
+      if (bareValgte) tegnListe();
+    });
+    // En gruppe velges hel, eller velges bort hel hvis alle allerede er med.
+    pg.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-type]');
+      if (!b || b.disabled) return;
+      const g = gruppe(b.dataset.type, b.dataset.navn);
+      const alleValgt = g.every((x) => valgt.has(x.id));
+      g.forEach((x) => (alleValgt ? valgt.delete(x.id) : valgt.add(x.id)));
+      tegnChips(); tegnListe();
+    });
+    const sokFelt = pg.querySelector('#vgSok');
+    sokFelt.addEventListener('input', () => { sok = sokFelt.value; tegnListe(); });
+    pg.querySelector('#vgBare').addEventListener('change', (e) => { bareValgte = e.target.checked; tegnListe(); });
+    setTimeout(() => sokFelt.focus(), 50);
+
+    const lukk = (resultat) => { pg.remove(); onDone(resultat); };
+    pg.querySelector('#vgClose').addEventListener('click', () => lukk(null));
+    pg.querySelector('#vgAvbryt').addEventListener('click', () => lukk(null));
+    pg.addEventListener('click', (e) => { if (e.target === pg) lukk(null); });
+    pg.querySelector('#vgFerdig').addEventListener('click', () => lukk(new Set(valgt)));
+  }
+
   // Dialogen for «kommer etter fristen»: enten et klokkeslett, eller ukjent.
   // Merket er en beskjed på raden, ikke en status – eleven står som mangler
   // til hun faktisk registrerer seg – så det har sin egen rute, ikke status.
@@ -3891,6 +4003,12 @@ async function renderBrannliste(main) {
           <p style="margin:0;font-size:14px;color:var(--muted-2);line-height:1.5">Eleven står som «mangler» til registreringen er gjort, men lista, PDF-en og e-posten viser at eleven er ventet. Oppgir du et klokkeslett, kan eleven registrere seg selv til 10 minutter etter det.</p>
           ${valg('time', 'Oppgi tidspunkt', `<input type="time" id="laTime" class="field" value="${esc(s.lateArrival?.expectedAt || '')}" style="height:44px;margin-top:8px;max-width:160px" />`)}
           ${valg('unknown', 'Tidspunkt ukjent')}
+          <label style="display:flex;gap:12px;align-items:flex-start;margin-top:18px;cursor:pointer">
+            <input type="checkbox" id="laFlereBoks" style="width:20px;height:20px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
+            <div><div style="font-size:15px;font-weight:700">Gjelder flere elever</div>
+              <div style="font-size:13px;color:var(--muted-2);margin-top:2px">Samme klokkeslett for flere – enkeltelever, en hel klasse eller et internat.</div></div>
+          </label>
+          <div id="laFlere"></div>
           <p id="laErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:14px 0 0;display:none"></p>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
@@ -3904,6 +4022,32 @@ async function renderBrannliste(main) {
     bg.querySelector('#close').addEventListener('click', close);
     bg.querySelector('#cancel').addEventListener('click', close);
     bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+    // «Gjelder flere elever»: de andre elevene som skal få samme merke. Den
+    // åpne eleven er alltid med og står ikke i settet.
+    const ekstra = new Set();
+    const flereBoks = bg.querySelector('#laFlereBoks');
+    function visFlere() {
+      const box = bg.querySelector('#laFlere');
+      if (!ekstra.size) { box.innerHTML = ''; return; }
+      const navn = d.dorms.flatMap((x) => x.students).filter((e) => ekstra.has(e.id)).map((e) => esc(e.fullName));
+      const liste = navn.length <= 3 ? navn.join(', ') : `${navn.slice(0, 3).join(', ')} og ${navn.length - 3} til`;
+      box.innerHTML = `<div style="margin:10px 0 0 32px;padding:10px 14px;background:#f7f8fa;border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:1.5">
+        <b>+ ${ekstra.size} ${ekstra.size === 1 ? 'elev' : 'elever'}:</b> ${liste}
+        <a href="#" id="laEndre" style="font-weight:700;color:var(--navy);margin-left:6px">Endre</a></div>`;
+      box.querySelector('#laEndre').addEventListener('click', (e) => { e.preventDefault(); åpneVelger(); });
+    }
+    function åpneVelger() {
+      velgFlereElever(s, ekstra, (valgt) => {
+        if (valgt) { ekstra.clear(); valgt.forEach((id) => ekstra.add(id)); }
+        flereBoks.checked = ekstra.size > 0;
+        visFlere();
+      });
+    }
+    flereBoks.addEventListener('change', () => {
+      if (flereBoks.checked) return åpneVelger();
+      ekstra.clear(); visFlere();
+    });
+
     // Å skrive i klokkeslettet velger «Oppgi tidspunkt» av seg selv.
     const tid = bg.querySelector('#laTime');
     tid.addEventListener('focus', () => { bg.querySelector('input[value="time"]').checked = true; });
@@ -3913,7 +4057,12 @@ async function renderBrannliste(main) {
       const err = bg.querySelector('#laErr'); err.style.display = 'none';
       const knapper = bg.querySelectorAll('button'); knapper.forEach((k) => { k.disabled = true; });
       try {
-        if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: s.id, ...body } });
+        if (body && ekstra.size) {
+          const r = await api('/api/firelist/late-arrival/bulk', { method: 'POST', body: { userIds: [s.id, ...ekstra], ...body } });
+          toast(r.skipped?.length
+            ? `Lagret for ${r.saved} elever · ${r.skipped.length} hoppet over (står ikke på lista)`
+            : `Lagret for ${r.saved} elever`);
+        } else if (body) await api('/api/firelist/late-arrival', { method: 'POST', body: { userId: s.id, ...body } });
         else await api(`/api/firelist/late-arrival/${s.id}`, { method: 'DELETE' });
         d = await api('/api/firelist/overview');
         updateHeaderCounts();
