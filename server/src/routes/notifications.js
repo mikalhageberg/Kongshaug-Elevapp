@@ -1,10 +1,13 @@
 import { Router } from 'express';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdminOrReviewDemo } from '../auth.js';
 import { watchNightDate, watchStartedAt } from '../fireWatch.js';
 import { listCurrent, listEarlier, unreadCount, markRead } from '../adminNotify.js';
 
 const router = Router();
-router.use(requireAuth, requireAdmin);
+// Reviewer-kontoens adminmodus slipper til: varslene er knyttet til kontoen
+// selv (user_id), og reviewer-kontoen er elev i databasen, så den får aldri
+// varsler om andre elever. Skjermen er da tom i stedet for en feilmelding.
+router.use(requireAuth, requireAdminOrReviewDemo);
 
 // Varslene mine. Delt i vakten som pågår og alt som ligger foran den.
 //

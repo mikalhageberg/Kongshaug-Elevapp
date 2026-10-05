@@ -138,9 +138,11 @@ function effectiveRole(user, auth) {
 // APPLE_REVIEW_USERNAME satt er isAppReviewUser alltid usann, og da finnes
 // ikke denne muligheten for noen som helst.
 //
-// ⚠ Adminmodus er ekte administrator-tilgang, ikke en demo: kontoen når hele
-// skolens elevregister gjennom admin-API-et så lenge miljøvariabelen står på.
-// Den skal fjernes igjen straks appen er godkjent – se APP-STORE-REVIEW-NOTES.md.
+// Adminmodus er en demo, ikke ekte administrator-tilgang: requireAdmin
+// avviser tokenet, og bare vakt-endepunktene (requireAdminOrReviewDemo i
+// auth.js) slipper det til – med en brannliste der kontoen selv er eneste
+// elev. Variabelen skal likevel fjernes straks appen er godkjent – se
+// APP-STORE-REVIEW-NOTES.md.
 router.post('/review-mode', requireAuth, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.auth.sub);
   if (!user || !user.active) return res.status(401).json({ error: 'Ikke innlogget' });

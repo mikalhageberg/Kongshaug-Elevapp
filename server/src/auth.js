@@ -100,18 +100,40 @@ export function requireAuth(req, res, next) {
   }
 }
 
+// Er sesjonen en ekte administrator? Reviewer-kontoens lånte adminmodus
+// (reviewMode i tokenet) teller ikke: den har rollen 'admin' for at vaktappen
+// skal vises, men skal aldri se eller røre andre elevers data. Bruk denne, ikke
+// auth.role direkte, overalt der admin får se eller gjøre mer enn eleven.
+export function isRealAdmin(auth) {
+  return auth?.role === 'admin' && !auth.reviewMode;
+}
+
 // Middleware: krever admin-rolle (bruk etter requireAuth).
+//
+// Reviewer-kontoens adminmodus slipper IKKE gjennom her. Den når bare de
+// vakt-endepunktene som eksplisitt bruker requireAdminOrReviewDemo under, og
+// der får den en demo-brannliste med seg selv som eneste elev – av
+// personvernhensyn skal den som går gjennom appen aldri se de ekte elevene.
 export function requireAdmin(req, res, next) {
-  if (req.auth?.role !== 'admin') {
-    return res.status(403).json({ error: 'Krever administrator-tilgang' });
-  }
-  // Et lånt token (reviewer-kontoens adminmodus) gjelder bare så lenge kontoen
-  // faktisk er reviewer-kontoen. Sjekken gjøres her, ved hvert kall, og ikke
-  // bare da tokenet ble utstedt: fjernes APPLE_REVIEW_USERNAME etter at appen
-  // er godkjent, slutter tokenet å virke i samme øyeblikk i stedet for å leve
-  // videre til det utløper av seg selv.
-  if (req.auth.reviewMode && !isAppReviewUser(req.auth.username)) {
+  if (!isRealAdmin(req.auth)) {
     return res.status(403).json({ error: 'Krever administrator-tilgang' });
   }
   next();
+}
+
+// Middleware: som requireAdmin, men slipper også gjennom reviewer-kontoens
+// adminmodus, merket med req.reviewDemo = true. Ruten som bruker denne MÅ
+// avgrense svaret til reviewer-kontoen selv når req.reviewDemo er satt.
+//
+// Lånet gjelder bare så lenge kontoen faktisk er reviewer-kontoen. Sjekken
+// gjøres ved hvert kall, ikke bare da tokenet ble utstedt: fjernes
+// APPLE_REVIEW_USERNAME etter at appen er godkjent, slutter tokenet å virke i
+// samme øyeblikk i stedet for å leve videre til det utløper av seg selv.
+export function requireAdminOrReviewDemo(req, res, next) {
+  if (isRealAdmin(req.auth)) return next();
+  if (req.auth?.role === 'admin' && req.auth.reviewMode && isAppReviewUser(req.auth.username)) {
+    req.reviewDemo = true;
+    return next();
+  }
+  return res.status(403).json({ error: 'Krever administrator-tilgang' });
 }

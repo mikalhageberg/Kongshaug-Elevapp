@@ -8,7 +8,7 @@
 import express, { Router } from 'express';
 import db from '../db.js';
 import { config } from '../config.js';
-import { requireAuth, requireAdmin, verifyPassword } from '../auth.js';
+import { requireAuth, requireAdmin, verifyPassword, isRealAdmin } from '../auth.js';
 import { currentWeekStart, isDateString, shiftWeek, weekInfo, weekStartOf } from '../isoWeek.js';
 import { dutyById, dutyWeek, dutyWeeks, hasDuty, kindOf, signDuty, unsignDuty } from '../duty.js';
 import { listTasks, taskById } from '../dormTasks.js';
@@ -160,7 +160,7 @@ export function createDutyRouter(kind) {
       if (!duty) return res.status(404).json({ error: 'Fant ikke oppgaven.' });
       if (duty.doneAt) return res.status(409).json({ error: 'Oppgaven er allerede signert.' });
 
-      const erAdmin = req.auth.role === 'admin';
+      const erAdmin = isRealAdmin(req.auth);
       const erMin = duty.userId === req.auth.sub;
       if (!erAdmin && !erMin) return res.status(403).json({ error: 'Du kan bare signere dine egne oppgaver.' });
       // Ingen kan signere for en uke som ikke har begynt.

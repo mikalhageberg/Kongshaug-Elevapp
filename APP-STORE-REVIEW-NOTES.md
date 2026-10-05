@@ -17,10 +17,13 @@ Apple/Google.
    der. Samme variabel gir kontoen velgeren mellom elev- og adminmodus øverst i
    appen. Se `server/.env.example` og `server/src/config.js` for detaljer.
 
-   ⚠ **Adminmodus er ekte administrator-tilgang**, ikke en demo: så lenge
-   variabelen står på, når testkontoen hele skolens elevregister gjennom
-   admin-API-et. Det er prisen for at reviewer skal få se vaktappen i det hele
-   tatt, men det er også grunnen til punktet under.
+   **Adminmodus er en demo, ikke ekte administrator-tilgang.** Av
+   personvernhensyn ser reviewer aldri de faktiske elevene: brannlisten i
+   vaktappen inneholder bare testkontoen selv (elevutgaven av
+   `apple.reviewer`), og det er bare den raden som kan endres. Resten av
+   admin-API-et (elevregister, gjester, andakt, innstillinger …) svarer 403
+   for testkontoen. Gi derfor testkontoen et **internat og rom**, slik at den
+   havner i et internat på demo-listen og ikke under «Uten internat».
 3. **Fjern `APPLE_REVIEW_USERNAME` igjen** så snart appen er godkjent. Det er
    et reelt, om enn smalt avgrenset, unntak fra brannsikkerhets-verifiseringen,
    og skal ikke stå på lenger enn nødvendig. Et adminmodus-token som allerede
@@ -54,7 +57,7 @@ forklart hvorfor appen krever GPS og hvorfor den ber om bilder. Det må derfor
 kunne leses av en reviewer som ikke kan norsk.
 
 Feltet i App Store Connect tar **4000 tegn**, og den engelske under ligger nå på
-**3989** – altså elleve tegn under taket. Lim inn **den engelske**. Den norske
+**3980** – altså 20 tegn under taket. Lim inn **den engelske**. Den norske
 under er kilden, for skolens egen del, og har ingen grense. Skal du legge til
 noe i den engelske, må omtrent like mye kortes ned et annet sted først.
 
@@ -71,8 +74,9 @@ Two modes in one account:
 The app is two apps: the student app, and a smaller one for staff on night
 duty. So you can see both from one login, the test account has an
 "App Review" bar at the top - tap "Elev" (student) or "Admin" to switch. Admin
-mode shows the fire roll call for the whole school; staff normally unlock it
-by scanning a code shown at the school, and the test account is exempt.
+mode shows the fire roll call - for privacy, a demo list with only the test
+account. Staff unlock it by scanning a code at the school; this account is
+exempt.
 
 About the GPS requirement:
 Two features (fire roll call and morning assembly) require the user to be
@@ -115,8 +119,8 @@ The photo is stored on the school's own server with the session, is visible
 only to the student and the administration, is deleted automatically with the
 rest of the practice history, and is never shared with third parties.
 
-The camera is used for these two things only - the QR code and these photos -
-both covered by the camera usage description.
+The camera is used only for the QR code and these photos, both covered by
+the camera usage description.
 
 About "Internat" and "Middag" (weekly duties):
 Students take turns with dormitory cleaning and kitchen duty, one week each.
@@ -153,7 +157,8 @@ To modus i én konto:
 Appen er egentlig to apper: elevappen, og en mye smalere app for den ansatte
 som har nattevakt. For at dere skal se begge uten to innlogginger, viser
 testkontoen en «App Review»-rad øverst med knappene «Elev» og «Admin» – trykk
-for å bytte. Adminmodus viser brannlisten for hele skolen. Ansatte låser den
+for å bytte. Adminmodus viser brannlisten – av personvernhensyn en
+demo-liste der testkontoen er den eneste eleven. Ansatte låser den
 normalt opp ved å skanne en kode på en skjerm på skolen; testkontoen er
 unntatt, som over.
 

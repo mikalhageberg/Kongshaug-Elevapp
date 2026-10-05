@@ -129,7 +129,8 @@ export default function VaktScreen({ user, onChanged, onLogout }) {
           <Text style={styles.kortTekst}>
             Denne testkontoen får brannlisten uten å skanne vakt-koden, siden koden
             henger på en skjerm på skolen. En vanlig administrator må skanne den
-            hver kveld for å komme hit.
+            hver kveld for å komme hit. Av personvernhensyn er brannlisten en
+            demo der testkontoen er den eneste eleven.
           </Text>
         </Card>
       ) : status?.active ? (

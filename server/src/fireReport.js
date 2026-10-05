@@ -4,17 +4,23 @@ import { config } from './config.js';
 
 // Bygg brannliste-oversikten for en gitt natt (night_date = dagen natten begynner).
 // Samme struktur som /api/firelist/overview.
-export function getFireOverview(nightDate = todayDate()) {
+//
+// onlyUserId avgrenser lista til én elev og gjestene hennes. Brukes til
+// demo-brannlisten reviewer-kontoen ser i adminmodus: samme oppbygging som den
+// ekte, men uten noen andre elever på.
+export function getFireOverview(nightDate = todayDate(), { onlyUserId = null } = {}) {
+  const only = onlyUserId == null ? null : Number(onlyUserId);
   const alle = db
     .prepare(
       `SELECT u.id, u.full_name, u.dorm, u.room, u.class_name, u.home_dweller, f.status, f.checked_at
        FROM users u
        LEFT JOIN fire_checkins f
-         ON f.user_id = u.id AND f.night_date = ?
+         ON f.user_id = u.id AND f.night_date = @night
        WHERE u.role = 'student' AND u.active = 1
+         AND (@only IS NULL OR u.id = @only)
        ORDER BY u.dorm COLLATE NOCASE, CAST(u.room AS INTEGER), u.full_name COLLATE NOCASE`
     )
-    .all(nightDate);
+    .all({ night: nightDate, only });
 
   // Hjemmeboerne står utenfor selve opptellingen. De bor ikke på internatet og
   // kan ikke være i bygget om natten, så en «mangler»-rad på dem ville sendt
@@ -57,10 +63,11 @@ export function getFireOverview(nightDate = todayDate()) {
       `SELECT g.id, g.guest_name, g.dorm, g.room, g.host_user_id, u.full_name AS host_name, u.dorm AS host_dorm
          FROM fire_guests g
          JOIN users u ON u.id = g.host_user_id
-        WHERE g.status = 'approved' AND ? BETWEEN g.start_date AND g.end_date
+        WHERE g.status = 'approved' AND @night BETWEEN g.start_date AND g.end_date
+          AND (@only IS NULL OR g.host_user_id = @only)
         ORDER BY g.guest_name COLLATE NOCASE`
     )
-    .all(nightDate);
+    .all({ night: nightDate, only });
   for (const g of guests) {
     const dorm = ensureDorm(g.dorm || 'Uten internat');
     dorm.guests.push({ id: g.id, name: g.guest_name, room: g.room || null, hostId: g.host_user_id, hostName: g.host_name, hostDorm: g.host_dorm || null });

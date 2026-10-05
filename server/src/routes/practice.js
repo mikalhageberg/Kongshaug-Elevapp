@@ -4,7 +4,7 @@ import express, { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import db from '../db.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, isRealAdmin } from '../auth.js';
 import {
   competitionState, startSession, pauseSession, resumeSession, stopSession,
   finishSession, discardSession, savePhoto,
@@ -103,7 +103,7 @@ router.delete('/:id', (req, res) => {
 router.get('/sessions/:id/photo', (req, res) => {
   const row = db.prepare('SELECT user_id, photo_filename FROM practice_sessions WHERE id = ?').get(Number(req.params.id));
   if (!row?.photo_filename) return res.status(404).json({ error: 'Fant ikke bildet' });
-  if (req.auth.role !== 'admin' && row.user_id !== req.auth.sub) {
+  if (!isRealAdmin(req.auth) && row.user_id !== req.auth.sub) {
     return res.status(403).json({ error: 'Ingen tilgang' });
   }
   const file = path.join(photoDir, row.photo_filename);

@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, isRealAdmin } from '../auth.js';
 import { createTask, deleteTask, listTasks, taskById, taskUsage, updateTask } from '../dormTasks.js';
 
 const router = Router();
@@ -19,7 +19,7 @@ const feil = (res, ex) => res.status(400).json({ error: ex.message || 'Kunne ikk
 // Admin ser alle oppgaver (også deaktiverte); eleven ser bare de aktive på sitt
 // eget internat – lista er ikke hemmelig, men den er heller ikke hennes sak.
 router.get('/', (req, res) => {
-  if (req.auth.role === 'admin') {
+  if (isRealAdmin(req.auth)) {
     return res.json({ tasks: listTasks({ dorm: req.query.dorm || null }) });
   }
   const meg = db.prepare('SELECT dorm FROM users WHERE id = ?').get(req.auth.sub);

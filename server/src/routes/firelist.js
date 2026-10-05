@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth, requireAdmin, isAppReviewUser } from '../auth.js';
+import { requireAuth, requireAdmin, requireAdminOrReviewDemo, isAppReviewUser } from '../auth.js';
 import { isOnCampus } from '../geo.js';
 import { todayDate } from '../andaktToken.js';
 import { fireWindowNow, currentNightDate, nightEndsAt, osloParts, lateArrivalWindow } from '../fireWindow.js';
@@ -282,6 +282,17 @@ function requireWatchOnNative(req, res, next) {
   });
 }
 
+// Demo-brannlisten for reviewer-kontoen (req.reviewDemo, se
+// requireAdminOrReviewDemo i auth.js): vaktappen virker som for en ekte vakt,
+// men den eneste eleven på lista – og den eneste den kan endre – er
+// testkontoen selv. Av personvernhensyn skal den som går gjennom appen hos
+// Apple eller Google aldri se skolens faktiske elever.
+function demoForbidsUser(req, res, uid) {
+  if (!req.reviewDemo || uid === req.auth.sub) return false;
+  res.status(404).json({ error: 'Fant ikke eleven' });
+  return true;
+}
+
 // ADMIN (nettleser): kveldens vakt-QR + hvem som har tatt vakten.
 router.get('/watch/qr', requireAdmin, async (req, res) => {
   const nightDate = watchNightDate();
@@ -321,7 +332,7 @@ router.post('/watch/register', requireAdmin, (req, res) => {
 });
 
 // ADMIN: har jeg vakten nå? Appen spør ved hver oppstart.
-router.get('/watch/status', requireAdmin, (req, res) => {
+router.get('/watch/status', requireAdminOrReviewDemo, (req, res) => {
   const nightDate = watchNightDate();
   const list = watchers(nightDate);
   // bypass forteller vaktskjermen at vakten er gitt uten skanning, slik at den
@@ -337,7 +348,8 @@ router.get('/watch/status', requireAdmin, (req, res) => {
     nightEndsAt: nightEndsAt(morgenDow),
     active: bypass || list.some((w) => w.id === req.auth.sub),
     bypass,
-    watchers: list,
+    // Navnene på de ekte vaktene er heller ikke reviewerens sak.
+    watchers: req.reviewDemo ? [] : list,
   });
 });
 
@@ -349,9 +361,10 @@ router.delete('/watch', requireAdmin, (req, res) => {
 
 // ── ADMIN: sett en elevs status manuelt (f.eks. mistet telefon) ──
 // body: { userId, status: 'present' | 'away' | 'clear' }. Ingen GPS-krav.
-router.post('/admin-checkin', requireAdmin, requireWatchOnNative, (req, res) => {
+router.post('/admin-checkin', requireAdminOrReviewDemo, requireWatchOnNative, (req, res) => {
   const uid = Number(req.body?.userId);
   const status = req.body?.status;
+  if (demoForbidsUser(req, res, uid)) return;
   const u = db.prepare("SELECT id, full_name, home_dweller FROM users WHERE id = ? AND role = 'student'").get(uid);
   if (!u) return res.status(404).json({ error: 'Fant ikke eleven' });
   // Hjemmeboere står ikke på lista, og skal heller ikke kunne settes der herfra.
@@ -413,8 +426,9 @@ const upsertLate = db.prepare(
      DO UPDATE SET expected_at = excluded.expected_at, set_by = excluded.set_by, created_at = datetime('now')`
 );
 
-router.post('/late-arrival', requireAdmin, requireWatchOnNative, (req, res) => {
+router.post('/late-arrival', requireAdminOrReviewDemo, requireWatchOnNative, (req, res) => {
   const uid = Number(req.body?.userId);
+  if (demoForbidsUser(req, res, uid)) return;
   if (!findListedStudent(uid, res)) return;
   const { value: expectedAt, error } = parseExpectedAt(req.body?.expectedAt);
   if (error) return res.status(400).json({ error });
@@ -434,8 +448,9 @@ router.post('/late-arrival', requireAdmin, requireWatchOnNative, (req, res) => {
 // rapporteres tilbake, i stedet for å velte hele lagringen – de kan ha blitt
 // valgt i en liste som var et par minutter gammel.
 const BULK_MAX = 500;
-router.post('/late-arrival/bulk', requireAdmin, requireWatchOnNative, (req, res) => {
-  const ids = [...new Set((Array.isArray(req.body?.userIds) ? req.body.userIds : []).map(Number).filter(Number.isInteger))];
+router.post('/late-arrival/bulk', requireAdminOrReviewDemo, requireWatchOnNative, (req, res) => {
+  let ids = [...new Set((Array.isArray(req.body?.userIds) ? req.body.userIds : []).map(Number).filter(Number.isInteger))];
+  if (req.reviewDemo) ids = ids.filter((id) => id === req.auth.sub);
   if (!ids.length) return res.status(400).json({ error: 'Ingen elever valgt.' });
   if (ids.length > BULK_MAX) return res.status(400).json({ error: `Maks ${BULK_MAX} elever om gangen.` });
   const { value: expectedAt, error } = parseExpectedAt(req.body?.expectedAt);
@@ -455,16 +470,18 @@ router.post('/late-arrival/bulk', requireAdmin, requireWatchOnNative, (req, res)
   })();
   res.json({ ok: true, nightDate: night, expectedAt, saved: saved.length, skipped });
 });
-router.delete('/late-arrival/:userId', requireAdmin, requireWatchOnNative, (req, res) => {
+router.delete('/late-arrival/:userId', requireAdminOrReviewDemo, requireWatchOnNative, (req, res) => {
   const uid = Number(req.params.userId);
+  if (demoForbidsUser(req, res, uid)) return;
   if (!findListedStudent(uid, res)) return;
   db.prepare('DELETE FROM fire_late_arrivals WHERE user_id = ? AND night_date = ?').run(uid, currentNightDate());
   res.json({ ok: true });
 });
 
 // ── ADMIN: oversikt over kveldens brannliste, gruppert på internat ──
-router.get('/overview', requireAdmin, requireWatchOnNative, (req, res) => {
-  res.json(getFireOverview(currentNightDate()));
+router.get('/overview', requireAdminOrReviewDemo, requireWatchOnNative, (req, res) => {
+  // Reviewer-kontoen får en demo-liste med bare seg selv på – se demoForbidsUser.
+  res.json(getFireOverview(currentNightDate(), { onlyUserId: req.reviewDemo ? req.auth.sub : null }));
 });
 
 // ── GJESTER ──────────────────────────────────────────────────
