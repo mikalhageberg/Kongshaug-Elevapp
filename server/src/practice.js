@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import db from './db.js';
-import { paths } from './config.js';
+import { paths, config } from './config.js';
 import { todayDate } from './andaktToken.js';
 import { getSettings, setSettings } from './settings.js';
 
@@ -52,6 +52,40 @@ export function competitionState(today = todayDate(), s = getSettings()) {
     frozenBy: frozen ? s.practiceFrozenBy || null : null,
     active: inPeriod && !frozen,
     warmupSeconds: s.practiceWarmupMinutes * 60,
+  };
+}
+
+// ── Demo-konkurranse for App/Play Store-reviewer-kontoen ─────
+// Reviewer-kontoen får sin egen konkurranse, uavhengig av skolens: alltid
+// åpen, med kort oppvarming og bilde på hver økt, slik at hele flyten –
+// stoppeklokke, oppvarming, pause, dokumentasjonsbilde, registrering – kan
+// prøves med én gang. Ellers hadde reviewer enten sett «Ingen øvekonkurranse
+// er satt opp», eller måttet vente ti minutter og ha flaks med terningen.
+//
+// Perioden ruller med dagens dato (30 dager hver vei), så øktene fra de
+// første dagene av gjennomgangen fortsatt teller mot slutten av den.
+// Økter lagres som vanlig, men kontoen holdes utenfor skolens stilling – se
+// leaderboard – og en nullstilling sletter dem sammen med alt annet.
+const DEMO_WARMUP_SECONDS = 60;
+const DEMO_HALF_PERIOD_DAYS = 30;
+
+function shiftDays(date, days) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+export function demoCompetitionState(today = todayDate()) {
+  return {
+    configured: true,
+    startDate: shiftDays(today, -DEMO_HALF_PERIOD_DAYS),
+    endDate: shiftDays(today, DEMO_HALF_PERIOD_DAYS),
+    inPeriod: true,
+    frozen: false,
+    frozenAt: null,
+    frozenBy: null,
+    active: true,
+    warmupSeconds: DEMO_WARMUP_SECONDS,
+    demo: true,
   };
 }
 
@@ -131,17 +165,22 @@ export function pendingSession(userId) {
 // Start en økt – eller hent fram den som allerede pågår. At en ny «start» gir
 // samme økt tilbake er poenget: lukker eleven appen midt i økten, plukker
 // timeren opp igjen der den var i stedet for å nullstille.
-export function startSession(userId) {
+//
+// I demo-konkurransen (comp.demo) gjelder dens egen oppvarming, og bildet
+// kreves alltid, så reviewer får se bildesteget på første økt.
+export function startSession(userId, comp = competitionState()) {
   const eksisterende = pendingSession(userId);
   if (eksisterende) return eksisterende;
 
   const s = getSettings();
+  const warmup = comp.demo ? comp.warmupSeconds : s.practiceWarmupMinutes * 60;
+  const photo = comp.demo || Math.random() * 100 < s.practicePhotoPercent;
   const info = db
     .prepare(
       `INSERT INTO practice_sessions (user_id, session_date, warmup_seconds, photo_required)
        VALUES (?, ?, ?, ?)`
     )
-    .run(userId, todayDate(), s.practiceWarmupMinutes * 60, Math.random() * 100 < s.practicePhotoPercent ? 1 : 0);
+    .run(userId, todayDate(), warmup, photo ? 1 : 0);
 
   const row = db.prepare('SELECT * FROM practice_sessions WHERE id = ?').get(info.lastInsertRowid);
   return { ...publicSession(row), elapsedSeconds: 0 };
@@ -314,7 +353,8 @@ export const SORTS = {
 };
 
 // Stillingen: én rad per aktiv elev, også de som ikke har øvd ennå – hullene er
-// like interessante for skolen som toppen av lista.
+// like interessante for skolen som toppen av lista. Reviewer-kontoen holdes
+// utenfor: den øver i sin egen demo-konkurranse, ikke i skolens.
 export function leaderboard(sort = 'time', comp = competitionState()) {
   const order = SORTS[sort] || SORTS.time;
   if (!comp.configured) return [];
@@ -327,11 +367,11 @@ export function leaderboard(sort = 'time', comp = competitionState()) {
          LEFT JOIN practice_sessions p
            ON p.user_id = u.id AND p.ended_at IS NOT NULL
           AND p.session_date BETWEEN @start AND @end
-        WHERE u.role = 'student' AND u.active = 1
+        WHERE u.role = 'student' AND u.active = 1 AND u.username != @reviewer
         GROUP BY u.id
         ORDER BY ${order}`
     )
-    .all({ start: comp.startDate, end: comp.endDate })
+    .all({ start: comp.startDate, end: comp.endDate, reviewer: config.appReview.bypassUsername })
     .map((r) => ({
       id: r.id,
       fullName: r.full_name,

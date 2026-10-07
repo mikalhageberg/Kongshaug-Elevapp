@@ -4,13 +4,13 @@ import express, { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import db from '../db.js';
-import { requireAuth, requireAdmin, isRealAdmin } from '../auth.js';
+import { requireAuth, requireAdmin, isRealAdmin, isAppReviewUser } from '../auth.js';
 import {
   competitionState, startSession, pauseSession, resumeSession, stopSession,
   finishSession, discardSession, savePhoto,
   pendingSession, mySessions, myTotalSeconds, leaderboard, sessionsFor,
   competitionStats, resetCompetition, photoDir, SORTS,
-  setFrozen, runningSessions, closedReason,
+  setFrozen, runningSessions, closedReason, demoCompetitionState,
 } from '../practice.js';
 
 const router = Router();
@@ -18,9 +18,16 @@ router.use(requireAuth);
 
 // ── ELEV ─────────────────────────────────────────────────────
 
+// Konkurransen som gjelder for denne eleven. Reviewer-kontoen får alltid sin
+// egen demo-konkurranse (se demoCompetitionState), alle andre skolens.
+// Samme sperre som de andre reviewer-unntakene: uten APPLE_REVIEW_USERNAME
+// satt gjelder det ingen.
+const competitionFor = (req) =>
+  (isAppReviewUser(req.auth.username) ? demoCompetitionState() : competitionState());
+
 // Alt appen trenger for å tegne øveskjermen i ett kall.
 router.get('/status', (req, res) => {
-  const comp = competitionState();
+  const comp = competitionFor(req);
   res.json({
     competition: {
       configured: comp.configured, active: comp.active, inPeriod: comp.inPeriod,
@@ -35,9 +42,9 @@ router.get('/status', (req, res) => {
 
 // Start en økt (eller hent fram den som allerede pågår).
 router.post('/start', (req, res) => {
-  const comp = competitionState();
+  const comp = competitionFor(req);
   if (!comp.active) return res.status(403).json({ error: closedReason(comp) });
-  res.status(201).json({ session: startSession(req.auth.sub) });
+  res.status(201).json({ session: startSession(req.auth.sub, comp) });
 });
 
 // Pause og fortsett. Tiden står stille mens økten er pauset.
@@ -78,7 +85,7 @@ router.post('/:id/photo', express.raw({ type: 'application/base64', limit: '8mb'
 
 // Registrer økten.
 router.post('/:id/finish', (req, res) => {
-  const comp = competitionState();
+  const comp = competitionFor(req);
   // Frysing stopper også registreringen av økter som allerede er i gang. Det er
   // hele poenget: stillingen skal stå stille fra det øyeblikket admin fryser.
   if (!comp.active) return res.status(403).json({ error: closedReason(comp) });

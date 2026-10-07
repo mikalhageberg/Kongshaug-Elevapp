@@ -29,18 +29,13 @@ Apple/Google.
    og skal ikke stå på lenger enn nødvendig. Et adminmodus-token som allerede
    er utstedt slutter å virke i samme øyeblikk – det trengs altså ingen
    opprydding utover å fjerne variabelen.
-4. **Gjør øvekonkurransen synlig i gjennomgangsperioden.** Er det ingen aktiv
-   konkurranse, ser reviewer bare «Ingen øvekonkurranse er satt opp», og kan
-   ikke prøve funksjonen – det kan bli lest som en skjult funksjon. Under
-   admin → **Øvekonkurranse**:
-   - sett en periode som dekker dagene appen er til gjennomgang,
-   - sett **oppvarming til 1 minutt**, slik at reviewer slipper å vente ti,
-   - sett **andel økter som må dokumenteres til 100 %**, slik at bildesteget
-     dukker opp med én gang i stedet for annenhver gang.
-
-   Sett verdiene tilbake (10 minutter, 50 %) når appen er godkjent, og bruk
-   **Nullstill konkurransen** nederst på siden for å slette reviewerens
-   testøkter og bilder.
+4. **Øvekonkurransen trenger ikke settes opp.** Testkontoen får automatisk
+   sin egen demo-konkurranse, uavhengig av skolens: alltid åpen, med
+   **1 minutts oppvarming** og **bilde på hver økt**, slik at reviewer når
+   hele flyten med én gang. Skolens konkurranse og innstillinger røres ikke,
+   og testkontoen vises ikke i skolens stilling. Bruk gjerne **Nullstill
+   konkurransen** etterpå for å slette reviewerens testbilder – men merk at
+   den sletter alle elevers økter, så gjør det bare mellom konkurranser.
 5. **Gi testkontoen en internatvask-oppgave å signere.** Samme grunn som over:
    uten dette ser reviewer bare en tom vaskeplan, og kommer aldri fram til
    signeringen med Face ID. Under admin → **Internat**:
@@ -57,7 +52,7 @@ forklart hvorfor appen krever GPS og hvorfor den ber om bilder. Det må derfor
 kunne leses av en reviewer som ikke kan norsk.
 
 Feltet i App Store Connect tar **4000 tegn**, og den engelske under ligger nå på
-**3980** – altså 20 tegn under taket. Lim inn **den engelske**. Den norske
+**4047** – altså -47 tegn under taket. Lim inn **den engelske**. Den norske
 under er kilden, for skolens egen del, og har ingen grense. Skal du legge til
 noe i den engelske, må omtrent like mye kortes ned et annet sted først.
 
@@ -87,10 +82,9 @@ user is on school grounds, and once more the moment they tap "register" - that
 last reading is the one that is stored. Never in the background, never
 continuously.
 
-The test account above is exempt from this requirement (this one account
-only), so you can test the full flow without being on site. A normal student
-account would see "You are not on school grounds" anywhere else - expected
-behaviour, not a bug.
+The test account is exempt (this one account only), so you can test the full
+flow off site. A normal student account would see "You are not on school
+grounds" - expected behaviour, not a bug.
 
 About the QR code in "Andakt" (morning assembly):
 Attendance is normally registered by scanning a rotating QR code shown on a
@@ -102,9 +96,9 @@ students practise as much as possible on their main instrument. The student
 starts a stopwatch in the app, completes a mandatory warm-up, and registers
 the session when finished.
 
-Roughly half of all sessions (the share is set by the school) must be
-documented with a photo. This is a check against someone just letting the
-clock run.
+Some sessions (a share set by the school) must be documented with a photo,
+as a check against just letting the clock run. The test account has its own
+demo competition with a 1-minute warm-up and a photo on every session.
 
 IMPORTANT ABOUT THIS PHOTO - PRIVACY:
 The app explicitly asks the student NOT to photograph themselves or anyone
@@ -188,7 +182,8 @@ telefonen kan ligge på notestativet uten å låse seg.
 
 Omtrent halvparten av øktene (andelen settes av skolen) må dokumenteres med et
 bilde før de kan registreres. Dette er en enkel kontroll mot at noen bare lar
-klokken gå.
+klokken gå. Testkontoen har sin egen demo-konkurranse, med ett minutts
+oppvarming og bilde på hver økt, slik at dere når hele flyten med én gang.
 
 VIKTIG OM DETTE BILDET – PERSONVERN:
 Appen ber uttrykkelig eleven om å IKKE ta bilde av seg selv eller andre
