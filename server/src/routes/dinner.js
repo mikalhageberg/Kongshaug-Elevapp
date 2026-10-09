@@ -35,8 +35,12 @@ router.get('/status', (req, res) => {
   // Når går dagens oversikt til kjøkkenet? Appen ber eleven melde seg av før
   // det. null når utsendingen er skrudd av – da finnes det ingen frist.
   const s = getSettings();
-  const kitchenEmailAt = s.kitchenEmailEnabled && s.kitchenEmailRecipient ? kitchenEmailTimeFor(date, s) : null;
-  res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut, kitchenEmailAt });
+  // kitchenEmailTimes gir begge fristene (hverdag og helg), så appen kan vise
+  // dem samlet; kitchenEmailAt (dagens) beholdes for eldre appversjoner.
+  const aktiv = s.kitchenEmailEnabled && s.kitchenEmailRecipient;
+  const kitchenEmailAt = aktiv ? kitchenEmailTimeFor(date, s) : null;
+  const kitchenEmailTimes = aktiv ? { weekday: s.kitchenEmailTime, weekend: s.kitchenEmailTimeWeekend } : null;
+  res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut, kitchenEmailAt, kitchenEmailTimes });
 });
 
 // ELEV: meld fra at du IKKE vil ha middag i dag

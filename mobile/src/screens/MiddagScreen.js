@@ -69,7 +69,7 @@ export default function MiddagScreen({ user }) {
         </Card>
       ))}
 
-      {dinner && !dinner.homeDweller ? <FristBoks kitchenEmailAt={dinner.kitchenEmailAt} /> : null}
+      {dinner && !dinner.homeDweller ? <FristBoks kitchenEmailTimes={dinner.kitchenEmailTimes} kitchenEmailAt={dinner.kitchenEmailAt} /> : null}
 
       <DutyPlan kind="kitchen" user={user} style={{ marginTop: 26 }} />
 
@@ -109,20 +109,21 @@ export default function MiddagScreen({ user }) {
   );
 }
 
-// Kjøkkenet får dagens oversikt på e-post på et fast klokkeslett, og lager
-// mat etter den. En avmelding etter det hjelper lite. Boksen sier når fristen
-// er, og – etter at den har gått – at oversikten alt er sendt, så eleven
-// forstår hvorfor det er for sent for i dag, men melder seg av likevel.
-function FristBoks({ kitchenEmailAt }) {
+// Kjøkkenet får dagens oversikt på e-post på et fast klokkeslett – ett for
+// hverdager og ett for helgen – og lager mat etter den. Boksen sier bare når
+// fristene er, slik serveren har dem.
+function FristBoks({ kitchenEmailTimes, kitchenEmailAt }) {
   let tekst;
-  if (!kitchenEmailAt) {
-    tekst = 'Meld deg av så tidlig som mulig, helst før lunsj. Da vet kjøkkenet hvor mange som spiser, og vi kaster mindre mat.';
+  const { weekday, weekend } = kitchenEmailTimes || {};
+  if (weekday && weekend) {
+    tekst = weekday === weekend
+      ? `Frist for å melde seg av middag: kl. ${weekday} hver dag.`
+      : `Frist for å melde seg av middag: kl. ${weekday} på hverdager og kl. ${weekend} i helgen.`;
+  } else if (kitchenEmailAt) {
+    // Eldre server uten kitchenEmailTimes: bare dagens frist er kjent.
+    tekst = `Frist for å melde seg av middag i dag: kl. ${kitchenEmailAt}.`;
   } else {
-    const nå = new Date();
-    const nåStr = `${String(nå.getHours()).padStart(2, '0')}:${String(nå.getMinutes()).padStart(2, '0')}`;
-    tekst = nåStr < kitchenEmailAt
-      ? `Meld deg av før kl. ${kitchenEmailAt}. Da går dagens oversikt til kjøkkenet, og de lager mat til dem som står på lista.`
-      : `Dagens oversikt gikk til kjøkkenet kl. ${kitchenEmailAt}. Meld deg av likevel om du ikke skal spise – og helst før kl. ${kitchenEmailAt} neste gang.`;
+    tekst = 'Meld deg av så tidlig som mulig, helst før lunsj. Da vet kjøkkenet hvor mange som spiser, og vi kaster mindre mat.';
   }
   return (
     <View style={styles.frist}>
