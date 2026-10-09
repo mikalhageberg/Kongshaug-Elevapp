@@ -3252,7 +3252,7 @@ async function renderSettings(main) {
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send brannlisten automatisk til ansvarlig lærer, med PDF vedlagt.</div>
       ${!s.mailConfigured ? `<div style="background:var(--amber-bg);color:var(--amber-ink);border:1px solid #f0dca0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin:6px 0 4px">⚠ Brevo er ikke satt opp ennå. Legg inn BREVO_API_KEY og MAIL_FROM i server/.env og start serveren på nytt.</div>` : ''}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
-        <div><div style="font-size:15px;font-weight:700">Automatisk utsending</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Send hver dag på tidspunktet under.</div></div>
+        <div><div style="font-size:15px;font-weight:700">Automatisk utsending</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Send hver dag på tidspunktene under.</div></div>
         <input type="checkbox" name="fireEmailEnabled" ${s.fireEmailEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
       </div>
       <div style="padding:16px 0;border-bottom:1px solid #f0f2f4">
@@ -3268,7 +3268,7 @@ async function renderSettings(main) {
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">E-post: middag (kjøkken)</div>
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Send oversikt over hvor mange som spiser i dag.</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #f0f2f4">
-        <div><div style="font-size:15px;font-weight:700">Automatisk utsending</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Send hver dag på tidspunktet under.</div></div>
+        <div><div style="font-size:15px;font-weight:700">Automatisk utsending</div><div style="font-size:13px;color:var(--muted-2);margin-top:2px">Send hver dag på tidspunktene under.</div></div>
         <input type="checkbox" name="kitchenEmailEnabled" ${s.kitchenEmailEnabled ? 'checked' : ''} style="width:22px;height:22px;flex:0 0 auto" />
       </div>
       <div style="padding:16px 0;border-bottom:1px solid #f0f2f4">
@@ -3280,7 +3280,8 @@ async function renderSettings(main) {
         <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Navnet middags-e-posten vises med (kan være annet enn brannlisten). Trenger ingen ekstra API-nøkkel.</div>
         <input type="text" name="kitchenEmailFromName" value="${(s.kitchenEmailFromName || '').replace(/"/g, '&quot;')}" placeholder="Kongshaug Kjøkken" class="field" style="height:46px" />
       </div>
-      ${timeRow('kitchenEmailTime', 'Sendetidspunkt', s.kitchenEmailTime, 'Sendes før middag, med dagens tall.')}
+      ${timeRow('kitchenEmailTime', 'Sendetidspunkt hverdag (man–fre)', s.kitchenEmailTime, 'Sendes før middag, med dagens tall.')}
+      ${timeRow('kitchenEmailTimeWeekend', 'Sendetidspunkt helg (lør–søn)', s.kitchenEmailTimeWeekend, 'Elevene ser fristen i appen og må melde seg av før dette.')}
       <div style="display:flex;justify-content:flex-end;margin-top:14px">
         <button class="btn btn-ghost" id="testKitchen" style="height:44px;padding:0 18px;font-size:14px">Send test nå</button>
       </div>
@@ -3326,6 +3327,7 @@ async function renderSettings(main) {
       kitchenEmailEnabled: val('kitchenEmailEnabled').checked,
       kitchenEmailRecipient: val('kitchenEmailRecipient').value.trim(),
       kitchenEmailTime: val('kitchenEmailTime').value,
+      kitchenEmailTimeWeekend: val('kitchenEmailTimeWeekend').value,
       kitchenEmailFromName: val('kitchenEmailFromName').value.trim(),
       guestEmailEnabled: val('guestEmailEnabled').checked,
       guestEmailRecipient: val('guestEmailRecipient').value.trim(),

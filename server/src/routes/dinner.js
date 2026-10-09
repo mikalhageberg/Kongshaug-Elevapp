@@ -6,7 +6,7 @@ import { getDinnerReport } from '../kitchenReport.js';
 import { currentWeekStart } from '../isoWeek.js';
 import { dutyWeek } from '../duty.js';
 import { createDutyRouter } from './duty.js';
-import { getSettings } from '../settings.js';
+import { getSettings, kitchenEmailTimeFor } from '../settings.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -35,7 +35,7 @@ router.get('/status', (req, res) => {
   // Når går dagens oversikt til kjøkkenet? Appen ber eleven melde seg av før
   // det. null når utsendingen er skrudd av – da finnes det ingen frist.
   const s = getSettings();
-  const kitchenEmailAt = s.kitchenEmailEnabled && s.kitchenEmailRecipient ? s.kitchenEmailTime : null;
+  const kitchenEmailAt = s.kitchenEmailEnabled && s.kitchenEmailRecipient ? kitchenEmailTimeFor(date, s) : null;
   res.json({ date, optedOut, fromPeriod: homeDweller || (period && !manual), homeDweller, eating: !optedOut, kitchenEmailAt });
 });
 

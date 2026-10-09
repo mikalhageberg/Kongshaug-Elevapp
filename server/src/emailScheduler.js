@@ -18,7 +18,7 @@
 // vinduet ikke gir dobbel utsending.
 
 import { config } from './config.js';
-import { getSettings, getLastSent, setLastSent, hhmmToMinutes } from './settings.js';
+import { getSettings, getLastSent, setLastSent, hhmmToMinutes, kitchenEmailTimeFor } from './settings.js';
 import { sendFireListEmail, sendKitchenEmail } from './mail.js';
 import { sendFireListReminder, sendWatchMissingPush } from './fireReminder.js';
 import { sendDutyReminders, isSunday } from './dutyReminder.js';
@@ -85,7 +85,7 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
     {
       navn: 'Middagsoversikt',
       key: 'kitchenEmailLastSent',
-      cfg: { enabled: s.kitchenEmailEnabled, recipient: s.kitchenEmailRecipient, time: s.kitchenEmailTime },
+      cfg: { enabled: s.kitchenEmailEnabled, recipient: s.kitchenEmailRecipient, time: kitchenEmailTimeFor(now.dateKey, s) },
       send: sendKitchenEmail,
       beskriv: (r) => `sendt til ${r.recipient} (${r.eating} spiser)`,
     },

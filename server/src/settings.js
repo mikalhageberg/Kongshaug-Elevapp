@@ -49,7 +49,10 @@ const DEFAULTS = {
   fireEmailDelayMinutes: 15,       // minutter etter at vinduet stengte
   kitchenEmailEnabled: false,      // send middagsoversikt til kjøkkenet automatisk
   kitchenEmailRecipient: '',       // e-post til kjøkkenet
-  kitchenEmailTime: '13:00',       // klokkeslett for utsending til kjøkkenet
+  kitchenEmailTime: '13:00',       // klokkeslett for utsending til kjøkkenet (man–fre)
+  // Egen tid for helgen (lør–søn) – middagen går ofte til en annen tid da.
+  // Ikke satt = samme som hverdag, så eksisterende oppsett ikke endres.
+  kitchenEmailTimeWeekend: '',
   kitchenEmailFromName: 'Kongshaug Kjøkken', // avsendernavn for middags-e-posten
   kitchenEmailFrom: '',            // valgfri egen avsender-e-post (må være verifisert i Brevo)
   fireReminderPushEnabled: false,  // send push-påminnelse kl 20:00 til elever som ikke har krysset seg av
@@ -186,6 +189,7 @@ export function getSettings() {
     kitchenEmailEnabled: s.kitchenEmailEnabled != null ? s.kitchenEmailEnabled === 'true' : DEFAULTS.kitchenEmailEnabled,
     kitchenEmailRecipient: s.kitchenEmailRecipient ?? DEFAULTS.kitchenEmailRecipient,
     kitchenEmailTime: s.kitchenEmailTime ?? DEFAULTS.kitchenEmailTime,
+    kitchenEmailTimeWeekend: s.kitchenEmailTimeWeekend || s.kitchenEmailTime || DEFAULTS.kitchenEmailTime,
     kitchenEmailFromName: s.kitchenEmailFromName ?? DEFAULTS.kitchenEmailFromName,
     kitchenEmailFrom: s.kitchenEmailFrom ?? DEFAULTS.kitchenEmailFrom,
     fireReminderPushEnabled: s.fireReminderPushEnabled != null ? s.fireReminderPushEnabled === 'true' : DEFAULTS.fireReminderPushEnabled,
@@ -237,6 +241,14 @@ export function setLastSent(key, dateKey) {
   db.prepare(
     'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   ).run(key, dateKey);
+}
+
+// Når middags-e-posten går en gitt dato ('YYYY-MM-DD'): lørdag og søndag
+// følger helgetiden, resten av uken kitchenEmailTime.
+export function kitchenEmailTimeFor(dateKey, s = getSettings()) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return dow === 0 || dow === 6 ? s.kitchenEmailTimeWeekend : s.kitchenEmailTime;
 }
 
 // Er det andakt i dag? (kun ukedager hvis andaktWeekdaysOnly er på)
