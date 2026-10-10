@@ -8,6 +8,8 @@ import { KeyboardScrollView, TextField } from '../keyboard';
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const WD = ['ma', 'ti', 'on', 'to', 'fr', 'lø', 'sø'];
 
+// Rutenett for en måned (mandag først), som rader på sju celler. Tomme celler = null.
+// Celletall og ukedagsnavn skalerer maks 1,4× med systemskrifta, så de får plass i cella.
 function monthWeeks(y, m) {
   const first = new Date(y, m, 1);
   const lead = (first.getDay() + 6) % 7;
@@ -130,7 +132,7 @@ export default function GjestModal({ visible, onClose, user }) {
             <Text style={styles.monthLabel}>{MONTHS[view.m]} {view.y}</Text>
             <Pressable onPress={() => shift(1)} hitSlop={10} style={{ paddingHorizontal: 12, paddingVertical: 4 }}><Text style={styles.nav}>›</Text></Pressable>
           </View>
-          <View style={styles.weekRow}>{WD.map((w) => <Text key={w} style={styles.wd}>{w}</Text>)}</View>
+          <View style={styles.weekRow}>{WD.map((w) => <Text key={w} style={styles.wd} maxFontSizeMultiplier={1.4}>{w}</Text>)}</View>
           {weeks.map((week, w) => (
             <View key={w} style={styles.grid}>
               {week.map((d, i) => {
@@ -139,7 +141,7 @@ export default function GjestModal({ visible, onClose, user }) {
                 return (
                   <Pressable key={i} disabled={disabled} onPress={() => tapDay(d)} style={styles.cell}>
                     <View style={[styles.cellInner, cellBg(d)]}>
-                      {d ? <Text style={[styles.cellText, disabled && { color: '#c8ced8' }, edge && { color: '#fff' }]}>{Number(d.slice(8))}</Text> : null}
+                      {d ? <Text style={[styles.cellText, disabled && { color: '#c8ced8' }, edge && { color: '#fff' }]} maxFontSizeMultiplier={1.4}>{Number(d.slice(8))}</Text> : null}
                     </View>
                   </Pressable>
                 );
