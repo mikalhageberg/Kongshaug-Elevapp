@@ -2490,9 +2490,11 @@ async function renderPractice(main) {
   let sort = 'time';
 
   page.querySelector('#body').innerHTML = `
+    <div id="avpaa" style="margin-bottom:22px"></div>
+
     <div class="kpi" style="padding:8px 24px 20px;margin-bottom:22px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Konkurranseperiode</div>
-      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Elevene kan bare registrere øving mellom disse datoene, begge dager inkludert. Deaktiver konkurransen under hvis den ikke skal åpne seg av seg selv på startdatoen.</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:6px">Elevene kan bare registrere øving mellom disse datoene, begge dager inkludert. Deaktiver konkurransen øverst hvis den ikke skal åpne seg av seg selv på startdatoen.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 0">
         <div><label class="field-label">Starter</label><input type="date" name="practiceStartDate" value="${s.practiceStartDate || ''}" class="field field-sm" /><div data-vist="practiceStartDate" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
         <div><label class="field-label">Slutter</label><input type="date" name="practiceEndDate" value="${s.practiceEndDate || ''}" class="field field-sm" /><div data-vist="practiceEndDate" style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:5px;min-height:17px"></div></div>
@@ -2548,44 +2550,9 @@ async function renderPractice(main) {
   // Fryskortet. Frysing er en manuell stopp som gjelder uansett hva datoene
   // sier – den brukes når konkurransen skal avsluttes eller settes på vent uten
   // at noen skal måtte flytte på sluttdatoen og dermed endre stillingen.
-  //
-  // Er konkurransen deaktivert, erstattes kortet av et av/på-kort: da finnes
-  // den ikke for elevene, og datoene gjelder ikke før den aktiveres igjen.
   function tegnFrys(c) {
     const frysEl = page.querySelector('#frys');
-    const avKnapp = `<button class="btn" id="avKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto;background:#fff;color:var(--slate);border:1.5px solid #d3dae2">Deaktiver</button>`;
-
-    if (!c.enabled) {
-      frysEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 22px;border-radius:16px;background:#f4f5f7;border:1px solid var(--line)">
-          <div style="flex:1;min-width:240px">
-            <div style="font-size:15px;font-weight:800">⏸ Konkurransen er deaktivert</div>
-            <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">Elevene ser den ikke i appen, og datoene gjelder ikke – den åpner seg ikke av seg selv. Perioden og resultatene er urørt.</div>
-          </div>
-          <button class="btn btn-primary" id="påKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto">Aktiver</button>
-        </div>`;
-      frysEl.querySelector('#påKnapp').addEventListener('click', () => {
-        // Ligger dagens dato i perioden, åpner konkurransen med én gang.
-        const iDag = todayStr();
-        const åpnerNå = c.hasPeriod && iDag >= c.startDate && iDag <= c.endDate && !c.frozen;
-        if (åpnerNå && !confirm('Dagens dato er innenfor perioden, så konkurransen åpner for elevene med én gang. Aktivere?')) return;
-        settAktiv(true);
-      });
-      return;
-    }
-
-    if (!c.configured) {
-      frysEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 22px;border-radius:16px;background:#fff;border:1px solid var(--line)">
-          <div style="flex:1;min-width:240px">
-            <div style="font-size:15px;font-weight:800">Konkurransen er aktivert</div>
-            <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">Den åpner på startdatoen så snart en periode er lagret. Deaktiver først hvis du vil legge inn datoene uten at den åpner seg av seg selv.</div>
-          </div>
-          ${avKnapp}
-        </div>`;
-      frysEl.querySelector('#avKnapp').addEventListener('click', () => settAktiv(false));
-      return;
-    }
+    if (!c.configured) { frysEl.innerHTML = ''; return; }
 
     const igjen = dagerIgjen(c.endDate);
     const tittel = c.frozen ? '🧊 Konkurransen er fryst' : c.inPeriod ? 'Konkurransen er åpen' : 'Konkurransen er ikke i gang';
@@ -2602,25 +2569,54 @@ async function renderPractice(main) {
           <div style="font-size:15px;font-weight:800;${c.frozen ? 'color:var(--navy)' : ''}">${tittel}</div>
           <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">${tekst}</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto">
-          <button class="btn" id="frysKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto;
-                  ${c.frozen ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--slate);border:1.5px solid #d3dae2'}">
-            ${c.frozen ? 'Lås opp' : 'Frys konkurransen…'}
-          </button>
-          ${avKnapp}
-        </div>
+        <button class="btn" id="frysKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto;
+                ${c.frozen ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--slate);border:1.5px solid #d3dae2'}">
+          ${c.frozen ? 'Lås opp' : 'Frys konkurransen…'}
+        </button>
       </div>`;
-
-    frysEl.querySelector('#avKnapp').addEventListener('click', () => {
-      if (c.active && !confirm('Konkurransen er åpen nå. Deaktiveres den, forsvinner den fra appen med én gang, og økter som pågår kan ikke registreres. Deaktivere?')) return;
-      settAktiv(false);
-    });
 
     frysEl.querySelector('#frysKnapp').addEventListener('click', () => {
       // Opptining åpner bare igjen og kan angres med ett trykk, så den går rett
       // gjennom. Frysing avbryter elever midt i økten, og spør først.
       if (c.frozen) settFryst(false);
       else frysModal(() => loadBoard());
+    });
+  }
+
+  // Av/på-kortet øverst på siden. Deaktivert betyr at konkurransen ikke finnes
+  // for elevene, og at datoene ikke gjelder før den aktiveres igjen – da trengs
+  // heller ikke fryskortet, som bare tegnes når konkurransen er på.
+  function tegnAvPå(c) {
+    const avpaaEl = page.querySelector('#avpaa');
+    const tekst = !c.enabled
+      ? 'Elevene ser den ikke i appen, og datoene gjelder ikke – den åpner seg ikke av seg selv. Perioden og resultatene er urørt.'
+      : c.hasPeriod
+        ? 'Elevene ser konkurransen i appen mens dagens dato er innenfor perioden. Deaktiver for å skjule den helt, uansett datoer.'
+        : 'Den åpner på startdatoen så snart en periode er lagret. Deaktiver først hvis du vil legge inn datoene uten at den åpner seg av seg selv.';
+
+    avpaaEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 22px;border-radius:16px;
+                  background:${c.enabled ? '#fff' : '#f4f5f7'};border:1px solid var(--line)">
+        <div style="flex:1;min-width:240px">
+          <div style="font-size:15px;font-weight:800">${c.enabled ? 'Konkurransen er aktivert' : '⏸ Konkurransen er deaktivert'}</div>
+          <div style="font-size:13px;color:var(--muted-2);margin-top:3px;line-height:1.5">${tekst}</div>
+        </div>
+        ${c.enabled
+          ? '<button class="btn" id="avKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto;background:#fff;color:var(--slate);border:1.5px solid #d3dae2">Deaktiver</button>'
+          : '<button class="btn btn-primary" id="påKnapp" style="height:44px;padding:0 18px;font-size:14px;flex:0 0 auto">Aktiver</button>'}
+      </div>`;
+
+    avpaaEl.querySelector('#avKnapp, #påKnapp').addEventListener('click', () => {
+      if (c.enabled) {
+        if (c.active && !confirm('Konkurransen er åpen nå. Deaktiveres den, forsvinner den fra appen med én gang, og økter som pågår kan ikke registreres. Deaktivere?')) return;
+        settAktiv(false);
+      } else {
+        // Ligger dagens dato i perioden, åpner konkurransen med én gang.
+        const iDag = todayStr();
+        const åpnerNå = c.hasPeriod && iDag >= c.startDate && iDag <= c.endDate && !c.frozen;
+        if (åpnerNå && !confirm('Dagens dato er innenfor perioden, så konkurransen åpner for elevene med én gang. Aktivere?')) return;
+        settAktiv(true);
+      }
     });
   }
 
@@ -2664,6 +2660,7 @@ async function renderPractice(main) {
     if (!d) { boardEl.innerHTML = '<div style="padding:22px;color:var(--muted-2)">Kunne ikke laste stillingen.</div>'; return; }
 
     const c = d.competition;
+    tegnAvPå(c);
     tegnFrys(c);
     const tilstand = !c.enabled ? 'deaktivert' : c.frozen ? 'fryst' : c.active ? 'pågår nå' : 'ikke aktiv';
     stateEl.textContent = !c.hasPeriod
