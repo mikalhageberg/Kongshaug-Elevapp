@@ -10,7 +10,7 @@ import {
   finishSession, discardSession, savePhoto,
   pendingSession, mySessions, myTotalSeconds, leaderboard, sessionsFor,
   competitionStats, resetCompetition, photoDir, SORTS,
-  setFrozen, runningSessions, closedReason, demoCompetitionState,
+  setFrozen, setEnabled, runningSessions, closedReason, demoCompetitionState,
 } from '../practice.js';
 
 const router = Router();
@@ -157,6 +157,16 @@ router.post('/freeze', requireAdmin, (req, res) => {
   const frozen = !!req.body?.frozen;
   const comp = setFrozen(frozen, req.auth.username || '');
   console.warn(`[øvekonkurranse] ${req.auth.username} ${frozen ? 'frøs' : 'tinte'} konkurransen`);
+  res.json({ competition: comp });
+});
+
+// Slå konkurransen av eller på. Av betyr at den ikke finnes for elevene, selv
+// om datoen er innenfor perioden – appen skjuler den, og økter kan verken
+// startes eller registreres. Datoene og resultatene beholdes.
+router.post('/enabled', requireAdmin, (req, res) => {
+  const enabled = !!req.body?.enabled;
+  const comp = setEnabled(enabled);
+  console.warn(`[øvekonkurranse] ${req.auth.username} ${enabled ? 'aktiverte' : 'deaktiverte'} konkurransen`);
   res.json({ competition: comp });
 });
 

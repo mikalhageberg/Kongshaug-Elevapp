@@ -67,6 +67,10 @@ const DEFAULTS = {
   practiceEndDate: '',             // 'YYYY-MM-DD', siste dag (inklusiv)
   practiceWarmupMinutes: 10,       // obligatorisk oppvarming før øvingen
   practicePhotoPercent: 50,        // hvor stor andel av øktene som må dokumenteres
+  // Av/på: en deaktivert konkurranse finnes ikke for elevene, uansett datoer.
+  // Datoene og resultatene står urørt, så den kan settes opp i forkant og slås
+  // på når skolen er klar – uten at den åpner seg av seg selv på startdatoen.
+  practiceEnabled: true,
   // Frysing: en manuell stopp som gjelder uansett hva datoene sier. Hvem og når
   // lagres sammen med bryteren, slik at admin ser hvem som stanset konkurransen.
   practiceFrozen: false,           // konkurransen er stanset manuelt
@@ -213,6 +217,7 @@ export function getSettings() {
     practicePhotoPercent: Number.isInteger(Number(s.practicePhotoPercent))
       ? Number(s.practicePhotoPercent)
       : DEFAULTS.practicePhotoPercent,
+    practiceEnabled: s.practiceEnabled != null ? s.practiceEnabled === 'true' : DEFAULTS.practiceEnabled,
     practiceFrozen: s.practiceFrozen != null ? s.practiceFrozen === 'true' : DEFAULTS.practiceFrozen,
     practiceFrozenAt: s.practiceFrozenAt ?? DEFAULTS.practiceFrozenAt,
     practiceFrozenBy: s.practiceFrozenBy ?? DEFAULTS.practiceFrozenBy,

@@ -11,6 +11,7 @@
 //  3. Om konkurransen er åpen. Perioden ligger i innstillingene, og økter kan
 //     verken startes eller fullføres utenfor den. Det samme gjelder frysingen:
 //     er konkurransen fryst, står stillingen stille uansett hva datoene sier.
+//     Og er den deaktivert, finnes den ikke for elevene i det hele tatt.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,13 +37,22 @@ export const MAX_WALL_SECONDS = 24 * 60 * 60;
 // konkurransen. De to holdes fra hverandre i svaret, slik at appen og admin kan
 // si hvorfor den er stengt – «ikke i perioden» og «stanset av skolen» er to
 // forskjellige beskjeder til eleven.
+//
+// Deaktivert går et hakk lenger enn fryst: da er konkurransen ikke satt opp i
+// det hele tatt, sett fra elevens side – appen skjuler den, og datoene gjelder
+// ikke. hasPeriod forteller admin at datoene likevel ligger der, slik at
+// stillingen kan vises mens den er av.
 export function competitionState(today = todayDate(), s = getSettings()) {
   const { practiceStartDate: start, practiceEndDate: end } = s;
-  const configured = !!(start && end);
+  const hasPeriod = !!(start && end);
+  const enabled = !!s.practiceEnabled;
+  const configured = hasPeriod && enabled;
   // Periodens datoer er inklusive – siste dag teller med.
   const inPeriod = configured && today >= start && today <= end;
   const frozen = !!s.practiceFrozen;
   return {
+    enabled,
+    hasPeriod,
     configured,
     startDate: start || null,
     endDate: end || null,
@@ -76,6 +86,8 @@ function shiftDays(date, days) {
 
 export function demoCompetitionState(today = todayDate()) {
   return {
+    enabled: true,
+    hasPeriod: true,
     configured: true,
     startDate: shiftDays(today, -DEMO_HALF_PERIOD_DAYS),
     endDate: shiftDays(today, DEMO_HALF_PERIOD_DAYS),
@@ -99,6 +111,13 @@ export function setFrozen(frozen, byUsername = '') {
   return competitionState();
 }
 
+// Slå konkurransen av eller på. Datoene, frysingen og resultatene røres ikke,
+// så den kommer tilbake nøyaktig slik den var.
+export function setEnabled(enabled) {
+  setSettings({ practiceEnabled: !!enabled });
+  return competitionState();
+}
+
 // Hvor mange økter som står og går akkurat nå. Frysing stopper dem, så admin
 // skal få vite hvor mange elever hun avbryter før hun trykker.
 export function runningSessions() {
@@ -107,6 +126,7 @@ export function runningSessions() {
 
 // Beskjeden eleven får når hun prøver å øve mens konkurransen er stengt.
 export function closedReason(comp) {
+  if (!comp.enabled) return 'Øvekonkurransen er ikke aktiv nå.';
   if (!comp.configured) return 'Ingen øvekonkurranse er satt opp.';
   if (comp.frozen) return 'Konkurransen er fryst av skolen akkurat nå.';
   return 'Konkurransen er ikke åpen nå.';
@@ -357,7 +377,7 @@ export const SORTS = {
 // utenfor: den øver i sin egen demo-konkurranse, ikke i skolens.
 export function leaderboard(sort = 'time', comp = competitionState()) {
   const order = SORTS[sort] || SORTS.time;
-  if (!comp.configured) return [];
+  if (!comp.hasPeriod) return [];
   return db
     .prepare(
       `SELECT u.id, u.full_name, u.class_name, u.instrument,
@@ -384,7 +404,7 @@ export function leaderboard(sort = 'time', comp = competitionState()) {
 
 // Øktene til én elev i perioden – det admin ser når hun åpner en rad.
 export function sessionsFor(userId, comp = competitionState()) {
-  if (!comp.configured) return [];
+  if (!comp.hasPeriod) return [];
   return db
     .prepare(
       `SELECT * FROM practice_sessions
