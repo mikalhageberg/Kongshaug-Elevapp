@@ -3025,6 +3025,9 @@ function prikkHendelseHTML(h) {
   if (h.action === 'opprettet') {
     tittel = `${h.after.category === TIDLIGERE ? 'Importerte' : 'Ga'} ${tildeling(h.after)}`;
     if (h.after.reason) detaljer.push(`Begrunnelse: «${esc(h.after.reason)}»`);
+  } else if (h.action === 'nullstilt') {
+    tittel = 'Nullstilte prikketellingen';
+    detaljer.push(`${prikkTekst(h.before.points)} fordelt på ${h.before.count} ${h.before.count === 1 ? 'tildeling' : 'tildelinger'} ble slettet`);
   } else if (h.action === 'slettet') {
     tittel = `Slettet ${tildeling(h.before)}`;
   } else {
@@ -3038,11 +3041,8 @@ function prikkHendelseHTML(h) {
           : `Begrunnelse: «${esc(b.reason)}» → «${esc(a.reason)}»`);
     }
   }
-  // Nullstillingen skrives som en merknad på hver slettede tildeling – vis den
-  // som det den er, ikke som en «grunn» noen har skrevet.
-  if (h.note?.startsWith('Prikketellingen ble nullstilt')) detaljer.push(`<b>${esc(h.note)}</b>`);
-  else if (h.note) detaljer.push(`Grunn: ${esc(h.note)}`);
-  const farge = { opprettet: 'var(--green)', endret: 'var(--amber)', slettet: 'var(--red)' }[h.action] || 'var(--muted-2)';
+  if (h.note) detaljer.push(`Grunn: ${esc(h.note)}`);
+  const farge = { opprettet: 'var(--green)', endret: 'var(--amber)', slettet: 'var(--red)', nullstilt: 'var(--navy)' }[h.action] || 'var(--muted-2)';
   return `
     <div style="display:flex;gap:12px;padding:11px 26px;border-bottom:1px solid #f2f4f6">
       <span class="dot" style="background:${farge};margin-top:7px;flex:0 0 auto"></span>
@@ -3078,14 +3078,13 @@ async function prikkHistorikkModal(elev, onEndret) {
   bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
   const etterEndring = async () => { await last(); await onEndret?.(); };
   bg.querySelector('#tildel').addEventListener('click', () => tildelPrikkerModal(elev, etterEndring));
-  // Nullstill: alle gjeldende prikker slettes på én gang. De står fortsatt i
-  // endringsloggen, merket som en nullstilling.
+  // Nullstill: alle gjeldende prikker slettes på én gang, og det står som én
+  // hendelse i endringsloggen.
   let sum = 0;
   bg.querySelector('#nullstill').addEventListener('click', async () => {
-    const grunn = prompt(`Nullstille prikketellingen for ${elev.fullName}?\n\nAlle ${prikkTekst(sum)} slettes, og eleven står på 0. Tildelingene blir stående i endringsloggen.\n\nGrunn (valgfritt):`, '');
-    if (grunn === null) return;
+    if (!confirm(`Nullstille prikketellingen for ${elev.fullName}?\n\nAlle ${prikkTekst(sum)} slettes, og eleven står på 0. Nullstillingen står i endringsloggen.`)) return;
     try {
-      const r = await api(`/api/demerits/students/${elev.id}/reset`, { method: 'POST', body: { note: grunn } });
+      const r = await api(`/api/demerits/students/${elev.id}/reset`, { method: 'POST' });
       toast(`Nullstilt – ${r.deleted} ${r.deleted === 1 ? 'tildeling' : 'tildelinger'} slettet`);
       await etterEndring();
     } catch (ex) { toast(ex.message); }

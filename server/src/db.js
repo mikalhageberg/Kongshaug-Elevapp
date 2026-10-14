@@ -315,6 +315,19 @@ db.exec(`
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_demerit_events_user ON demerit_events(user_id);
+
+  -- Nullstillinger: én rad per gang en superbruker nullstiller en elev. Står
+  -- for seg selv i stedet for som en «slettet»-rad per tildeling – i loggen er
+  -- en nullstilling én hendelse. points/count er det eleven hadde da.
+  CREATE TABLE IF NOT EXISTS demerit_resets (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    actor_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    points     REAL    NOT NULL,
+    count      INTEGER NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_demerit_resets_user ON demerit_resets(user_id);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

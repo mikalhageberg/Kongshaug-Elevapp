@@ -151,14 +151,17 @@ export const deleteDemerit = db.transaction((id, actorId, note = null) => {
   return true;
 });
 
-// Nullstill en elev: alle gjeldende tildelinger slettes på én gang. Hver av
-// dem får sin egen «slettet»-rad i loggen, merket som en nullstilling, så det
-// fortsatt går an å se hva eleven hadde. Returnerer antall som ble slettet.
-export const resetDemerits = db.transaction((userId, actorId, note = null) => {
-  const ids = db.prepare('SELECT id FROM demerits WHERE user_id = ? AND deleted_at IS NULL').all(userId).map((r) => r.id);
-  const merknad = note ? `Prikketellingen ble nullstilt: ${note}` : 'Prikketellingen ble nullstilt';
-  for (const id of ids) deleteDemerit(id, actorId, merknad);
-  return ids.length;
+// Nullstill en elev: alle gjeldende tildelinger slettes (mykt) på én gang.
+// I loggen er det ÉN hendelse (demerit_resets), ikke en sletting per
+// tildeling. Returnerer antall som ble slettet.
+export const resetDemerits = db.transaction((userId, actorId) => {
+  const { n, sum } = db.prepare(
+    'SELECT COUNT(*) AS n, COALESCE(SUM(points), 0) AS sum FROM demerits WHERE user_id = ? AND deleted_at IS NULL'
+  ).get(userId);
+  if (!n) return 0;
+  db.prepare("UPDATE demerits SET deleted_at = datetime('now') WHERE user_id = ? AND deleted_at IS NULL").run(userId);
+  db.prepare('INSERT INTO demerit_resets (user_id, actor_id, points, count) VALUES (?, ?, ?, ?)').run(userId, actorId, sum, n);
+  return n;
 });
 
 // Alle gjeldende tildelinger til én elev, nyeste først. withGiver tar med
@@ -183,10 +186,23 @@ export function demeritsFor(userId, { withGiver = false } = {}) {
   return { total: items.reduce((s, x) => s + x.points, 0), items };
 }
 
-// Hele endringsloggen for én elev, nyeste først: hver tildeling, endring og
-// sletting, med hvem som gjorde det. Bare for superbrukere.
+// Hele endringsloggen for én elev, nyeste først: hver tildeling, endring,
+// sletting og nullstilling, med hvem som gjorde det. Bare for superbrukere.
 export function demeritHistory(userId) {
-  return db.prepare(
+  const nullstillinger = db.prepare(
+    `SELECT r.id, r.points, r.count, r.created_at, u.full_name AS actor_name
+       FROM demerit_resets r LEFT JOIN users u ON u.id = r.actor_id
+      WHERE r.user_id = ?`
+  ).all(userId).map((r) => ({
+    id: `nullstilt-${r.id}`,
+    action: 'nullstilt',
+    before: { points: r.points, count: r.count },
+    after: null,
+    note: null,
+    actor: r.actor_name || null,
+    createdAt: r.created_at,
+  }));
+  const hendelser = db.prepare(
     `SELECT e.id, e.demerit_id, e.action, e.before_json, e.after_json, e.note, e.created_at,
             u.full_name AS actor_name
        FROM demerit_events e LEFT JOIN users u ON u.id = e.actor_id
@@ -202,6 +218,8 @@ export function demeritHistory(userId) {
     actor: r.actor_name || null,
     createdAt: r.created_at,
   }));
+  return [...hendelser, ...nullstillinger]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
 }
 
 // Elevlista på adminsiden: alle aktive elever med summen sin, også de som

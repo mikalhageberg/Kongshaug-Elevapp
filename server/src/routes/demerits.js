@@ -93,14 +93,14 @@ router.post('/import', (req, res) => {
 
 const notat = (v) => String(v ?? '').trim().slice(0, 500) || null;
 
-// Nullstill en elevs prikker. Body (valgfri): { note }. Alt slettes mykt og
-// står i endringsloggen.
+// Nullstill en elevs prikker. Alt slettes mykt, og nullstillingen står som
+// én hendelse i endringsloggen. Ingen grunn oppgis.
 router.post('/students/:id/reset', (req, res) => {
   const uid = Number(req.params.id);
   if (!db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'student'").get(uid)) {
     return res.status(404).json({ error: 'Fant ikke eleven' });
   }
-  res.json({ ok: true, deleted: resetDemerits(uid, req.auth.sub, notat(req.body?.note)) });
+  res.json({ ok: true, deleted: resetDemerits(uid, req.auth.sub) });
 });
 
 // Endre en tildeling: { category, points?, reason?, note? }. Samme regler som

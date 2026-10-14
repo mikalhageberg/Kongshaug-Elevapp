@@ -571,7 +571,8 @@ Hvem ser hva:
   **slettes**, og under dem hele **endringsloggen**: hva som er gitt, endret og
   slettet, av hvem og når, med en valgfri grunn. Nederst i vinduet ligger
   **«Nullstill prikker»**, som sletter alle elevens gjeldende prikker på én
-  gang – de står fortsatt i loggen, merket som en nullstilling. Vanlige
+  gang. Den spør ikke om grunn, og står som én hendelse i loggen med hvor mange
+  prikker eleven hadde (tabellen `demerit_resets`). Vanlige
   administratorer ser verken siden eller menyvalget, og serveren avviser dem.
 - **Vakten**: knappen under hver elev på brannlisten i appen gir valget
   «Utvid fristen» eller «Tildel prikker» (bare «Tildel prikker» for elever som
