@@ -245,7 +245,7 @@
   </div>
   <div class="foot">
     <span>Alt du trenger å vite om appen, steg for steg</span>
-    <span>Versjon 1.4</span>
+    <span>Versjon 1.5</span>
   </div>
 </div>
 
@@ -262,7 +262,7 @@
     <div class="row"><span class="n">6</span><span class="d"><span class="t">Gjest på internatet</span> <span class="desc">– søke om overnattingsbesøk</span></span></div>
     <div class="row"><span class="n">7</span><span class="d"><span class="t">Andakt</span> <span class="desc">– registrere oppmøte med QR-kode</span></span></div>
     <div class="row"><span class="n">8</span><span class="d"><span class="t">Middag og kjøkkentjeneste</span></span></div>
-    <div class="row"><span class="n">9</span><span class="d"><span class="t">Internat og internatvask</span> <span class="desc">– oppgaver og signering</span></span></div>
+    <div class="row"><span class="n">9</span><span class="d"><span class="t">Internat, internatvask og prikker</span> <span class="desc">– oppgaver, signering og «Se mine prikker»</span></span></div>
     <div class="row"><span class="n">10</span><span class="d"><span class="t">Øvekonkurransen</span> <span class="desc">– oppvarming, stoppeklokke og dokumentasjon</span></span></div>
     <div class="row"><span class="n">11</span><span class="d"><span class="t">Varsler på telefonen</span></span></div>
     <div class="row"><span class="n">12</span><span class="d"><span class="t">Personvern og sikkerhet</span></span></div>
@@ -365,7 +365,7 @@
     <tr><td class="k">🔥 Brannliste</td><td>Melde deg til stede i kveld, melde deg borte, planlegge fravær framover og melde gjest.</td></tr>
     <tr><td class="k">📖 Andakt</td><td>Kameraet som skanner QR-koden på storskjerm.</td></tr>
     <tr><td class="k">🍽️ Middag</td><td>Melde deg av middagen i dag, ukemenyen dag for dag, og kjøkkentjenesten.</td></tr>
-    <tr><td class="k">🧹 Internat</td><td>Internatvasken: hvem som vasker denne uken, oppgavene dine og signeringen.</td></tr>
+    <tr><td class="k">🧹 Internat</td><td>Internatvasken: hvem som vasker denne uken, oppgavene dine og signeringen. Her ser du også prikkene dine.</td></tr>
     </tbody>
   </table>
 
@@ -618,8 +618,8 @@
 
 <!-- ═══════════════ 9 INTERNAT ═══════════════ -->
 <section>
-  <h2><span class="num">9</span>Internat og internatvask</h2>
-  <p class="lead">Fanen 🧹 Internat viser internatvasken: hvem som vasker denne uken, hvilke <strong>oppgaver</strong> som skal gjøres, og hvor du signerer når jobben er ferdig.</p>
+  <h2><span class="num">9</span>Internat, internatvask og prikker</h2>
+  <p class="lead">Fanen 🧹 Internat viser internatvasken: hvem som vasker denne uken, hvilke <strong>oppgaver</strong> som skal gjøres, og hvor du signerer når jobben er ferdig. Her finner du også knappen <strong>Se mine prikker</strong>.</p>
   <p class="note">Internatet ditt er satt av skolen. På Vestheim er hver gang sitt eget internat i appen – <strong>Vestheim - 10-Gangen</strong>, <strong>Vestheim - 20-Gangen</strong> og så videre til 80-Gangen – så brannlisten og vaskelisten følger gangen du bor på. Står du på feil gang, si fra til internatleder.</p>
 
   <h3>9.1 Uken din</h3>
@@ -653,6 +653,24 @@
 
   <h3>9.4 Hele rundgangen</h3>
   <p>Trykk <span class="btn ghost">Vis hele planen</span> for å se vaskeplanen uke for uke framover. Ukene der du selv står oppført er markert i gult, og du får et banner som sier når din neste vaskeuke er.</p>
+
+  <h3>9.5 Prikker – se mine prikker</h3>
+  <p>Brudd på internatreglene gir <strong>prikker</strong>, etter skolens faste liste – for eksempel å ikke ta romvask, å være ute etter innetid, uro etter innetid eller gjest på rommet uten avtale. Noen forseelser gir en halv prikk, andre flere. Prikkene gis av internatvakten eller internatledelsen.</p>
+  <ol class="steps">
+    <li><span class="st">Gå til 🧹 Internat</span></li>
+    <li><span class="st">Trykk <span class="btn ghost">Se mine prikker</span></span> Knappen ligger øverst, under datoen.</li>
+    <li><span class="st">Les oversikten</span> Øverst står hvor mange prikker du har <strong>totalt</strong>. Under kommer hver prikk du har fått: hva den gjelder, hvor mange prikker den ga, dato og klokkeslett, og begrunnelsen hvis den som ga prikken skrev en.</li>
+  </ol>
+  <p>Dra listen nedover for å oppdatere den. Har du ingen prikker, står det det.</p>
+  <div class="box tip">
+    <span class="h">«Opptjente prikker før appen ble tatt i bruk»</span>
+    <p>Prikker du hadde fra papirlista før appen kom, står samlet på én linje med dette navnet, uten dato. De teller med i summen på samme måte som de andre.</p>
+  </div>
+  <div class="box warn">
+    <span class="h">Mener du at en prikk er feil?</span>
+    <p>Ta det opp med internatleder. Det er bare internatledelsen som kan endre eller fjerne prikker – det kan ikke gjøres i appen.</p>
+  </div>
+  <p class="note">Oversikten finnes i appen på telefonen, ikke i nettleserversjonen.</p>
 
 </section>
 
@@ -822,6 +840,12 @@
   <h4>Kan jeg se hvem andre som har krysset seg av?</h4>
   <p>Nei. Du ser din egen status. Vaskeplan og kjøkkentjeneste er felles lister, og der ser du navnene til dem du har tjeneste sammen med.</p>
 
+  <h4>Hvordan får jeg vite at jeg har fått prikker?</h4>
+  <p>Du får ikke eget varsel. Åpne 🧹 Internat og trykk «Se mine prikker» – der står alle prikkene dine, med dato og eventuell begrunnelse.</p>
+
+  <h4>Kan jeg se hvem som ga meg en prikk?</h4>
+  <p>Nei. Du ser hva prikken gjelder, når den ble gitt og begrunnelsen. Lurer du på noe, spør internatleder.</p>
+
   <h4>Hva skjer med dataene mine når jeg slutter på skolen?</h4>
   <p>Historikken slettes automatisk etter lagringstiden skolen har satt – som standard ett skoleår – og posisjonsdata allerede etter et døgn.</p>
 </section>
@@ -852,6 +876,7 @@
     <tr><td class="k">Skal ikke spise middag</td><td>Middag → «Meld fra – jeg spiser ikke i dag».</td></tr>
     <tr><td class="k">Har kjøkkentjeneste</td><td>Middag → se hvem du har uken sammen med.</td></tr>
     <tr><td class="k">Har internatvask</td><td>Internat → les oppgaven → gjør jobben → signer med biometri.</td></tr>
+    <tr><td class="k">Vil se prikkene dine</td><td>Internat → Se mine prikker.</td></tr>
     <tr><td class="k">Skal øve i konkurransen</td><td>Hjem → Øvekonkurranse → Start øving → varm opp → stopp og registrer.</td></tr>
     </tbody>
   </table>

@@ -244,7 +244,7 @@
   </div>
   <div class="foot">
     <span>Alle sidene i admin, forklart – med rutinene rundt</span>
-    <span>Versjon 1.4</span>
+    <span>Versjon 1.5</span>
   </div>
 </div>
 
@@ -262,7 +262,7 @@
     <div class="row"><span class="n">7</span><span class="d"><span class="t">Andakt / QR</span> <span class="desc">– storskjerm, oppmøte, ukeeksport</span></span></div>
     <div class="row"><span class="n">8</span><span class="d"><span class="t">Andaktsarkiv</span> <span class="desc">– ukesrapporter over fravær</span></span></div>
     <div class="row"><span class="n">9</span><span class="d"><span class="t">Kjøkken</span> <span class="desc">– middagstall, kjøkkentjeneste, ukemeny</span></span></div>
-    <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus og signaturer</span></span></div>
+    <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus, signaturer og prikkesystemet</span></span></div>
     <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, frysing, av/på, stilling, dokumentasjon</span></span></div>
     <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes og vaktens telefoner</span></span></div>
     <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
@@ -307,6 +307,7 @@
   </div>
   <p>Nederst i menyen står navnet ditt og en knapp for å logge ut. Kommer det inn en besøksforespørsel fra en elev, får <strong>Gjester</strong> et rødt tall i menyen.</p>
   <p class="note">Andaktsarkivet har ingen egen menyoppføring – det nås fra Andakt-siden. Storskjermvisningen åpnes i et eget vindu.</p>
+  <p class="note">For superbrukere er <strong>Internat</strong> en nedtrekksmeny med to sider: <strong>Internattjenester</strong> (vasken) og <strong>Prikkesystem</strong>. Vanlige administratorer har bare internattjenestene, og ser «Internat» som en vanlig lenke.</p>
 
   <h3>1.3 Kontoer og sikkerhet</h3>
   <ul>
@@ -500,6 +501,8 @@
     <tr><td class="k">Opprette og slette elever</td><td>Ja</td><td>Nei</td></tr>
     <tr><td class="k">Se og endre administratorer</td><td>Ja</td><td>Nei – siden vises ikke</td></tr>
     <tr><td class="k">Innstillinger-siden</td><td>Ja</td><td>Nei – siden vises ikke</td></tr>
+    <tr><td class="k">Tildele prikker fra brannlisten</td><td>Ja</td><td>Ja – men ser ikke hvor mange prikker eleven har</td></tr>
+    <tr><td class="k">Prikkesystem-siden<br><span style="font-weight:normal">Se prikkene, endre, slette, nullstille, importere</span></td><td>Ja</td><td>Nei – siden vises ikke</td></tr>
     </tbody>
   </table>
   <p>Innstillinger som hører til de daglige sidene – push-bryterne under Varsler, øvekonkurransens periode og oppvarming, og hvor lenge andaktsarkivet tar vare på uker – kan vanlige administratorer fortsatt endre. Det er bare Innstillinger-siden som er stengt.</p>
@@ -571,7 +574,7 @@
     <tr><td class="k">✓ grønn</td><td>Til stede. Hold pekeren over knappen for å se klokkeslettet eleven eventuelt registrerte seg.</td></tr>
     <tr><td class="k">🏠 blå</td><td>Borte i natt.</td></tr>
     <tr><td class="k">✕ rød</td><td>Fjerner registreringen – eleven står som «ikke registrert» igjen.</td></tr>
-    <tr><td class="k">🕘 gul</td><td>Merker at eleven <strong>kommer etter fristen</strong>. Du velger et klokkeslett eleven er ventet, eller «Tidspunkt ukjent». Se boksen under.</td></tr>
+    <tr><td class="k">⋯ / 🕘</td><td>Gir to valg: <strong>Utvid fristen</strong> – merker at eleven <strong>kommer etter fristen</strong>, med et klokkeslett eleven er ventet eller «Tidspunkt ukjent» (se boksen under) – eller <strong>Tildel prikker</strong> (10.6). Knappen viser 🕘 når eleven alt har merket. For elever som er til stede eller borte gjelder ikke fristen, og knappen går rett til prikkene.</td></tr>
     </tbody>
   </table>
   <div class="box">
@@ -579,7 +582,7 @@
     <p>Har en elev lov til å komme sent, kan vakten merke det på raden. Merket står som en liten undertittel under navnet – <em>«Kommer etter fristen – ca. kl. 23:30»</em> eller <em>«Kommer etter fristen – tidspunkt ukjent»</em> – på denne siden, i appen, i PDF-en, i brannliste-e-posten og i varselet til vakten. Eleven står <strong>fortsatt som «mangler»</strong> til registreringen er gjort, men mangler-telleren sier hvor mange av dem som er ventet sent («6 mangler · 2 kommer sent»): ved en brann skal den som leser lista vite at eleven ikke er gjort rede for, og samtidig slippe å sende noen ut for å lete etter en som er ventet.</p>
     <p><strong>Et klokkeslett gir eleven en utvidet frist.</strong> Er eleven merket «kommer ca. kl. 23:30», kan eleven registrere seg selv i appen til kl. 23:40 – ti minutter etter – selv om innsjekken er stengt. «Tidspunkt ukjent» gir ingen slik frist; da krysser du av for hånd. Fristen går aldri lenger enn natten varer. Eleven ser en gul boks i appen fra merket settes og hele dagen, så det ikke er tvil om at avtalen er registrert.</p>
     <p><strong>Gjelder flere elever.</strong> Kommer en hel klasse sent fra en konsert, eller et internat fra en tur, krysser du av for <strong>«Gjelder flere elever»</strong> i dialogen. Da åpnes et vindu der du kan ta <strong>en hel klasse</strong> eller <strong>et helt internat</strong> med ett trykk, eller søke opp enkeltelever. Alle får nøyaktig samme klokkeslett – eller «Tidspunkt ukjent» – som eleven du startet med. Bare elever som <em>mangler</em> kan velges: de som allerede er til stede eller meldt borte vises grået ut, så du ser hvorfor de ikke ble med. Gruppa lagres samlet – enten får alle merket, eller ingen. Det samme valget finnes i vaktappen, i dialogen bak den gule knappen.</p>
-    <p class="note">Merket gjelder én natt, og blir stående etter at eleven har registrert seg – da viser raden grønt med undertittelen under. Trykk klokke-knappen igjen for å endre tidspunktet eller fjerne merket. I appen er det en gul knapp under rommet på dem som mangler; med merke satt viser den tidspunktet.</p>
+    <p class="note">Merket gjelder én natt, og blir stående etter at eleven har registrert seg – da viser raden grønt med undertittelen under. Trykk klokke-knappen igjen og velg «Endre fristen» for å endre tidspunktet eller fjerne merket. I appen er det en gul knapp under rommet på dem som mangler; med merke satt viser den tidspunktet.</p>
   </div>
   <p class="note">Elevene kan bare registrere seg innenfor tidsvinduet skolen har satt (kapittel 13). Du kan sette status <strong>når som helst</strong> – også lenge etter at vinduet stengte. Det er slik du fikser eleven med tomt batteri.</p>
   <p class="note">Hjemmeboere har ingen slike knapper – statusen deres er den samme hver natt, og settes på elevkortet (3.3).</p>
@@ -596,7 +599,8 @@
     <li><span class="st">Navnet dukker opp i lista under koden</span> Nå har hun brannlisten, oppropsmodus og varselet.</li>
   </ol>
   <p>Flere kan ha vakt sammen – alle som skanner står i lista, og alle får varselet. Neste kveld må koden skannes på nytt.</p>
-  <p><strong>Kommer etter fristen.</strong> Den gule knappen <strong>«Kommer etter fristen»</strong> under rommet på dem som mangler åpner dialogen for å merke at eleven kommer sent – klokkeslett eller «Tidspunkt ukjent» (5.2). Undertittelen vises i lista, i oppropet og i varselet om hvem som mangler.</p>
+  <p><strong>Utvid frist eller tildel prikker.</strong> Den gule knappen <strong>«Utvid frist / tildel prikker»</strong> under rommet på dem som mangler gir to valg: <strong>Utvid fristen</strong> åpner dialogen for å merke at eleven kommer sent – klokkeslett eller «Tidspunkt ukjent» (5.2) – og <strong>Tildel prikker</strong> åpner den samme tildelingen som på adminsiden (10.6). Undertittelen for sen ankomst vises i lista, i oppropet og i varselet om hvem som mangler. Elever som er til stede eller borte har en mindre knapp, <strong>«Tildel prikker»</strong>, som går rett til prikkene.</p>
+  <p class="note">Vakten ser aldri hvor mange prikker eleven har fra før – bare hva som blir gitt nå. I appen krever tildeling at du har tatt vakten; i nettleseren kan alle administratorer tildele fra brannlisten.</p>
   <div class="box">
     <span class="h">Vakten varer til neste morgen – 07:30 på skoledager, 10:00 i helgen</span>
     <p>Ikke til midnatt, og ikke til innsjekken stenger. Så lenge vakten står, har den som er på jobb brannlisten – hvem som sover hvor i natt – i lomma. Gikk vakten over tidligere, ville hun stått uten lista mens elevene fortsatt ligger og sover, og veien tilbake går gjennom vakt-koden på en skjerm hun ikke kommer til hvis det brenner. Derfor to tider: på en skoledag er huset tomt fra halv åtte, men lørdag og søndag ligger elevene til langt på formiddagen. Begge settes under Innstillinger (13.2).</p>
@@ -785,7 +789,8 @@
 <!-- ═══════════════ 10 INTERNAT ═══════════════ -->
 <section>
   <h2><span class="num">10</span>Internat</h2>
-  <p class="lead">Internatvasken fungerer som kjøkkentjenesten – samme ukevisning, samme import – men i tillegg har den <strong>oppgaver</strong> og <strong>signaturer</strong>.</p>
+  <p class="lead">Internatvasken fungerer som kjøkkentjenesten – samme ukevisning, samme import – men i tillegg har den <strong>oppgaver</strong> og <strong>signaturer</strong>. Superbrukere finner også <strong>Prikkesystem</strong> her (10.5–10.9).</p>
+  <p class="note">Superbrukere velger side i nedtrekksmenyen under Internat: <strong>Internattjenester</strong> (10.1–10.4) eller <strong>Prikkesystem</strong>.</p>
 
   <h3>10.1 Oppgavene</h3>
   <p>Oppgavene er fasit for hva som skal gjøres: 80-gongen, trappegangen, kjøkkenet. Eleven leser hele beskrivelsen i appen og signerer når jobben er gjort.</p>
@@ -856,6 +861,65 @@
   <h3>10.4 Oversikt uke for uke</h3>
   <p>Nederst ligger matrisen – oppgavene nedover, ukene bortover. Det er samme oppslag som henger på veggen, men med signaturene fylt inn. Trykk <strong>Utvid</strong> for full bredde, og klikk en ukekolonne for å redigere den uken.</p>
   <p class="note"><strong>✓ grønn</strong> = signert &nbsp;·&nbsp; <strong>○ gul</strong> = uken har vært eller pågår uten signatur &nbsp;·&nbsp; <strong>· grå prikk</strong> = satt opp, men uken har ikke begynt &nbsp;·&nbsp; <strong>–</strong> = ingen satt opp.</p>
+
+  <h3>10.5 Prikkesystemet – hvem ser hva</h3>
+  <p>Brudd på internatreglene gir prikker etter skolens faste liste. Hver forseelse har et fast antall prikker – fra en halv prikk for manglende X eller B på brannlisten til 15 eller flere for alkohol og andre rusmidler. I tillegg finnes <strong>«Egendefinert»</strong>, der du skriver antallet selv.</p>
+  <table>
+    <thead><tr><th style="width:26%">Hvem</th><th>Kan</th></tr></thead>
+    <tbody>
+    <tr><td class="k">Superbruker</td><td>Alt: se alle elevenes prikker under <strong>Internat → Prikkesystem</strong>, tildele, endre, slette, nullstille, slette logg og importere tidligere prikker.</td></tr>
+    <tr><td class="k">Vanlig administrator</td><td>Tildele prikker fra <strong>brannlisten i nettleseren</strong> (5.2). Ser ikke hvor mange prikker eleven har.</td></tr>
+    <tr><td class="k">Brannvakten i appen</td><td>Tildele prikker fra brannlisten i appen (5.4), så lenge vakten er tatt. Ser ikke hvor mange prikker eleven har.</td></tr>
+    <tr><td class="k">Eleven</td><td>Se sine egne prikker under <strong>Internat → Se mine prikker</strong>: summen, hva hver prikk gjelder, dato og begrunnelse – men ikke hvem som ga den.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Elevlista</h4>
+  <p>Prikkesystem-siden viser alle aktive elever med antall prikker i en farget boks: grå for 0, gul for noen, rød fra 10 og oppover. Øverst er et <strong>søkefelt</strong> (navn, klasse, internat eller nøyaktig romnummer), sortering – <strong>Navn A–Å</strong>, <strong>Flest prikker</strong>, <strong>Færrest prikker</strong> – og filter per internat. Hver rad har knappene <strong>Se historikk</strong> og <strong>Tildel prikker</strong>.</p>
+
+  <h3>10.6 Tildele prikker</h3>
+  <p>Tildelingen skjer i to steg, likt på Prikkesystem-siden, på brannlisten i nettleseren og i vaktappen:</p>
+  <ol class="steps">
+    <li><span class="st">Velg hendelser</span> Kryss av én eller flere. Velger du «Egendefinert», skriver du antallet prikker i feltet som dukker opp; rusmidler er forhåndsutfylt med 15 og kan settes høyere. Halve prikker er lov (f.eks. 1,5). Nederst står hvor mange hendelser og prikker du har valgt.</li>
+    <li><span class="st">Trykk «Neste»</span></li>
+    <li><span class="st">Skriv en begrunnelse</span> Valgfritt, men anbefalt. <strong>Eleven ser begrunnelsen</strong> sammen med prikkene.</li>
+    <li><span class="st">Trykk «Tildel»</span> Hver hendelse blir sin egen linje i historikken, med samme begrunnelse.</li>
+  </ol>
+  <p class="note">Er én av hendelsene ugyldig, lagres ingen av dem – enten blir alle gitt, eller ingen.</p>
+
+  <h3>10.7 Historikk – endre og slette</h3>
+  <p><strong>Se historikk</strong> åpner et vindu med elevens gjeldende prikker øverst. Hver linje viser antall, hendelse, begrunnelse, <strong>«Tildelt av»</strong> og dato. Elever ser aldri hvem som ga prikkene – det gjør bare superbrukere.</p>
+  <ul>
+    <li><strong>Endre</strong> – bytt hendelse, antall eller begrunnelse. Du kan skrive hvorfor den endres; det havner bare i loggen.</li>
+    <li><strong>🗑</strong> – slett én tildeling som ble feil. Du kan skrive en grunn.</li>
+  </ul>
+  <p>Under prikkene ligger <strong>endringsloggen</strong>: alt som er gitt, endret, slettet og nullstilt, med hvem som gjorde det og når. For endringer står det hva som ble endret, f.eks. «Prikker: 2 → 1».</p>
+
+  <h3>10.8 Nullstille prikker og slette loggen</h3>
+  <p>Nederst i historikkvinduet ligger to knapper:</p>
+  <table>
+    <thead><tr><th style="width:26%">Knapp</th><th>Hva den gjør</th></tr></thead>
+    <tbody>
+    <tr><td class="k">Nullstill prikker</td><td>Sletter alle elevens gjeldende prikker på én gang, så eleven står på 0. Nullstillingen står som én linje i loggen («Nullstilte prikketellingen – 12,5 prikker fordelt på 4 tildelinger»). Krysser du av for <strong>«Slett også loggen»</strong>, slettes loggen samtidig.</td></tr>
+    <tr><td class="k">Slett logg</td><td>Sletter hele endringsloggen for eleven <strong>for godt</strong>. Prikkene eleven har nå, blir stående.</td></tr>
+    </tbody>
+  </table>
+  <div class="box warn">
+    <span class="h">Slett logg kan ikke angres</span>
+    <p>Loggen er det eneste stedet som viser prikker som er slettet eller nullstilt, og hvem som har endret hva. Når den er slettet, er det borte – også for dere.</p>
+  </div>
+
+  <h3>10.9 Importere tidligere prikker</h3>
+  <p>Prikker fra papirlista før appen ble tatt i bruk legges inn fra Excel med knappen <strong>«Importer tidligere prikker»</strong> øverst til høyre på Prikkesystem-siden.</p>
+  <ol class="steps">
+    <li><span class="st">Last ned mal</span> Arket har to kolonner: <strong>Navn</strong> og <strong>Prikker</strong>.</li>
+    <li><span class="st">Fyll ut én elev per rad</span> Tomme celler og 0 hoppes over.</li>
+    <li><span class="st">Velg filen og trykk «Les arket»</span> Du får en forhåndsvisning før noe lagres.</li>
+    <li><span class="st">Sjekk koblingen</span> Navnene kobles til elevene på fullt navn, eller fornavn og etternavn. Navn som ikke ble funnet, kan du koble til riktig elev i nedtrekkslista – eller la stå på «Hopp over».</li>
+    <li><span class="st">Trykk «Importer»</span></li>
+  </ol>
+  <p>Hver elev får én linje i historikken, <strong>«Opptjente prikker før appen ble tatt i bruk»</strong>, uten dato og begrunnelse. Eleven ser den på samme måte. Importerer du arket på nytt, oppdateres antallet i stedet for at det kommer en linje til. En importert linje kan bare endres i antall.</p>
+  <p class="note">Fornavn alene godtas ikke ved import – to elever med samme fornavn skal ikke kunne forveksles når det henger prikker på treffet.</p>
 </section>
 
 <!-- ═══════════════ 11 ØVEKONKURRANSE ═══════════════ -->
@@ -1105,6 +1169,7 @@
     <li><span class="st">Gå gjennom Innstillinger</span> Frist for andakt, innsjekksvinduene, mottakere for e-post.</li>
     <li><span class="st">Legg inn turnusene</span> Kjøkkentjeneste og internatvask, og opprett vaskeoppgavene per internat.</li>
     <li><span class="st">Slå på varslene, og send en test</span> «Send test nå» på begge e-postutsendingene og begge push-varslene.</li>
+    <li><span class="st">Ta stilling til prikkene</span> Prikker følger eleven fra år til år. Skal noen starte på null, nullstiller du dem under Internat → Prikkesystem (10.8).</li>
   </ol>
   <p class="note">Skal klasser, internat eller instrumenter endres, si fra til den som drifter systemet i god tid – de listene ligger i koden.</p>
 
@@ -1164,6 +1229,12 @@
   <h4>Hvorfor teller andaktsrapporten andre elever enn i dag?</h4>
   <p>Arkiverte rapporter er frosne kopier av uken slik den var. Nye eller deaktiverte elever påvirker ikke gamle uker.</p>
 
+  <h4>Hvorfor ser jeg ikke hvor mange prikker eleven har når jeg tildeler fra brannlisten?</h4>
+  <p>Det er med vilje. Bare superbrukere ser prikkene, på Prikkesystem-siden. Vakten og vanlige administratorer kan gi prikker, men ikke lese av summen.</p>
+
+  <h4>En elev mener en prikk er feil. Hva gjør vi?</h4>
+  <p>En superbruker åpner Internat → Prikkesystem → Se historikk, og endrer eller sletter tildelingen. Endringen står i loggen med hvem som gjorde den.</p>
+
   <h4>Kan vi endre hvem som er internatvakt i appen?</h4>
   <p>Internatvaktene ligger i ukemenyen. Trykk <strong>Rediger</strong> på menyen under Kjøkken og rett dem der.</p>
 </section>
@@ -1193,18 +1264,23 @@
     <tr><td class="k">legge inn ukemenyen</td><td>Kjøkken → Ukemeny → Last opp PDF</td></tr>
     <tr><td class="k">sette opp vaskeoppgaver</td><td>Internat → Oppgaver → Ny oppgave</td></tr>
     <tr><td class="k">signere vask for en elev uten telefon</td><td>Internat → uken → Signer</td></tr>
+    <tr><td class="k">gi en elev prikker</td><td>Brannliste → ⋯ på raden → Tildel prikker, eller Internat → Prikkesystem → Tildel prikker</td></tr>
+    <tr><td class="k">se, endre eller slette en elevs prikker</td><td>Internat → Prikkesystem → Se historikk</td></tr>
+    <tr><td class="k">legge inn prikker fra papirlista</td><td>Internat → Prikkesystem → Importer tidligere prikker</td></tr>
     <tr><td class="k">sende en beskjed til alle elever</td><td>Varsler → Send til alle nå</td></tr>
     <tr><td class="k">endre fristen for andakt</td><td>Innstillinger → Andakt</td></tr>
     </tbody>
   </table>
 
-  <h3>De fem som ikke kan angres</h3>
+  <h3>De sju som ikke kan angres</h3>
   <ol>
     <li><strong>Slette bruker</strong> – fjerner alle registreringer for eleven.</li>
     <li><strong>Gjør klar til nytt skoleår</strong> – sletter hele VG3 med alle registreringer.</li>
     <li><strong>Slette uke fra arkivet</strong> – sletter også registreringene uken bygger på.</li>
     <li><strong>Nullstill konkurransen</strong> – alle øveøkter og bilder, for alle elever.</li>
     <li><strong>Kjør sletting nå</strong> – rydder historikk og GPS etter periodene som er satt.</li>
+    <li><strong>Slett logg</strong> (prikker) – hele endringsloggen for eleven.</li>
+    <li><strong>Nullstill prikker</strong> – alle elevens prikker. De står i loggen, men kan ikke settes tilbake. Med «Slett også loggen» forsvinner loggen også.</li>
   </ol>
 
   <div class="box tip" style="margin-top:6mm">
