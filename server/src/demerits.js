@@ -10,8 +10,9 @@
 //   - Superbrukere tildeler, ser alle elevenes summer, kan endre og slette
 //     tildelinger, og ser hele endringsloggen. Ingenting slettes for godt:
 //     en slettet tildeling merkes, og loggen viser hvem som gjorde hva.
-//   - Den som har vakten kan tildele fra brannlisten, men får ALDRI se hvor
-//     mange prikker eleven har fra før. Svaret på en tildeling inneholder
+//   - Den som har vakten kan tildele fra brannlisten i appen, og alle
+//     administratorer kan tildele fra brannlisten i nettleseren – men ingen av
+//     dem får se hvor mange prikker eleven har fra før. Svaret på en tildeling inneholder
 //     derfor ingen sum.
 //   - Eleven ser sine egne prikker, med kategori og begrunnelse.
 
@@ -148,6 +149,16 @@ export const deleteDemerit = db.transaction((id, actorId, note = null) => {
   db.prepare("UPDATE demerits SET deleted_at = datetime('now') WHERE id = ?").run(id);
   logEvent.run(id, før.user_id, 'slettet', actorId, json(snapshot(før)), null, note);
   return true;
+});
+
+// Nullstill en elev: alle gjeldende tildelinger slettes på én gang. Hver av
+// dem får sin egen «slettet»-rad i loggen, merket som en nullstilling, så det
+// fortsatt går an å se hva eleven hadde. Returnerer antall som ble slettet.
+export const resetDemerits = db.transaction((userId, actorId, note = null) => {
+  const ids = db.prepare('SELECT id FROM demerits WHERE user_id = ? AND deleted_at IS NULL').all(userId).map((r) => r.id);
+  const merknad = note ? `Prikketellingen ble nullstilt: ${note}` : 'Prikketellingen ble nullstilt';
+  for (const id of ids) deleteDemerit(id, actorId, merknad);
+  return ids.length;
 });
 
 // Alle gjeldende tildelinger til én elev, nyeste først. withGiver tar med

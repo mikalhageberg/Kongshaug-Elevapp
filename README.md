@@ -569,13 +569,19 @@ Hvem ser hva:
   «Se historikk» og «Tildel prikker» på hver rad. «Se historikk» viser elevens
   gjeldende prikker, der hver tildeling kan **endres** (kategori, antall, begrunnelse) eller
   **slettes**, og under dem hele **endringsloggen**: hva som er gitt, endret og
-  slettet, av hvem og når, med en valgfri grunn. Vanlige administratorer ser
-  verken siden eller menyvalget, og serveren avviser dem.
+  slettet, av hvem og når, med en valgfri grunn. Nederst i vinduet ligger
+  **«Nullstill prikker»**, som sletter alle elevens gjeldende prikker på én
+  gang – de står fortsatt i loggen, merket som en nullstilling. Vanlige
+  administratorer ser verken siden eller menyvalget, og serveren avviser dem.
 - **Vakten**: knappen under hver elev på brannlisten i appen gir valget
   «Utvid fristen» eller «Tildel prikker» (bare «Tildel prikker» for elever som
   er til stede eller borte). Vakten får samme kategorier, men **aldri** se hvor
   mange prikker eleven har fra før – svaret på en tildeling har ingen sum.
   Tildeling krever kveldens vakt, som resten av vaktappen.
+- **Alle administratorer i nettleseren**: den siste knappen på hver rad på
+  brannlisten (⋯, eller 🕘 når eleven har merket «kommer etter fristen») gir
+  det samme valget. Her trengs ingen vakt – adminsiden er en arbeidsplass man
+  er logget inn på – men heller ikke her vises hvor mange prikker eleven har.
 - **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
   tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.
 

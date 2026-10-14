@@ -84,6 +84,7 @@ const nav = {
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/></svg>',
   flame: icon.flame,
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20v.01M17 20h.01M20 17h.01"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg>',
@@ -3037,7 +3038,10 @@ function prikkHendelseHTML(h) {
           : `Begrunnelse: «${esc(b.reason)}» → «${esc(a.reason)}»`);
     }
   }
-  if (h.note) detaljer.push(`Grunn: ${esc(h.note)}`);
+  // Nullstillingen skrives som en merknad på hver slettede tildeling – vis den
+  // som det den er, ikke som en «grunn» noen har skrevet.
+  if (h.note?.startsWith('Prikketellingen ble nullstilt')) detaljer.push(`<b>${esc(h.note)}</b>`);
+  else if (h.note) detaljer.push(`Grunn: ${esc(h.note)}`);
   const farge = { opprettet: 'var(--green)', endret: 'var(--amber)', slettet: 'var(--red)' }[h.action] || 'var(--muted-2)';
   return `
     <div style="display:flex;gap:12px;padding:11px 26px;border-bottom:1px solid #f2f4f6">
@@ -3064,6 +3068,7 @@ async function prikkHistorikkModal(elev, onEndret) {
       <div id="phListe" style="padding:4px 0 8px"></div>
       <div id="phLogg"></div>
       <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
+        <button id="nullstill" class="btn btn-ghost" style="height:46px;padding:0 18px;font-size:14.5px;color:var(--red-ink);margin-right:auto" disabled>Nullstill prikker</button>
         <button id="tildel" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Tildel prikker</button>
       </div>
     </div></div>`);
@@ -3073,12 +3078,26 @@ async function prikkHistorikkModal(elev, onEndret) {
   bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
   const etterEndring = async () => { await last(); await onEndret?.(); };
   bg.querySelector('#tildel').addEventListener('click', () => tildelPrikkerModal(elev, etterEndring));
+  // Nullstill: alle gjeldende prikker slettes på én gang. De står fortsatt i
+  // endringsloggen, merket som en nullstilling.
+  let sum = 0;
+  bg.querySelector('#nullstill').addEventListener('click', async () => {
+    const grunn = prompt(`Nullstille prikketellingen for ${elev.fullName}?\n\nAlle ${prikkTekst(sum)} slettes, og eleven står på 0. Tildelingene blir stående i endringsloggen.\n\nGrunn (valgfritt):`, '');
+    if (grunn === null) return;
+    try {
+      const r = await api(`/api/demerits/students/${elev.id}/reset`, { method: 'POST', body: { note: grunn } });
+      toast(`Nullstilt – ${r.deleted} ${r.deleted === 1 ? 'tildeling' : 'tildelinger'} slettet`);
+      await etterEndring();
+    } catch (ex) { toast(ex.message); }
+  });
 
   async function last() {
     let d;
     try { d = await api(`/api/demerits/students/${elev.id}`); }
     catch (ex) { bg.querySelector('#phListe').innerHTML = `<p style="padding:0 26px">${esc(ex.message)}</p>`; return; }
     bg.querySelector('#phSum').textContent = `${prikkTekst(d.total)} totalt`;
+    sum = d.total;
+    bg.querySelector('#nullstill').disabled = !d.items.length;
     const liten = 'flex:0 0 auto;height:34px;padding:0 12px;font-size:13px';
     bg.querySelector('#phListe').innerHTML = d.items.length ? d.items.map((x) => `
       <div style="display:flex;gap:14px;align-items:flex-start;padding:14px 26px;border-bottom:1px solid #f2f4f6">
@@ -4413,7 +4432,9 @@ async function renderBrannliste(main) {
               ${statusBtn(s.id, 'present', icon.check, 'var(--green)', s.status === 'present', 'Sett til stede' + timeTitle)}
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
               ${statusBtn(s.id, 'clear', icon.x, 'var(--red)', s.status === 'missing', 'Fjern (ikke registrert)')}
-              ${statusBtn(s.id, 'late', nav.clock, 'var(--amber-ink)', !!s.lateArrival, s.lateArrival ? 'Kommer etter fristen – endre eller fjern' : 'Merk at eleven kommer etter fristen')}
+              ${statusBtn(s.id, 'late', s.lateArrival ? nav.clock : nav.more, 'var(--amber-ink)', !!s.lateArrival,
+                s.lateArrival ? 'Kommer etter fristen – endre fristen eller tildel prikker'
+                  : s.status === 'missing' ? 'Utvid fristen eller tildel prikker' : 'Tildel prikker')}
             </div>
           </div>${own}`;
       }).join('');
@@ -4431,7 +4452,7 @@ async function renderBrannliste(main) {
     }).join('') + (!statusFilter && (activeFilter === 'Alle' || q()) ? homeCardHTML() : '');
     grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
       const uid = Number(b.dataset.uid);
-      if (b.dataset.set === 'late') return lateArrivalModal(d.dorms.flatMap((x) => x.students).find((s) => s.id === uid));
+      if (b.dataset.set === 'late') return fristEllerPrikker(d.dorms.flatMap((x) => x.students).find((s) => s.id === uid));
       setStatus(uid, b.dataset.set);
     }));
   }
@@ -4551,6 +4572,33 @@ async function renderBrannliste(main) {
   // Dialogen for «kommer etter fristen»: enten et klokkeslett, eller ukjent.
   // Merket er en beskjed på raden, ikke en status – eleven står som mangler
   // til hun faktisk registrerer seg – så det har sin egen rute, ikke status.
+  // Knappen ytterst på raden: utvide fristen («kommer etter fristen») eller
+  // tildele prikker. Fristen gjelder bare elever som mangler eller alt har
+  // merket – de andre går rett til prikkene. Alle administratorer kan tildele
+  // herfra, men ingen ser hvor mange prikker eleven har fra før.
+  function fristEllerPrikker(s) {
+    if (!s) return;
+    if (!(s.lateArrival || s.status === 'missing')) return tildelPrikkerModal(s);
+    const bg = el(`
+      <div class="modal-bg"><div class="modal" style="width:400px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 14px">
+          <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${esc(s.fullName)}</div>
+            <div style="font-size:13px;color:var(--muted-2);font-weight:600">Rom ${esc(s.room ?? '–')}</div></div>
+          <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:4px 26px 24px">
+          <button id="frist" class="btn btn-ghost" style="height:52px;font-size:15px;justify-content:flex-start;gap:10px"><span style="width:18px;height:18px;display:block">${nav.clock}</span>${s.lateArrival ? 'Endre fristen' : 'Utvid fristen'}</button>
+          <button id="prikker" class="btn btn-ghost" style="height:52px;font-size:15px;justify-content:flex-start;gap:10px"><span style="width:18px;height:18px;display:block">${nav.more}</span>Tildel prikker</button>
+        </div>
+      </div></div>`);
+    document.body.appendChild(bg);
+    const close = () => bg.remove();
+    bg.querySelector('#close').addEventListener('click', close);
+    bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+    bg.querySelector('#frist').addEventListener('click', () => { close(); lateArrivalModal(s); });
+    bg.querySelector('#prikker').addEventListener('click', () => { close(); tildelPrikkerModal(s); });
+  }
+
   function lateArrivalModal(s) {
     if (!s) return;
     const har = !!s.lateArrival;

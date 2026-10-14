@@ -7,7 +7,7 @@ import { isSuperAdmin, requireSuperAdmin } from '../permissions.js';
 import { hasActiveWatch } from '../fireWatch.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import {
-  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
+  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, resetDemerits, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
 } from '../demerits.js';
 
 const router = Router();
@@ -24,7 +24,11 @@ router.get('/me', (req, res) => {
   res.json(demeritsFor(req.auth.sub));
 });
 
-// Tildel prikker. Superbrukere kan alltid; ellers må man ha kveldens vakt.
+// Tildel prikker. Superbrukere kan alltid, og alle administratorer kan fra
+// nettleseren (brannlisten på adminsiden). I mobilappen krever det kveldens
+// vakt – samme skille som for brannlisten selv (requireWatchOnNative i
+// firelist.js): adminsiden er en arbeidsplass man er logget inn på, telefonen
+// noe man går rundt med.
 // Svaret inneholder bevisst ingen sum: vakten skal ikke kunne lese av hvor
 // mange prikker eleven har fra før.
 router.post('/', requireAdminOrReviewDemo, (req, res) => {
@@ -32,9 +36,10 @@ router.post('/', requireAdminOrReviewDemo, (req, res) => {
   // Reviewer-kontoens demo-vakt ser bare seg selv på lista, og kan bare gi
   // prikker til seg selv (se requireAdminOrReviewDemo i auth.js).
   if (req.reviewDemo && uid !== req.auth.sub) return res.status(404).json({ error: 'Fant ikke eleven' });
-  const kan = req.reviewDemo || isSuperAdmin(req.auth.sub) || hasActiveWatch(req.auth.sub) || isAppReviewUser(req.auth.username);
+  const kan = req.reviewDemo || !req.auth.native || isSuperAdmin(req.auth.sub)
+    || hasActiveWatch(req.auth.sub) || isAppReviewUser(req.auth.username);
   if (!kan) {
-    return res.status(403).json({ error: 'no-watch', message: 'Bare superbrukere og den som har vakten kan tildele prikker.' });
+    return res.status(403).json({ error: 'no-watch', message: 'I appen kan bare superbrukere og den som har vakten tildele prikker. Bruk brannlisten på adminsiden.' });
   }
   const elev = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1").get(uid);
   if (!elev && !req.reviewDemo) return res.status(404).json({ error: 'Fant ikke eleven' });
@@ -87,6 +92,16 @@ router.post('/import', (req, res) => {
 });
 
 const notat = (v) => String(v ?? '').trim().slice(0, 500) || null;
+
+// Nullstill en elevs prikker. Body (valgfri): { note }. Alt slettes mykt og
+// står i endringsloggen.
+router.post('/students/:id/reset', (req, res) => {
+  const uid = Number(req.params.id);
+  if (!db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'student'").get(uid)) {
+    return res.status(404).json({ error: 'Fant ikke eleven' });
+  }
+  res.json({ ok: true, deleted: resetDemerits(uid, req.auth.sub, notat(req.body?.note)) });
+});
 
 // Endre en tildeling: { category, points?, reason?, note? }. Samme regler som
 // ved tildeling. `note` er en valgfri grunn til endringen, bare for loggen.
