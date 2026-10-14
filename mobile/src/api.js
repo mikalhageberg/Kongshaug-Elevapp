@@ -8,8 +8,14 @@ import { getCampus, setCampus, isOnCampus, isCampusLoaded } from './campus';
 // 1) Hvis extra.apiUrl er satt i app.json, brukes den (f.eks. i drift).
 // 2) Ellers utledes dev-maskinens IP fra Metro-verten, slik at appen på
 //    telefonen når serveren på PC-en uten at du må skrive inn IP manuelt.
+//
+// EXPO_PUBLIC_API_URL går foran begge: den settes bare på kommandolinjen når
+// Expo Go skal mot testserveren (`npm run staging`), og bakes inn i bundelen
+// av Metro. Den er IKKE satt for eas update/build, så produksjonsappen bruker
+// fortsatt app.json. Legg den aldri i en .env-fil her – Expo leser .env selv,
+// og da ville også en produksjonsoppdatering pekt mot testserveren.
 function resolveBaseUrl() {
-  const override = Constants.expoConfig?.extra?.apiUrl;
+  const override = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl;
   if (override) {
     const url = String(override).trim().replace(/\/$/, '');
     // Tåler at apiUrl er satt uten protokoll («vert.example.com»): fetch krever

@@ -553,6 +553,32 @@ og signeringen ligger på `POST {base}/duties/:id/sign` (admin angrer med
 `DELETE` på samme sti). Malen deler kode med elevlista
 (`server/src/sheetTemplate.js`), så feilmeldingene er de samme begge steder.
 
+### Prikkesystem
+
+Prikker for brudd på internatreglene, etter skolens liste (romvask, innetid,
+gjester, snus osv.). Kategoriene og antallet prikker ligger i
+`server/src/demerits.js` – serveren avgjør selv hvor mange prikker en kategori
+gir, klienten sender bare hvilken. To unntak: **«Egendefinert»**, der den som
+tildeler skriver antallet, og **rusmidler**, som gir minst 15 men kan settes
+høyere. Halve prikker er lov. Begrunnelsen er valgfri og vises for eleven.
+
+Hvem ser hva:
+
+- **Superbrukere**: admin → **Internat → Prikkesystem**. Elevlista med summen
+  til hver elev, søk, sortering på flest/færrest prikker og filter på internat.
+  «Tildel prikker» på hver rad; trykk på navnet for hele historikken, med hvem
+  som ga prikkene og mulighet til å slette en tildeling som ble feil. Vanlige
+  administratorer ser verken siden eller menyvalget, og serveren avviser dem.
+- **Vakten**: knappen under hver elev på brannlisten i appen gir valget
+  «Utvid fristen» eller «Tildel prikker» (bare «Tildel prikker» for elever som
+  er til stede eller borte). Vakten får samme kategorier, men **aldri** se hvor
+  mange prikker eleven har fra før – svaret på en tildeling har ingen sum.
+  Tildeling krever kveldens vakt, som resten av vaktappen.
+- **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
+  tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.
+
+API-et ligger på `/api/demerits`, tabellen heter `demerits`.
+
 ### Superbrukere og vanlige administratorer
 
 Administratorer er delt i to. **Superbrukere** kan i tillegg endre
@@ -654,6 +680,7 @@ Kongshaug/
 │  │  ├─ duty.js           # kjøkkentjeneste + internatvask (delt)
 │  │  ├─ permissions.js    # superbrukere vs. vanlige administratorer
 │  │  ├─ practice.js       # øvekonkurransen
+│  │  ├─ demerits.js       # prikkesystemet: kategorier og tildelinger
 │  │  ├─ retention.js      # sletting/nulling av gamle data
 │  │  ├─ seed.js           # testdata
 │  │  ├─ views/            # server-fylte sider (nedlastingssiden)

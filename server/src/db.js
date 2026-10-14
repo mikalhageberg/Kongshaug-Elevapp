@@ -282,6 +282,22 @@ db.exec(`
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_admin_notif_user ON admin_notifications(user_id, night_date);
+
+  -- Prikkesystemet: én rad per tildeling. Kategoriens navn kopieres inn i raden
+  -- (category_label), så historikken eleven ser ikke endrer seg om lista over
+  -- kategorier blir skrevet om senere. Poengene er REAL fordi enkelte forseelser
+  -- gir en halv prikk. Se demerits.js.
+  CREATE TABLE IF NOT EXISTS demerits (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category_key   TEXT    NOT NULL,          -- 'romvask', 'snus', 'egendefinert' …
+    category_label TEXT    NOT NULL,          -- teksten slik den var da prikkene ble gitt
+    points         REAL    NOT NULL,
+    reason         TEXT,                      -- valgfri begrunnelse, vises for eleven
+    given_by       INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_demerits_user ON demerits(user_id);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

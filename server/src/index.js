@@ -18,6 +18,7 @@ import notificationRoutes from './routes/notifications.js';
 import { createDutyRouter } from './routes/duty.js';
 import dormTaskRoutes from './routes/dormTasks.js';
 import practiceRoutes from './routes/practice.js';
+import demeritRoutes from './routes/demerits.js';
 import handbookRoutes from './routes/handbooks.js';
 import distributionRoutes from './routes/distribution.js';
 import { ensureBootstrapAdmin } from './bootstrap.js';
@@ -66,6 +67,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/dorm-duty', createDutyRouter('dorm'));
 app.use('/api/dorm-tasks', dormTaskRoutes);
 app.use('/api/practice', practiceRoutes);
+// Prikkesystemet for internatet.
+app.use('/api/demerits', demeritRoutes);
 // Håndbøkene (PDF) – kun for innlogget administrator, se routes/handbooks.js.
 app.use('/api/handbooks', handbookRoutes);
 

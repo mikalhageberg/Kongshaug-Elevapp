@@ -5,6 +5,7 @@ import { C, formatTime, formatDateLong, shiftDate, senAnkomstTekst } from '../..
 import { Button, Card } from '../../ui';
 import { KeyboardScrollView, TextField } from '../../keyboard';
 import OppropScreen from './OppropScreen';
+import { TildelPrikkerModal } from '../../Prikker';
 
 // Brannlisten på telefonen: samme oversikt som adminsiden viser, gruppert på
 // internat, men bygget for en hånd i en mørk gang i stedet for en iPad på et
@@ -33,6 +34,20 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   const [venter, setVenter] = useState(null);
   // Eleven dialogen «kommer etter fristen» står åpen for, eller null.
   const [sen, setSen] = useState(null);
+  // Eleven tildelingsdialogen for prikker står åpen for, eller null.
+  const [prikk, setPrikk] = useState(null);
+
+  // Knappen under hver rad: utvide fristen eller tildele prikker. Fristen
+  // gjelder bare elever som mangler (eller alt har merket) – de andre går
+  // rett til prikkene.
+  function valgFor(elev) {
+    if (!(elev.lateArrival || elev.status === 'missing')) return setPrikk(elev);
+    Alert.alert(elev.fullName, undefined, [
+      { text: elev.lateArrival ? 'Endre fristen' : 'Utvid fristen', onPress: () => setSen(elev) },
+      { text: 'Tildel prikker', onPress: () => setPrikk(elev) },
+      { text: 'Avbryt', style: 'cancel' },
+    ]);
+  }
 
   const last = useCallback(async () => {
     try { setD(await api('/api/firelist/overview')); setFeil(''); }
@@ -168,7 +183,7 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
               </View>
               {dorm.students.map((s) => (
                 <View key={s.id}>
-                  <ElevRad elev={s} venter={venter === s.id} onSett={settStatus} onSen={setSen} />
+                  <ElevRad elev={s} venter={venter === s.id} onSett={settStatus} onValg={valgFor} />
                   {gjester.filter((g) => g.hostId === s.id).map((g) => <GjestRad key={g.id} gjest={g} sammeInternat />)}
                 </View>
               ))}
@@ -183,20 +198,25 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
         onClose={() => setSen(null)}
         onLagret={async () => { setSen(null); await last(); }}
       />
+      <TildelPrikkerModal elev={prikk} onClose={() => setPrikk(null)} onLagret={() => setPrikk(null)} />
     </View>
   );
 }
 
-function ElevRad({ elev, venter, onSett, onSen }) {
+function ElevRad({ elev, venter, onSett, onValg }) {
   const farge = elev.status === 'present' ? C.green : elev.status === 'away' ? C.navy : C.red;
   const bg = elev.status === 'missing' ? '#fdf5f4' : elev.status === 'away' ? '#f6f8fb' : '#fff';
-  // «Kommer etter fristen» er en egen liten knapp under rommet, ikke en fjerde
-  // statusknapp: tre 52 px-knapper er alt raden tåler ved siden av et navn.
-  // Vises på dem som mangler, og på alle som alt har merket, så det kan
-  // endres eller fjernes. Med merke viser knappen tidspunktet.
+  // Knappen under rommet gir to valg: utvide fristen («kommer etter
+  // fristen») eller tildele prikker. Den er ikke en fjerde statusknapp: tre
+  // 52 px-knapper er alt raden tåler ved siden av et navn. Fristen gjelder bare
+  // dem som mangler, og dem som alt har merket (så det kan endres eller
+  // fjernes) – på de andre står det bare «Tildel prikker». Med merke viser
+  // knappen tidspunktet.
   const la = elev.lateArrival;
-  const visSen = la || elev.status === 'missing';
-  const senTekst = la ? (la.expectedAt ? `Kommer ca. kl. ${la.expectedAt}` : 'Kommer sent – tid ukjent') : 'Kommer etter fristen';
+  const kanSen = la || elev.status === 'missing';
+  const knappTekst = la
+    ? `🕘 ${la.expectedAt ? `Kommer ca. kl. ${la.expectedAt}` : 'Kommer sent – tid ukjent'}`
+    : kanSen ? '🕘 Utvid frist / tildel prikker' : 'Tildel prikker';
   // Knappen ligger under hele raden, ikke inne i navnekolonnen – der fikk den
   // bare navnets bredde og ble til «Ko…».
   return (
@@ -228,11 +248,9 @@ function ElevRad({ elev, venter, onSett, onSen }) {
         })}
       </View>
       </View>
-      {visSen ? (
-        <Pressable onPress={() => onSen(elev)} style={[styles.senKnapp, la && styles.senKnappSatt]}>
-          <Text style={[styles.senKnappTekst, la && { color: '#fff' }]} numberOfLines={1}>🕘 {senTekst}</Text>
-        </Pressable>
-      ) : null}
+      <Pressable onPress={() => onValg(elev)} style={[styles.senKnapp, la && styles.senKnappSatt, !kanSen && styles.prikkKnapp]}>
+        <Text style={[styles.senKnappTekst, la && { color: '#fff' }, !kanSen && { color: C.slate }]} numberOfLines={1}>{knappTekst}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -539,6 +557,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: C.amber, backgroundColor: C.amberBg, justifyContent: 'center',
   },
   senKnappSatt: { backgroundColor: C.amberInk, borderColor: C.amberInk },
+  // Rolig variant for elever som er gjort rede for: der er prikker det eneste
+  // valget, og knappen skal ikke rope like høyt som «mangler».
+  prikkKnapp: { alignSelf: 'flex-start', height: 36, borderColor: C.line2, backgroundColor: '#fff' },
   senKnappTekst: { fontSize: 14.5, fontWeight: '800', color: C.amberInk },
   modalBg: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 22 },
   modal: { width: '100%', maxWidth: 440, backgroundColor: '#fff', borderRadius: 22, padding: 22 },
