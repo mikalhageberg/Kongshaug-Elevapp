@@ -3014,7 +3014,8 @@ async function tildelPrikkerModal(elev, onLagret, eksisterende = null) {
 
 // Én linje i endringsloggen: hva som ble gitt, endret eller slettet.
 function prikkHendelseHTML(h) {
-  const tid = `${formatDateLong(localDate(h.createdAt))} kl. ${formatTime(h.createdAt)}${h.actor ? ` · ${esc(h.actor)}` : ''}`;
+  // Hvem som gjorde det. NULL betyr at kontoen er slettet siden.
+  const tid = `${formatDateLong(localDate(h.createdAt))} kl. ${formatTime(h.createdAt)} · av ${h.actor ? esc(h.actor) : 'ukjent (slettet konto)'}`;
   const tildeling = (x) => `${prikkTekst(x.points)} – ${esc(x.categoryLabel)}`;
   let tittel, detaljer = [];
   if (h.action === 'opprettet') {
@@ -3082,7 +3083,7 @@ async function prikkHistorikkModal(elev, onEndret) {
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:700;line-height:1.35">${esc(x.categoryLabel)}</div>
           ${x.reason ? `<div style="font-size:14px;color:var(--slate);margin-top:3px;line-height:1.45;white-space:pre-wrap">${esc(x.reason)}</div>` : ''}
-          <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.givenBy ? ` · ${esc(x.givenBy)}` : ''}${x.updatedAt ? ' · endret' : ''}</div>
+          <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">Tildelt av <b style="color:var(--slate)">${x.givenBy ? esc(x.givenBy) : 'ukjent (slettet konto)'}</b> · ${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.updatedAt ? ' · endret' : ''}</div>
         </div>
         <button type="button" class="btn btn-ghost" data-endre="${x.id}" style="${liten}">Endre</button>
         <button type="button" class="btn btn-ghost" data-slett="${x.id}" title="Slett tildelingen" style="${liten};color:var(--red-ink)"><span style="width:16px;height:16px;display:block">${nav.trash}</span></button>
