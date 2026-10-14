@@ -560,7 +560,13 @@ gjester, snus osv.). Kategoriene og antallet prikker ligger i
 `server/src/demerits.js` – serveren avgjør selv hvor mange prikker en kategori
 gir, klienten sender bare hvilken. To unntak: **«Egendefinert»**, der den som
 tildeler skriver antallet, og **rusmidler**, som gir minst 15 men kan settes
-høyere. Halve prikker er lov. Begrunnelsen er valgfri og vises for eleven.
+høyere. Halve prikker er lov.
+
+Tildeling skjer i **to steg**, likt på adminsiden, brannlisten i nettleseren og
+i vaktappen: først krysser man av én eller flere hendelser og trykker «Neste»,
+så kommer en egen side for en valgfri begrunnelse før «Tildel». Hver hendelse
+blir sin egen tildeling med samme begrunnelse, og de lagres i én transaksjon
+– enten alle eller ingen. Begrunnelsen vises for eleven.
 
 Hvem ser hva:
 

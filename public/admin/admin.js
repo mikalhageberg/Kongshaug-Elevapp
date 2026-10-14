@@ -2919,19 +2919,155 @@ async function renderPrikker(main) {
   tegn();
 }
 
-// Tildelingsdialogen: én kategori, med prikkene ved siden av. «Egendefinert»
-// og rusmidler (minst 15) får et tallfelt. Begrunnelsen er valgfri og vises
-// for eleven.
-//
-// Med `eksisterende` (en tildeling fra historikken) blir dialogen til «Endre
-// prikker»: alt er forhåndsutfylt, og det kommer et ekstra felt for hvorfor
-// den endres – det havner bare i endringsloggen, ikke hos eleven.
+// Tildeling i to steg. Steg 1: kryss av én eller flere hendelser (med tallfelt
+// for «Egendefinert» og rusmidler). Steg 2: se over, skriv en valgfri
+// begrunnelse og tildel. Begrunnelsen har et eget steg for at den ikke skal
+// gå under i en lang liste – den ble lett oversett nederst i den gamle dialogen.
+// Hver hendelse blir sin egen tildeling, med samme begrunnelse.
+function tildelToStegModal(elev, kategorier, onLagret) {
+  const valgt = new Map();  // kategori-nøkkel → antall (tekst) for dem med tallfelt, ellers ''
+  let steg = 1;
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="width:560px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Tildel prikker</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600"><span id="tsSteg"></span> · ${esc(elev.fullName)}${elev.room ? ` · Rom ${esc(elev.room)}` : ''}</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div id="tsInnhold" style="padding:8px 26px 20px"></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
+        <span id="tsOppsummert" style="margin-right:auto;font-size:14px;font-weight:700;color:var(--slate)"></span>
+        <button id="tsTilbake" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+        <button id="tsVidere" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Neste</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', close);
+  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  const innhold = bg.querySelector('#tsInnhold');
+  const medTall = (c) => c.custom || c.minPoints != null;
+  const tall = (v) => Number(String(v).trim().replace(',', '.'));
+  // Antallet for en valgt hendelse, eller NaN om tallfeltet ikke er fylt ut riktig.
+  const poengFor = (c) => (medTall(c) ? tall(valgt.get(c.key)) : c.points);
+  const valgte = () => kategorier.filter((c) => valgt.has(c.key));
+
+  function oppsummer() {
+    const v = valgte();
+    const sum = v.reduce((s, c) => s + (poengFor(c) || 0), 0);
+    bg.querySelector('#tsOppsummert').textContent = v.length
+      ? `${v.length} ${v.length === 1 ? 'hendelse' : 'hendelser'} · ${prikkTekst(sum)}` : '';
+    if (steg === 1) bg.querySelector('#tsVidere').disabled = !v.length;
+  }
+
+  function feil(m) {
+    const p = innhold.querySelector('#tsErr');
+    p.textContent = m || ''; p.style.display = m ? 'block' : 'none';
+  }
+
+  function tegnSteg1() {
+    steg = 1;
+    bg.querySelector('#tsSteg').textContent = 'Steg 1 av 2: Velg hendelser';
+    bg.querySelector('#tsTilbake').textContent = 'Avbryt';
+    bg.querySelector('#tsVidere').textContent = 'Neste';
+    innhold.innerHTML = `
+      <p style="margin:8px 0 4px;font-size:13.5px;color:var(--muted-2)">Du kan velge flere.</p>
+      ${kategorier.map((c) => {
+        const på = valgt.has(c.key);
+        return `
+        <div data-kat="${c.key}" style="border:1.5px solid ${på ? 'var(--navy)' : 'var(--line-2)'};background:${på ? '#f4f7fb' : '#fff'};border-radius:12px;margin-top:8px">
+          <label style="display:flex;gap:12px;align-items:flex-start;padding:11px 14px;cursor:pointer">
+            <input type="checkbox" ${på ? 'checked' : ''} style="width:19px;height:19px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14.5px;font-weight:700;line-height:1.35">${esc(c.label)}</div>
+              ${c.note ? `<div style="font-size:12.5px;color:var(--red-ink);font-weight:700;margin-top:2px">${esc(c.note)}</div>` : ''}
+            </div>
+            <span class="pill ${c.custom ? 'pill-grey' : 'pill-amber'}" style="flex:0 0 auto;padding:4px 10px;font-size:12.5px">${c.custom ? 'Velg selv' : c.minPoints != null ? `${prikkTall(c.minPoints)} +` : prikkTall(c.points)}</span>
+          </label>
+          ${på && medTall(c) ? `
+          <div style="display:flex;align-items:center;gap:10px;padding:0 14px 12px 45px">
+            <label class="field-label" style="margin:0">Antall prikker</label>
+            <input data-antall="${c.key}" class="field field-sm" inputmode="decimal" placeholder="F.eks. 1,5" value="${esc(valgt.get(c.key))}" style="max-width:120px;height:40px" />
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+      <p id="tsErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>`;
+    innhold.querySelectorAll('[data-kat] input[type=checkbox]').forEach((boks) => boks.addEventListener('change', () => {
+      const key = boks.closest('[data-kat]').dataset.kat;
+      const c = kategorier.find((k) => k.key === key);
+      if (boks.checked) valgt.set(key, c.custom ? '' : c.minPoints != null ? prikkTall(c.minPoints) : '');
+      else valgt.delete(key);
+      const rull = bg.querySelector('.modal').scrollTop;
+      tegnSteg1();
+      bg.querySelector('.modal').scrollTop = rull;
+      if (boks.checked && c.custom) innhold.querySelector(`[data-antall="${key}"]`)?.focus();
+    }));
+    innhold.querySelectorAll('[data-antall]').forEach((f) => f.addEventListener('input', () => { valgt.set(f.dataset.antall, f.value); oppsummer(); }));
+    oppsummer();
+  }
+
+  function tegnSteg2() {
+    steg = 2;
+    bg.querySelector('#tsSteg').textContent = 'Steg 2 av 2: Begrunnelse';
+    bg.querySelector('#tsTilbake').textContent = 'Tilbake';
+    bg.querySelector('#tsVidere').textContent = 'Tildel';
+    bg.querySelector('#tsVidere').disabled = false;
+    innhold.innerHTML = `
+      <div style="margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden">
+        ${valgte().map((c) => `
+          <div style="display:flex;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid #f2f4f6">
+            <span class="pill pill-amber" style="flex:0 0 auto;min-width:44px;justify-content:center;padding:4px 10px;font-size:13px">${prikkTall(poengFor(c))}</span>
+            <span style="font-size:14.5px;font-weight:700;line-height:1.35">${esc(c.label)}</span>
+          </div>`).join('')}
+      </div>
+      <label class="field-label" for="tsGrunn" style="margin-top:20px;font-size:15px;color:var(--ink)">Begrunnelse <span style="font-weight:600;color:var(--muted-2)">(valgfritt)</span></label>
+      <textarea id="tsGrunn" class="field" rows="4" maxlength="500" placeholder="Hva skjedde? Eleven ser begrunnelsen sammen med prikkene." style="height:auto;padding:12px 14px;resize:vertical;font-family:inherit"></textarea>
+      <p id="tsErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>`;
+    innhold.querySelector('#tsGrunn').focus();
+    oppsummer();
+  }
+
+  bg.querySelector('#tsTilbake').addEventListener('click', () => (steg === 1 ? close() : tegnSteg1()));
+  bg.querySelector('#tsVidere').addEventListener('click', async () => {
+    if (steg === 1) {
+      const v = valgte();
+      if (!v.length) return feil('Velg minst én hendelse.');
+      const mangler = v.find((c) => medTall(c) && !(poengFor(c) > 0));
+      if (mangler) return feil(`Skriv inn antall prikker for «${mangler.label}».`);
+      const forLavt = v.find((c) => c.minPoints != null && poengFor(c) < c.minPoints);
+      if (forLavt) return feil(`«${forLavt.label}» gir minst ${prikkTall(forLavt.minPoints)} prikker.`);
+      return tegnSteg2();
+    }
+    const knapp = bg.querySelector('#tsVidere'); knapp.disabled = true;
+    try {
+      const r = await api('/api/demerits', {
+        method: 'POST',
+        body: {
+          userId: elev.id,
+          reason: innhold.querySelector('#tsGrunn').value,
+          items: valgte().map((c) => ({ category: c.key, ...(medTall(c) ? { points: valgt.get(c.key) } : {}) })),
+        },
+      });
+      close();
+      toast(`${elev.fullName} fikk ${prikkTekst(r.points)}`);
+      await onLagret?.();
+    } catch (ex) { feil(ex.message); knapp.disabled = false; }
+  });
+
+  tegnSteg1();
+}
+
+// Inngangen til både tildeling og endring. Uten `eksisterende` går den til
+// totrinnsdialogen over. Med `eksisterende` (en tildeling fra historikken) er
+// det «Endre prikker»: én kategori, alt forhåndsutfylt, og et ekstra felt for
+// hvorfor den endres – det havner bare i endringsloggen, ikke hos eleven.
 async function tildelPrikkerModal(elev, onLagret, eksisterende = null) {
   if (!elev) return;
   let kategorier;
   try { kategorier = await hentPrikkKategorier(); } catch (ex) { toast(ex.message); return; }
   const endre = !!eksisterende;
   if (eksisterende?.category === TIDLIGERE) return endreTidligereModal(elev, eksisterende, onLagret);
+  if (!endre) return tildelToStegModal(elev, kategorier, onLagret);
   const rad = (c) => `
     <label style="display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border:1.5px solid var(--line-2);border-radius:12px;cursor:pointer;margin-top:8px">
       <input type="radio" name="prikkKat" value="${c.key}" ${eksisterende?.category === c.key ? 'checked' : ''} style="width:19px;height:19px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />

@@ -44,11 +44,24 @@ router.post('/', requireAdminOrReviewDemo, (req, res) => {
   const elev = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1").get(uid);
   if (!elev && !req.reviewDemo) return res.status(404).json({ error: 'Fant ikke eleven' });
 
-  let d;
-  try { d = parseDemerit(req.body || {}); }
+  // Flere hendelser på én gang: { items: [{ category, points? }], reason }.
+  // Hver blir sin egen tildeling med samme begrunnelse. Den gamle formen med
+  // én { category, points } godtas fortsatt.
+  const rå = Array.isArray(req.body?.items) ? req.body.items : [req.body || {}];
+  if (!rå.length) return res.status(400).json({ error: 'Velg minst én hendelse.' });
+  if (rå.length > DEMERIT_CATEGORIES.length) return res.status(400).json({ error: 'For mange hendelser på én gang.' });
+  if (new Set(rå.map((x) => x?.category)).size !== rå.length) return res.status(400).json({ error: 'Samme hendelse er valgt flere ganger.' });
+  let liste;
+  try { liste = rå.map((x) => parseDemerit({ category: x?.category, points: x?.points, reason: req.body?.reason })); }
   catch (ex) { return res.status(400).json({ error: ex.message }); }
-  const id = addDemerit(uid, req.auth.sub, d);
-  res.status(201).json({ ok: true, id, points: d.points, categoryLabel: d.categoryLabel });
+  const ids = db.transaction(() => liste.map((d) => addDemerit(uid, req.auth.sub, d)))();
+  res.status(201).json({
+    ok: true,
+    ids,
+    count: liste.length,
+    points: liste.reduce((s, d) => s + d.points, 0),
+    categoryLabels: liste.map((d) => d.categoryLabel),
+  });
 });
 
 // ── SUPERBRUKER ──────────────────────────────────────────────
