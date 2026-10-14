@@ -566,8 +566,8 @@ Hvem ser hva:
 
 - **Superbrukere**: admin → **Internat → Prikkesystem**. Elevlista med summen
   til hver elev, søk, sortering på flest/færrest prikker og filter på internat.
-  «Tildel prikker» på hver rad. Trykk på navnet for elevens gjeldende prikker,
-  der hver tildeling kan **endres** (kategori, antall, begrunnelse) eller
+  «Se historikk» og «Tildel prikker» på hver rad. «Se historikk» viser elevens
+  gjeldende prikker, der hver tildeling kan **endres** (kategori, antall, begrunnelse) eller
   **slettes**, og under dem hele **endringsloggen**: hva som er gitt, endret og
   slettet, av hvem og når, med en valgfri grunn. Vanlige administratorer ser
   verken siden eller menyvalget, og serveren avviser dem.

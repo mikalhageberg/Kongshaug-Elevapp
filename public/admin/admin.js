@@ -2819,8 +2819,8 @@ async function renderInternat(main) {
 // ── Prikkesystem ─────────────────────────────────────────────
 // Bare for superbrukere (SUPERADMIN_SIDER, og requireSuperAdmin på serveren).
 // Elevlista med summen til hver elev, søk og sortering på flest/færrest
-// prikker, og «Tildel prikker» på hver rad. Et trykk på navnet viser hele
-// historikken, der en tildeling som ble feil kan slettes.
+// prikker, og «Se historikk» og «Tildel prikker» på hver rad. Historikken viser
+// elevens prikker, der de kan endres og slettes, og hele endringsloggen.
 
 // 1,5 – ikke 1.5. «1 prikk», ellers «prikker».
 const prikkTall = (n) => String(Math.round(n * 2) / 2).replace('.', ',');
@@ -2895,16 +2895,17 @@ async function renderPrikker(main) {
       const farge = e.total >= 10 ? ['var(--red-bg)', 'var(--red-ink)'] : e.total > 0 ? ['var(--amber-bg)', 'var(--amber-ink)'] : ['#f2f4f6', 'var(--muted-2)'];
       return `
       <div style="display:flex;align-items:center;gap:14px;padding:12px 16px 12px 20px;border-bottom:1px solid #f2f4f6">
-        <button type="button" data-vis="${e.id}" title="Se alle prikkene" style="flex:1;min-width:0;display:flex;align-items:center;gap:14px;background:none;border:none;padding:0;text-align:left;font-family:inherit;color:inherit;cursor:pointer">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:14px">
           <span style="flex:0 0 auto;min-width:58px;height:46px;padding:0 10px;border-radius:12px;background:${farge[0]};color:${farge[1]};display:inline-flex;flex-direction:column;align-items:center;justify-content:center;line-height:1">
             <span style="font-size:19px;font-weight:800">${prikkTall(e.total)}</span>
             <span style="font-size:10.5px;font-weight:700;margin-top:3px;opacity:.85">${e.total === 1 ? 'prikk' : 'prikker'}</span>
           </span>
           <span style="min-width:0">
             <span style="display:block;font-size:18px;font-weight:700;line-height:1.25">${esc(e.fullName)}</span>
-            <span style="display:block;font-size:14px;color:var(--muted-2);font-weight:600;margin-top:2px">${[e.className, e.dorm, e.room ? `Rom ${esc(e.room)}` : ''].filter(Boolean).map(esc).join(' · ') || '–'}</span>
+            <span style="display:block;font-size:14px;color:var(--muted-2);font-weight:600;margin-top:2px">${[e.className, e.dorm, e.room ? `Rom ${e.room}` : ''].filter(Boolean).map(esc).join(' · ') || '–'}</span>
           </span>
-        </button>
+        </div>
+        <button type="button" class="btn btn-ghost" data-vis="${e.id}" style="flex:0 0 auto;height:44px;padding:0 16px;font-size:14px">Se historikk</button>
         <button type="button" class="btn btn-ghost" data-tildel="${e.id}" style="flex:0 0 auto;height:44px;padding:0 16px;font-size:14px">Tildel prikker</button>
       </div>`;
     }).join('');
