@@ -578,7 +578,10 @@ Hvem ser hva:
   slettet, av hvem og når, med en valgfri grunn. Nederst i vinduet ligger
   **«Nullstill prikker»**, som sletter alle elevens gjeldende prikker på én
   gang. Den spør ikke om grunn, og står som én hendelse i loggen med hvor mange
-  prikker eleven hadde (tabellen `demerit_resets`). Vanlige
+  prikker eleven hadde (tabellen `demerit_resets`). Krysser man av «Slett også
+  loggen», forsvinner loggen samtidig. **«Slett logg»** sletter hele
+  endringsloggen for eleven for godt – hendelsene, nullstillingene og
+  tildelinger som allerede var slettet – mens de gjeldende prikkene blir stående. Vanlige
   administratorer ser verken siden eller menyvalget, og serveren avviser dem.
 - **Vakten**: knappen under hver elev på brannlisten i appen gir valget
   «Utvid fristen» eller «Tildel prikker» (bare «Tildel prikker» for elever som
@@ -602,12 +605,13 @@ uten dato eller begrunnelse. Importeres arket på nytt, oppdateres antallet i
 stedet for at det kommer en post til. Kategorien (`tidligere`) kan ikke velges
 ved vanlig tildeling, og en importert post kan bare endres i antall.
 
-Ingenting slettes for godt. En slettet tildeling merkes med `deleted_at` og
-forsvinner fra eleven og summene, men står igjen i endringsloggen
-(`demerit_events`, én rad per tildeling, endring og sletting, med verdiene før
-og etter).
+En slettet tildeling merkes med `deleted_at` og forsvinner fra eleven og
+summene, men står igjen i endringsloggen (`demerit_events`, én rad per
+tildeling, endring og sletting, med verdiene før og etter) – helt til en
+superbruker sletter loggen. Først da er den borte for godt.
 
-API-et ligger på `/api/demerits`, tabellene heter `demerits` og `demerit_events`.
+API-et ligger på `/api/demerits`, tabellene heter `demerits`, `demerit_events`
+og `demerit_resets`.
 
 ### Superbrukere og vanlige administratorer
 

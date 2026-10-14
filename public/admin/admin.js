@@ -3190,6 +3190,38 @@ function prikkHendelseHTML(h) {
     </div>`;
 }
 
+// Liten bekreftelsesdialog for de to destruktive knappene i historikken.
+// `avkrysning` gir en valgfri avkrysningsboks; onOk får om den var krysset av.
+function bekreftModal({ tittel, tekst, avkrysning, avkrysningHint, knapp, onOk }) {
+  const bg = el(`
+    <div class="modal-bg" style="z-index:50"><div class="modal" style="width:440px">
+      <div style="padding:22px 26px 6px"><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${tittel}</div></div>
+      <div style="padding:6px 26px 20px">
+        <p style="margin:0;font-size:14.5px;color:var(--slate);line-height:1.55">${tekst}</p>
+        ${avkrysning ? `
+        <label style="display:flex;gap:12px;align-items:flex-start;margin-top:16px;cursor:pointer">
+          <input type="checkbox" id="bkBoks" style="width:20px;height:20px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--red-ink)" />
+          <div><div style="font-size:15px;font-weight:700">${avkrysning}</div>
+            ${avkrysningHint ? `<div style="font-size:13px;color:var(--muted-2);margin-top:2px">${avkrysningHint}</div>` : ''}</div>
+        </label>` : ''}
+        <p id="bkErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+        <button id="bkAvbryt" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+        <button id="bkOk" class="btn" style="height:46px;padding:0 22px;font-size:14.5px;background:var(--red);color:#fff">${knapp}</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#bkAvbryt').addEventListener('click', close);
+  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  bg.querySelector('#bkOk').addEventListener('click', async () => {
+    const k = bg.querySelector('#bkOk'); k.disabled = true;
+    try { await onOk(!!bg.querySelector('#bkBoks')?.checked); close(); }
+    catch (ex) { const e = bg.querySelector('#bkErr'); e.textContent = ex.message; e.style.display = 'block'; k.disabled = false; }
+  });
+}
+
 // Én elev: de gjeldende prikkene (med «Endre» og sletting), og under dem hele
 // endringsloggen – hva som er gitt, endret og slettet, av hvem og når.
 async function prikkHistorikkModal(elev, onEndret) {
@@ -3204,7 +3236,8 @@ async function prikkHistorikkModal(elev, onEndret) {
       <div id="phListe" style="padding:4px 0 8px"></div>
       <div id="phLogg"></div>
       <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
-        <button id="nullstill" class="btn btn-ghost" style="height:46px;padding:0 18px;font-size:14.5px;color:var(--red-ink);margin-right:auto" disabled>Nullstill prikker</button>
+        <button id="nullstill" class="btn btn-ghost" style="height:46px;padding:0 18px;font-size:14.5px;color:var(--red-ink)" disabled>Nullstill prikker</button>
+        <button id="slettLogg" class="btn btn-ghost" style="height:46px;padding:0 18px;font-size:14.5px;color:var(--red-ink);margin-right:auto" disabled>Slett logg</button>
         <button id="tildel" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Tildel prikker</button>
       </div>
     </div></div>`);
@@ -3215,15 +3248,35 @@ async function prikkHistorikkModal(elev, onEndret) {
   const etterEndring = async () => { await last(); await onEndret?.(); };
   bg.querySelector('#tildel').addEventListener('click', () => tildelPrikkerModal(elev, etterEndring));
   // Nullstill: alle gjeldende prikker slettes på én gang, og det står som én
-  // hendelse i endringsloggen.
+  // hendelse i endringsloggen – eller loggen slettes også, om man krysser av.
   let sum = 0;
-  bg.querySelector('#nullstill').addEventListener('click', async () => {
-    if (!confirm(`Nullstille prikketellingen for ${elev.fullName}?\n\nAlle ${prikkTekst(sum)} slettes, og eleven står på 0. Nullstillingen står i endringsloggen.`)) return;
-    try {
-      const r = await api(`/api/demerits/students/${elev.id}/reset`, { method: 'POST' });
-      toast(`Nullstilt – ${r.deleted} ${r.deleted === 1 ? 'tildeling' : 'tildelinger'} slettet`);
-      await etterEndring();
-    } catch (ex) { toast(ex.message); }
+  bg.querySelector('#nullstill').addEventListener('click', () => {
+    bekreftModal({
+      tittel: 'Nullstill prikker',
+      tekst: `Alle ${prikkTekst(sum)} til ${esc(elev.fullName)} slettes, og eleven står på 0.`,
+      avkrysning: 'Slett også loggen',
+      avkrysningHint: 'Uten avkrysning står nullstillingen i endringsloggen.',
+      knapp: 'Nullstill',
+      async onOk(slettLogg) {
+        const r = await api(`/api/demerits/students/${elev.id}/reset`, { method: 'POST', body: { clearLog: slettLogg } });
+        toast(`Nullstilt – ${r.deleted} ${r.deleted === 1 ? 'tildeling' : 'tildelinger'} slettet${r.logCleared ? ', og loggen er slettet' : ''}`);
+        await etterEndring();
+      },
+    });
+  });
+  // Slett logg: hele endringsloggen forsvinner for godt. Gjeldende prikker
+  // blir stående.
+  bg.querySelector('#slettLogg').addEventListener('click', () => {
+    bekreftModal({
+      tittel: 'Slett logg',
+      tekst: `Hele endringsloggen for ${esc(elev.fullName)} slettes for godt. Prikkene eleven har nå, blir stående.`,
+      knapp: 'Slett logg',
+      async onOk() {
+        await api(`/api/demerits/students/${elev.id}/log`, { method: 'DELETE' });
+        toast('Loggen er slettet');
+        await etterEndring();
+      },
+    });
   });
 
   async function last() {
@@ -3233,6 +3286,7 @@ async function prikkHistorikkModal(elev, onEndret) {
     bg.querySelector('#phSum').textContent = `${prikkTekst(d.total)} totalt`;
     sum = d.total;
     bg.querySelector('#nullstill').disabled = !d.items.length;
+    bg.querySelector('#slettLogg').disabled = !d.history.length;
     const liten = 'flex:0 0 auto;height:34px;padding:0 12px;font-size:13px';
     bg.querySelector('#phListe').innerHTML = d.items.length ? d.items.map((x) => `
       <div style="display:flex;gap:14px;align-items:flex-start;padding:14px 26px;border-bottom:1px solid #f2f4f6">

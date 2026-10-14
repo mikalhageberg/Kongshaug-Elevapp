@@ -7,7 +7,7 @@ import { isSuperAdmin, requireSuperAdmin } from '../permissions.js';
 import { hasActiveWatch } from '../fireWatch.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import {
-  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, resetDemerits, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
+  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, resetDemerits, clearDemeritLog, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
 } from '../demerits.js';
 
 const router = Router();
@@ -106,14 +106,27 @@ router.post('/import', (req, res) => {
 
 const notat = (v) => String(v ?? '').trim().slice(0, 500) || null;
 
+const finnElev = (uid) => db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'student'").get(uid);
+
 // Nullstill en elevs prikker. Alt slettes mykt, og nullstillingen står som
-// én hendelse i endringsloggen. Ingen grunn oppgis.
+// én hendelse i endringsloggen. Ingen grunn oppgis. Med { clearLog: true }
+// slettes også hele loggen – nullstillingen med.
 router.post('/students/:id/reset', (req, res) => {
   const uid = Number(req.params.id);
-  if (!db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'student'").get(uid)) {
-    return res.status(404).json({ error: 'Fant ikke eleven' });
-  }
-  res.json({ ok: true, deleted: resetDemerits(uid, req.auth.sub) });
+  if (!finnElev(uid)) return res.status(404).json({ error: 'Fant ikke eleven' });
+  const deleted = db.transaction(() => {
+    const n = resetDemerits(uid, req.auth.sub);
+    if (req.body?.clearLog === true) clearDemeritLog(uid);
+    return n;
+  })();
+  res.json({ ok: true, deleted, logCleared: req.body?.clearLog === true });
+});
+
+// Slett endringsloggen for én elev. Gjeldende prikker blir stående.
+router.delete('/students/:id/log', (req, res) => {
+  const uid = Number(req.params.id);
+  if (!finnElev(uid)) return res.status(404).json({ error: 'Fant ikke eleven' });
+  res.json({ ok: true, deleted: clearDemeritLog(uid) });
 });
 
 // Endre en tildeling: { category, points?, reason?, note? }. Samme regler som

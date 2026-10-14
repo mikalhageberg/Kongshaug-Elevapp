@@ -8,8 +8,9 @@
 //
 // Hvem ser hva:
 //   - Superbrukere tildeler, ser alle elevenes summer, kan endre og slette
-//     tildelinger, og ser hele endringsloggen. Ingenting slettes for godt:
-//     en slettet tildeling merkes, og loggen viser hvem som gjorde hva.
+//     tildelinger, og ser hele endringsloggen. En slettet tildeling merkes,
+//     og loggen viser hvem som gjorde hva – til en superbruker sletter
+//     loggen for eleven (clearDemeritLog).
 //   - Den som har vakten kan tildele fra brannlisten i appen, og alle
 //     administratorer kan tildele fra brannlisten i nettleseren – men ingen av
 //     dem får se hvor mange prikker eleven har fra før. Svaret på en tildeling inneholder
@@ -162,6 +163,16 @@ export const resetDemerits = db.transaction((userId, actorId) => {
   db.prepare("UPDATE demerits SET deleted_at = datetime('now') WHERE user_id = ? AND deleted_at IS NULL").run(userId);
   db.prepare('INSERT INTO demerit_resets (user_id, actor_id, points, count) VALUES (?, ?, ?, ?)').run(userId, actorId, sum, n);
   return n;
+});
+
+// Slett endringsloggen for én elev. Alt som bare finnes i loggen forsvinner
+// for godt: hendelsene, nullstillingene og tildelingene som allerede var
+// slettet (de vises ingen andre steder). Gjeldende prikker røres ikke.
+export const clearDemeritLog = db.transaction((userId) => {
+  db.prepare('DELETE FROM demerits WHERE user_id = ? AND deleted_at IS NOT NULL').run(userId);
+  const hendelser = db.prepare('DELETE FROM demerit_events WHERE user_id = ?').run(userId).changes;
+  const nullstillinger = db.prepare('DELETE FROM demerit_resets WHERE user_id = ?').run(userId).changes;
+  return hendelser + nullstillinger;
 });
 
 // Alle gjeldende tildelinger til én elev, nyeste først. withGiver tar med
