@@ -298,6 +298,23 @@ db.exec(`
     created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_demerits_user ON demerits(user_id);
+
+  -- Endringsloggen for prikkene: én rad for hver gang en tildeling blir gitt,
+  -- endret eller slettet. Raden står selv om tildelingen slettes – det er
+  -- nettopp da den trengs. before_json/after_json er tildelingen slik den var
+  -- før og etter (kategori, prikker, begrunnelse).
+  CREATE TABLE IF NOT EXISTS demerit_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    demerit_id  INTEGER NOT NULL REFERENCES demerits(id) ON DELETE CASCADE,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,  -- eleven
+    action      TEXT    NOT NULL,          -- 'opprettet' | 'endret' | 'slettet'
+    actor_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    before_json TEXT,
+    after_json  TEXT,
+    note        TEXT,                      -- valgfri grunn til endringen/slettingen
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_demerit_events_user ON demerit_events(user_id);
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.
@@ -399,6 +416,10 @@ ensureColumn('menus', 'parsed_at', 'TEXT');
 ensureColumn('fire_guests', 'room', 'TEXT');
 // Fritekst-kommentar fra eleven om besøket, f.eks. «Foreldre» eller «Søsken».
 ensureColumn('fire_guests', 'note', 'TEXT');
+// Prikker slettes ikke fra tabellen, de merkes som slettet – historikken skal
+// vise hva som en gang ble gitt. Se demerits.js.
+ensureColumn('demerits', 'deleted_at', 'TEXT');
+ensureColumn('demerits', 'updated_at', 'TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_feide ON users(feide_id) WHERE feide_id IS NOT NULL');
 
 export default db;

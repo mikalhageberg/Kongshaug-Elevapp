@@ -6,7 +6,7 @@ import { requireAuth, requireAdmin, requireAdminOrReviewDemo, isAppReviewUser } 
 import { isSuperAdmin, requireSuperAdmin } from '../permissions.js';
 import { hasActiveWatch } from '../fireWatch.js';
 import {
-  DEMERIT_CATEGORIES, parseDemerit, addDemerit, deleteDemerit, demeritsFor, demeritTotals,
+  DEMERIT_CATEGORIES, parseDemerit, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
 } from '../demerits.js';
 
 const router = Router();
@@ -53,7 +53,7 @@ router.get('/students', (req, res) => {
   res.json({ students: demeritTotals() });
 });
 
-// Én elevs historikk, med hvem som ga prikkene.
+// Én elevs gjeldende prikker, med hvem som ga dem, og hele endringsloggen.
 router.get('/students/:id', (req, res) => {
   const uid = Number(req.params.id);
   const u = db.prepare("SELECT id, full_name, class_name, dorm, room FROM users WHERE id = ? AND role = 'student'").get(uid);
@@ -61,12 +61,29 @@ router.get('/students/:id', (req, res) => {
   res.json({
     student: { id: u.id, fullName: u.full_name, className: u.class_name, dorm: u.dorm, room: u.room },
     ...demeritsFor(uid, { withGiver: true }),
+    history: demeritHistory(uid),
   });
 });
 
-// Fjern en tildeling som ble feil.
+const notat = (v) => String(v ?? '').trim().slice(0, 500) || null;
+
+// Endre en tildeling: { category, points?, reason?, note? }. Samme regler som
+// ved tildeling. `note` er en valgfri grunn til endringen, bare for loggen.
+router.patch('/:id', (req, res) => {
+  let d;
+  try { d = parseDemerit(req.body || {}); }
+  catch (ex) { return res.status(400).json({ error: ex.message }); }
+  const r = updateDemerit(Number(req.params.id), req.auth.sub, d, notat(req.body?.note));
+  if (r === false) return res.status(404).json({ error: 'Fant ikke tildelingen' });
+  res.json({ ok: true, changed: r === true });
+});
+
+// Slett en tildeling som ble feil. Den forsvinner fra eleven og summen, men
+// står i endringsloggen. Body (valgfri): { note }.
 router.delete('/:id', (req, res) => {
-  if (!deleteDemerit(Number(req.params.id))) return res.status(404).json({ error: 'Fant ikke tildelingen' });
+  if (!deleteDemerit(Number(req.params.id), req.auth.sub, notat(req.body?.note))) {
+    return res.status(404).json({ error: 'Fant ikke tildelingen' });
+  }
   res.json({ ok: true });
 });
 

@@ -2918,13 +2918,18 @@ async function renderPrikker(main) {
 // Tildelingsdialogen: én kategori, med prikkene ved siden av. «Egendefinert»
 // og rusmidler (minst 15) får et tallfelt. Begrunnelsen er valgfri og vises
 // for eleven.
-async function tildelPrikkerModal(elev, onLagret) {
+//
+// Med `eksisterende` (en tildeling fra historikken) blir dialogen til «Endre
+// prikker»: alt er forhåndsutfylt, og det kommer et ekstra felt for hvorfor
+// den endres – det havner bare i endringsloggen, ikke hos eleven.
+async function tildelPrikkerModal(elev, onLagret, eksisterende = null) {
   if (!elev) return;
   let kategorier;
   try { kategorier = await hentPrikkKategorier(); } catch (ex) { toast(ex.message); return; }
+  const endre = !!eksisterende;
   const rad = (c) => `
     <label style="display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border:1.5px solid var(--line-2);border-radius:12px;cursor:pointer;margin-top:8px">
-      <input type="radio" name="prikkKat" value="${c.key}" style="width:19px;height:19px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
+      <input type="radio" name="prikkKat" value="${c.key}" ${eksisterende?.category === c.key ? 'checked' : ''} style="width:19px;height:19px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
       <div style="flex:1;min-width:0">
         <div style="font-size:14.5px;font-weight:700;line-height:1.35">${esc(c.label)}</div>
         ${c.note ? `<div style="font-size:12.5px;color:var(--red-ink);font-weight:700;margin-top:2px">${esc(c.note)}</div>` : ''}
@@ -2934,7 +2939,7 @@ async function tildelPrikkerModal(elev, onLagret) {
   const bg = el(`
     <div class="modal-bg"><div class="modal" style="width:560px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
-        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Tildel prikker</div>
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${endre ? 'Endre prikker' : 'Tildel prikker'}</div>
           <div style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(elev.fullName)}${elev.room ? ` · Rom ${esc(elev.room)}` : ''}</div></div>
         <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
       </div>
@@ -2945,12 +2950,15 @@ async function tildelPrikkerModal(elev, onLagret) {
           <input id="prikkAntall" class="field field-sm" inputmode="decimal" placeholder="F.eks. 1,5" style="max-width:160px" />
         </div>
         <label class="field-label" for="prikkGrunn" style="margin-top:16px">Begrunnelse (valgfritt)</label>
-        <textarea id="prikkGrunn" class="field" rows="3" maxlength="500" placeholder="Vises for eleven" style="height:auto;padding:12px 14px;resize:vertical;font-family:inherit"></textarea>
+        <textarea id="prikkGrunn" class="field" rows="3" maxlength="500" placeholder="Vises for eleven" style="height:auto;padding:12px 14px;resize:vertical;font-family:inherit">${esc(eksisterende?.reason || '')}</textarea>
+        ${endre ? `
+        <label class="field-label" for="prikkNotat" style="margin-top:16px">Hvorfor endres den? (valgfritt)</label>
+        <input id="prikkNotat" class="field field-sm" maxlength="500" placeholder="Vises bare i endringsloggen" />` : ''}
         <p id="prikkErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
         <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
-        <button id="save" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Tildel</button>
+        <button id="save" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">${endre ? 'Lagre endringen' : 'Tildel'}</button>
       </div>
     </div></div>`);
   document.body.appendChild(bg);
@@ -2962,44 +2970,95 @@ async function tildelPrikkerModal(elev, onLagret) {
   const antallBoks = bg.querySelector('#prikkAntallBoks');
   const antall = bg.querySelector('#prikkAntall');
   const valgt = () => kategorier.find((c) => c.key === bg.querySelector('input[name="prikkKat"]:checked')?.value);
-  bg.querySelectorAll('input[name="prikkKat"]').forEach((r) => r.addEventListener('change', () => {
+  // fyll: true når kategorien ble valgt nå, false ved åpning av en tildeling
+  // som skal endres – da skal antallet den har, stå i feltet.
+  function oppdater(fyll) {
     const c = valgt();
     bg.querySelectorAll('input[name="prikkKat"]').forEach((x) => { x.closest('label').style.borderColor = x.checked ? 'var(--navy)' : 'var(--line-2)'; x.closest('label').style.background = x.checked ? '#f4f7fb' : ''; });
     const visTall = c && (c.custom || c.minPoints != null);
     antallBoks.style.display = visTall ? 'block' : 'none';
-    if (visTall) { antall.value = c.custom ? '' : prikkTall(c.minPoints); antall.focus(); }
-  }));
+    if (!visTall) return;
+    if (fyll) { antall.value = c.custom ? '' : prikkTall(c.minPoints); antall.focus(); }
+    else antall.value = prikkTall(eksisterende.points);
+  }
+  bg.querySelectorAll('input[name="prikkKat"]').forEach((r) => r.addEventListener('change', () => oppdater(true)));
+  if (endre) {
+    oppdater(false);
+    bg.querySelector('input[name="prikkKat"]:checked')?.closest('label').scrollIntoView({ block: 'center' });
+  }
 
   bg.querySelector('#save').addEventListener('click', async () => {
     const err = bg.querySelector('#prikkErr'); err.style.display = 'none';
     const c = valgt();
     const vis = (m) => { err.textContent = m; err.style.display = 'block'; };
     if (!c) return vis('Velg en kategori.');
-    const body = { userId: elev.id, category: c.key, reason: bg.querySelector('#prikkGrunn').value };
+    const body = { category: c.key, reason: bg.querySelector('#prikkGrunn').value };
     if (c.custom || c.minPoints != null) body.points = antall.value;
     const knapp = bg.querySelector('#save'); knapp.disabled = true;
     try {
-      const r = await api('/api/demerits', { method: 'POST', body });
-      close();
-      toast(`${elev.fullName} fikk ${prikkTekst(r.points)}`);
+      if (endre) {
+        body.note = bg.querySelector('#prikkNotat').value;
+        const r = await api(`/api/demerits/${eksisterende.id}`, { method: 'PATCH', body });
+        close();
+        toast(r.changed ? 'Endringen er lagret' : 'Ingenting å endre');
+      } else {
+        const r = await api('/api/demerits', { method: 'POST', body: { userId: elev.id, ...body } });
+        close();
+        toast(`${elev.fullName} fikk ${prikkTekst(r.points)}`);
+      }
       await onLagret?.();
     } catch (ex) { vis(ex.message); knapp.disabled = false; }
   });
 }
 
-// Hele historikken for én elev, med hvem som ga prikkene og mulighet til å
-// slette en tildeling som ble feil.
+// Én linje i endringsloggen: hva som ble gitt, endret eller slettet.
+function prikkHendelseHTML(h) {
+  const tid = `${formatDateLong(localDate(h.createdAt))} kl. ${formatTime(h.createdAt)}${h.actor ? ` · ${esc(h.actor)}` : ''}`;
+  const tildeling = (x) => `${prikkTekst(x.points)} – ${esc(x.categoryLabel)}`;
+  let tittel, detaljer = [];
+  if (h.action === 'opprettet') {
+    tittel = `Ga ${tildeling(h.after)}`;
+    if (h.after.reason) detaljer.push(`Begrunnelse: «${esc(h.after.reason)}»`);
+  } else if (h.action === 'slettet') {
+    tittel = `Slettet ${tildeling(h.before)}`;
+  } else {
+    tittel = `Endret ${esc(h.before.categoryLabel)}`;
+    const b = h.before, a = h.after;
+    if (b.category !== a.category) detaljer.push(`Kategori: ${esc(b.categoryLabel)} → ${esc(a.categoryLabel)}`);
+    if (b.points !== a.points) detaljer.push(`Prikker: ${prikkTall(b.points)} → ${prikkTall(a.points)}`);
+    if ((b.reason || '') !== (a.reason || '')) {
+      detaljer.push(!b.reason ? `Begrunnelse lagt til: «${esc(a.reason)}»`
+        : !a.reason ? `Begrunnelse fjernet (var «${esc(b.reason)}»)`
+          : `Begrunnelse: «${esc(b.reason)}» → «${esc(a.reason)}»`);
+    }
+  }
+  if (h.note) detaljer.push(`Grunn: ${esc(h.note)}`);
+  const farge = { opprettet: 'var(--green)', endret: 'var(--amber)', slettet: 'var(--red)' }[h.action] || 'var(--muted-2)';
+  return `
+    <div style="display:flex;gap:12px;padding:11px 26px;border-bottom:1px solid #f2f4f6">
+      <span class="dot" style="background:${farge};margin-top:7px;flex:0 0 auto"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;line-height:1.4">${tittel}</div>
+        ${detaljer.map((t) => `<div style="font-size:13.5px;color:var(--slate);line-height:1.45;margin-top:2px;white-space:pre-wrap">${t}</div>`).join('')}
+        <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:3px">${tid}</div>
+      </div>
+    </div>`;
+}
+
+// Én elev: de gjeldende prikkene (med «Endre» og sletting), og under dem hele
+// endringsloggen – hva som er gitt, endret og slettet, av hvem og når.
 async function prikkHistorikkModal(elev, onEndret) {
   if (!elev) return;
   const bg = el(`
-    <div class="modal-bg"><div class="modal" style="width:600px">
+    <div class="modal-bg"><div class="modal" style="width:640px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
         <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${esc(elev.fullName)}</div>
           <div id="phSum" style="font-size:13px;color:var(--muted-2);font-weight:600">Laster …</div></div>
         <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
       </div>
       <div id="phListe" style="padding:4px 0 8px"></div>
-      <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+      <div id="phLogg"></div>
+      <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
         <button id="tildel" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Tildel prikker</button>
       </div>
     </div></div>`);
@@ -3007,26 +3066,37 @@ async function prikkHistorikkModal(elev, onEndret) {
   const close = () => bg.remove();
   bg.querySelector('#close').addEventListener('click', close);
   bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
-  bg.querySelector('#tildel').addEventListener('click', () => tildelPrikkerModal(elev, async () => { await last(); await onEndret?.(); }));
+  const etterEndring = async () => { await last(); await onEndret?.(); };
+  bg.querySelector('#tildel').addEventListener('click', () => tildelPrikkerModal(elev, etterEndring));
 
   async function last() {
     let d;
     try { d = await api(`/api/demerits/students/${elev.id}`); }
     catch (ex) { bg.querySelector('#phListe').innerHTML = `<p style="padding:0 26px">${esc(ex.message)}</p>`; return; }
     bg.querySelector('#phSum').textContent = `${prikkTekst(d.total)} totalt`;
+    const liten = 'flex:0 0 auto;height:34px;padding:0 12px;font-size:13px';
     bg.querySelector('#phListe').innerHTML = d.items.length ? d.items.map((x) => `
       <div style="display:flex;gap:14px;align-items:flex-start;padding:14px 26px;border-bottom:1px solid #f2f4f6">
         <span class="pill pill-amber" style="flex:0 0 auto;min-width:44px;justify-content:center;padding:4px 10px;font-size:13px;margin-top:1px">${prikkTall(x.points)}</span>
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:700;line-height:1.35">${esc(x.categoryLabel)}</div>
           ${x.reason ? `<div style="font-size:14px;color:var(--slate);margin-top:3px;line-height:1.45;white-space:pre-wrap">${esc(x.reason)}</div>` : ''}
-          <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.givenBy ? ` · ${esc(x.givenBy)}` : ''}</div>
+          <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.givenBy ? ` · ${esc(x.givenBy)}` : ''}${x.updatedAt ? ' · endret' : ''}</div>
         </div>
-        <button type="button" data-slett="${x.id}" title="Slett tildelingen" style="flex:0 0 auto;background:none;border:none;cursor:pointer;color:var(--muted-2);padding:4px"><span style="width:18px;height:18px;display:block">${nav.trash}</span></button>
+        <button type="button" class="btn btn-ghost" data-endre="${x.id}" style="${liten}">Endre</button>
+        <button type="button" class="btn btn-ghost" data-slett="${x.id}" title="Slett tildelingen" style="${liten};color:var(--red-ink)"><span style="width:16px;height:16px;display:block">${nav.trash}</span></button>
       </div>`).join('') : '<div style="padding:22px 26px;color:var(--muted-2);font-size:15px;font-weight:600">Ingen prikker.</div>';
+    bg.querySelector('#phLogg').innerHTML = d.history.length ? `
+      <div style="padding:14px 26px 6px;font-size:12.5px;font-weight:800;color:var(--muted-2);letter-spacing:.4px;border-top:1px solid var(--line);background:#f7f8fa">ENDRINGSLOGG</div>
+      <div style="background:#fbfbfc">${d.history.map(prikkHendelseHTML).join('')}</div>` : '';
+    bg.querySelectorAll('[data-endre]').forEach((b) => b.addEventListener('click', () => {
+      tildelPrikkerModal(elev, etterEndring, d.items.find((x) => x.id === Number(b.dataset.endre)));
+    }));
     bg.querySelectorAll('[data-slett]').forEach((b) => b.addEventListener('click', async () => {
-      if (!confirm('Slette denne tildelingen? Prikkene forsvinner også fra elevens oversikt.')) return;
-      try { await api(`/api/demerits/${b.dataset.slett}`, { method: 'DELETE' }); await last(); await onEndret?.(); }
+      const x = d.items.find((i) => i.id === Number(b.dataset.slett));
+      const grunn = prompt(`Slette «${x.categoryLabel}» (${prikkTekst(x.points)})?\n\nPrikkene forsvinner fra elevens oversikt, men slettingen står i endringsloggen.\n\nGrunn (valgfritt):`, '');
+      if (grunn === null) return;
+      try { await api(`/api/demerits/${x.id}`, { method: 'DELETE', body: { note: grunn } }); toast('Tildelingen er slettet'); await etterEndring(); }
       catch (ex) { toast(ex.message); }
     }));
   }

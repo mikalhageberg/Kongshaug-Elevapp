@@ -566,9 +566,11 @@ Hvem ser hva:
 
 - **Superbrukere**: admin → **Internat → Prikkesystem**. Elevlista med summen
   til hver elev, søk, sortering på flest/færrest prikker og filter på internat.
-  «Tildel prikker» på hver rad; trykk på navnet for hele historikken, med hvem
-  som ga prikkene og mulighet til å slette en tildeling som ble feil. Vanlige
-  administratorer ser verken siden eller menyvalget, og serveren avviser dem.
+  «Tildel prikker» på hver rad. Trykk på navnet for elevens gjeldende prikker,
+  der hver tildeling kan **endres** (kategori, antall, begrunnelse) eller
+  **slettes**, og under dem hele **endringsloggen**: hva som er gitt, endret og
+  slettet, av hvem og når, med en valgfri grunn. Vanlige administratorer ser
+  verken siden eller menyvalget, og serveren avviser dem.
 - **Vakten**: knappen under hver elev på brannlisten i appen gir valget
   «Utvid fristen» eller «Tildel prikker» (bare «Tildel prikker» for elever som
   er til stede eller borte). Vakten får samme kategorier, men **aldri** se hvor
@@ -577,7 +579,12 @@ Hvem ser hva:
 - **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
   tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.
 
-API-et ligger på `/api/demerits`, tabellen heter `demerits`.
+Ingenting slettes for godt. En slettet tildeling merkes med `deleted_at` og
+forsvinner fra eleven og summene, men står igjen i endringsloggen
+(`demerit_events`, én rad per tildeling, endring og sletting, med verdiene før
+og etter).
+
+API-et ligger på `/api/demerits`, tabellene heter `demerits` og `demerit_events`.
 
 ### Superbrukere og vanlige administratorer
 
