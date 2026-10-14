@@ -174,7 +174,10 @@ export function MinePrikkerModal({ visible, onClose }) {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.postTittel}>{x.categoryLabel}</Text>
                         {x.reason ? <Text style={styles.postGrunn}>{x.reason}</Text> : null}
-                        <Text style={styles.postDato}>{formatDateLong(lokalDato(x.createdAt))} kl. {formatTime(x.createdAt)}</Text>
+                        {/* Prikker fra før appen har ingen egen dato – bare merkelappen. */}
+                        {x.category === 'tidligere' ? null : (
+                          <Text style={styles.postDato}>{formatDateLong(lokalDato(x.createdAt))} kl. {formatTime(x.createdAt)}</Text>
+                        )}
                       </View>
                     </View>
                   ))}

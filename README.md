@@ -579,6 +579,16 @@ Hvem ser hva:
 - **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
   tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.
 
+**Tidligere prikker** (fra papirlista før appen) importeres med **Importer
+tidligere prikker** øverst på Prikkesystem-siden. Malen har to kolonner, `Navn`
+og `Prikker`. Navnene kobles mot de aktive elevene på fullt navn eller fornavn +
+etternavn – ikke fornavn alene, så to elever med samme fornavn ikke forveksles.
+Rader som ikke ble koblet, kan kobles for hånd i forhåndsvisningen før noe
+lagres. Hver elev får én post, «Opptjente prikker før appen ble tatt i bruk»,
+uten dato eller begrunnelse. Importeres arket på nytt, oppdateres antallet i
+stedet for at det kommer en post til. Kategorien (`tidligere`) kan ikke velges
+ved vanlig tildeling, og en importert post kan bare endres i antall.
+
 Ingenting slettes for godt. En slettet tildeling merkes med `deleted_at` og
 forsvinner fra eleven og summene, men står igjen i endringsloggen
 (`demerit_events`, én rad per tildeling, endring og sletting, med verdiene før

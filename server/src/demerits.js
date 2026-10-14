@@ -16,6 +16,7 @@
 //   - Eleven ser sine egne prikker, med kategori og begrunnelse.
 
 import db from './db.js';
+import { cellText, isBlankRow, normName, q, readTemplateHeader, throwRowErrors } from './sheetTemplate.js';
 
 export const DEMERIT_CATEGORIES = [
   { key: 'kjokkentjeneste', label: 'Møtte ikke til kjøkkentjeneste', points: 2 },
@@ -45,12 +46,31 @@ export const DEMERIT_CATEGORIES = [
   { key: 'egendefinert', label: 'Egendefinert', points: null, custom: true },
 ];
 
+// Prikker eleven hadde fra papirlista før appen ble tatt i bruk. Kommer bare
+// inn via Excel-importen – kategorien står ikke i DEMERIT_CATEGORIES og kan
+// derfor ikke velges i tildelingsmenyen. Én slik rad per elev: en ny import
+// endrer den som finnes (og logger endringen) i stedet for å legge til enda en.
+export const IMPORT_CATEGORY = {
+  key: 'tidligere',
+  label: 'Opptjente prikker før appen ble tatt i bruk',
+};
+
 const MAX_POINTS = 100;
+const MAX_IMPORT_POINTS = 500;
 const MAX_REASON = 500;
 
 // Tolker og kontrollerer en tildeling. Kaster med en norsk feilmelding som kan
 // vises rett i appen.
-export function parseDemerit({ category, points, reason }) {
+//
+// allowImport slipper gjennom «tidligere»-kategorien – bare når en importert
+// rad endres. Ved vanlig tildeling kan den ikke velges.
+export function parseDemerit({ category, points, reason }, { allowImport = false } = {}) {
+  if (allowImport && category === IMPORT_CATEGORY.key) {
+    const n = parsePoints(points);
+    if (n == null) throw new Error('Skriv inn antall prikker.');
+    if (n > MAX_IMPORT_POINTS) throw new Error(`Høyst ${MAX_IMPORT_POINTS} prikker.`);
+    return { categoryKey: IMPORT_CATEGORY.key, categoryLabel: IMPORT_CATEGORY.label, points: n, reason: null };
+  }
   const cat = DEMERIT_CATEGORIES.find((c) => c.key === category);
   if (!cat) throw new Error('Velg en kategori.');
 
@@ -84,6 +104,15 @@ const json = (o) => (o ? JSON.stringify(o) : null);
 
 function aktiv(id) {
   return db.prepare('SELECT * FROM demerits WHERE id = ? AND deleted_at IS NULL').get(id);
+}
+
+// «1,5», «1.5», 2 → tall i halve prikker. null for tomt; kaster for ugyldig.
+function parsePoints(v) {
+  if (v == null || String(v).trim() === '') return null;
+  const n = Number(String(v).trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0) throw new Error('Antall prikker må være et positivt tall.');
+  if (Math.round(n * 2) !== n * 2) throw new Error('Antall prikker må være et helt tall eller en halv (f.eks. 1,5).');
+  return n;
 }
 
 export const addDemerit = db.transaction((userId, givenBy, d) => {
@@ -129,7 +158,7 @@ export function demeritsFor(userId, { withGiver = false } = {}) {
             u.full_name AS given_by_name
        FROM demerits d LEFT JOIN users u ON u.id = d.given_by
       WHERE d.user_id = ? AND d.deleted_at IS NULL
-      ORDER BY d.created_at DESC, d.id DESC`
+      ORDER BY d.category_key = '${IMPORT_CATEGORY.key}', d.created_at DESC, d.id DESC`
   ).all(userId);
   const items = rows.map((r) => ({
     id: r.id,
@@ -196,3 +225,102 @@ db.exec(`
     FROM demerits d
    WHERE NOT EXISTS (SELECT 1 FROM demerit_events e WHERE e.demerit_id = d.id AND e.action = 'opprettet')
 `);
+
+// ── Import av tidligere prikker (Excel) ──────────────────────
+// Malen har to kolonner: Navn og Prikker. Arket tolkes lokalt, og navnene
+// kobles mot de aktive elevene. Bare fullt navn eller fornavn + etternavn
+// godtas – ikke fornavn alene, som vaskelistene: her henger det prikker på
+// treffet, og to elever med samme fornavn skal ikke kunne forveksles.
+export const IMPORT_HEADERS = { name: 'Navn', points: 'Prikker' };
+
+function firstLast(norm) {
+  const t = norm.split(' ').filter(Boolean);
+  return t.length < 2 ? null : `${t[0]} ${t[t.length - 1]}`;
+}
+
+// Returnerer en forhåndsvisning: én rad per linje i arket, med eleven den ble
+// koblet til (eller null), antallet, og hva eleven har importert fra før.
+// Skriver ingenting.
+export function parseImportSheet(rows) {
+  let headerRow, cols;
+  try { ({ headerRow, cols } = readTemplateHeader(rows, IMPORT_HEADERS, ['name', 'points'])); }
+  catch (ex) {
+    // Malfeilen foreslår OpenAI-tolking, som ikke finnes for denne importen.
+    throw new Error(ex.message.replace(/ Følger ikke arket malen, kan du velge «Tolk arket med OpenAI» i stedet\./, ' Last ned malen, så er overskriftene riktige.'));
+  }
+  const students = db.prepare(
+    "SELECT id, full_name, class_name, dorm FROM users WHERE role = 'student' AND active = 1"
+  ).all();
+  const full = new Map(), fl = new Map();
+  const push = (m, k, s) => { if (k) (m.get(k) || m.set(k, []).get(k)).push(s); };
+  for (const s of students) { const n = normName(s.full_name); push(full, n, s); push(fl, firstLast(n), s); }
+  const finn = (navn) => {
+    const n = normName(navn);
+    const a = full.get(n); if (a?.length === 1) return { student: a[0] };
+    if (a?.length > 1) return { error: 'flere elever har dette navnet' };
+    const b = fl.get(firstLast(n)); if (b?.length === 1) return { student: b[0] };
+    if (b?.length > 1) return { error: 'flere elever passer – skriv hele navnet' };
+    return { error: 'fant ingen aktiv elev med dette navnet' };
+  };
+  const tidligere = new Map(db.prepare(
+    'SELECT user_id, points FROM demerits WHERE category_key = ? AND deleted_at IS NULL'
+  ).all(IMPORT_CATEGORY.key).map((r) => [r.user_id, r.points]));
+
+  const feil = [];
+  const out = [];
+  const sett = new Map();  // elev-id → radnummer, for å oppdage dubletter
+  for (let i = headerRow + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (isBlankRow(row)) continue;
+    const linje = i + 1;
+    const navn = cellText(row, cols.name);
+    const tekst = cellText(row, cols.points);
+    if (!navn) { feil.push(`rad ${linje}: mangler navn`); continue; }
+    let points;
+    try { points = parsePoints(tekst); }
+    catch (ex) { feil.push(`rad ${linje} (${q(navn)}): ${ex.message.toLowerCase()}`); continue; }
+    if (points == null) continue;  // tom eller 0 → ingenting å importere
+    if (points > MAX_IMPORT_POINTS) { feil.push(`rad ${linje} (${q(navn)}): høyst ${MAX_IMPORT_POINTS} prikker`); continue; }
+    const { student, error } = finn(navn);
+    if (student && sett.has(student.id)) {
+      feil.push(`rad ${linje} (${q(navn)}): eleven står også på rad ${sett.get(student.id)}`);
+      continue;
+    }
+    if (student) sett.set(student.id, linje);
+    out.push({
+      row: linje,
+      name: navn,
+      points,
+      student: student ? { id: student.id, fullName: student.full_name, className: student.class_name, dorm: student.dorm } : null,
+      error: error || null,
+      existing: student ? (tidligere.get(student.id) ?? null) : null,
+    });
+  }
+  throwRowErrors(feil);
+  if (!out.length) throw new Error('Fant ingen rader med prikker i arket.');
+  return { rows: out };
+}
+
+// Lagrer importen: items = [{ userId, points }]. Har eleven en importert rad
+// fra før, endres den; ellers opprettes en ny. Alt i én transaksjon.
+export const importDemerits = db.transaction((items, actorId) => {
+  const elev = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student' AND active = 1");
+  const finnes = db.prepare('SELECT id FROM demerits WHERE user_id = ? AND category_key = ? AND deleted_at IS NULL');
+  let created = 0, updated = 0, unchanged = 0;
+  const seen = new Set();
+  for (const it of items) {
+    const uid = Number(it?.userId);
+    if (!Number.isInteger(uid) || seen.has(uid) || !elev.get(uid)) throw new Error('Ugyldig eller dobbel elev i importen.');
+    seen.add(uid);
+    const d = parseDemerit({ category: IMPORT_CATEGORY.key, points: it.points }, { allowImport: true });
+    const før = finnes.get(uid, IMPORT_CATEGORY.key);
+    if (før) {
+      const r = updateDemerit(før.id, actorId, d, 'Importert på nytt fra Excel');
+      if (r) updated++; else unchanged++;
+    } else {
+      addDemerit(uid, actorId, d);
+      created++;
+    }
+  }
+  return { created, updated, unchanged };
+});

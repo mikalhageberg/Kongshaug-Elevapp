@@ -1,12 +1,13 @@
 // Prikkesystemet. Se demerits.js for hvem som får se og gjøre hva.
 
-import { Router } from 'express';
+import express, { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireAdmin, requireAdminOrReviewDemo, isAppReviewUser } from '../auth.js';
 import { isSuperAdmin, requireSuperAdmin } from '../permissions.js';
 import { hasActiveWatch } from '../fireWatch.js';
+import { readXlsxGrid } from '../xlsxReader.js';
 import {
-  DEMERIT_CATEGORIES, parseDemerit, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
+  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
 } from '../demerits.js';
 
 const router = Router();
@@ -65,13 +66,41 @@ router.get('/students/:id', (req, res) => {
   });
 });
 
+// Import av tidligere prikker fra Excel. Først en forhåndsvisning (skriver
+// ingenting), så selve importen når admin har sett over og bekreftet.
+router.post('/import/parse', express.raw({ type: () => true, limit: '5mb' }), (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Tom fil.' });
+  try {
+    const { rows } = readXlsxGrid(req.body);
+    res.json(parseImportSheet(rows));
+  } catch (ex) {
+    res.status(400).json({ error: ex.message || 'Kunne ikke lese filen.' });
+  }
+});
+
+router.post('/import', (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  if (!items.length) return res.status(400).json({ error: 'Ingen elever å importere.' });
+  if (items.length > 1000) return res.status(400).json({ error: 'For mange på én gang (maks 1000).' });
+  try { res.json({ ok: true, ...importDemerits(items, req.auth.sub) }); }
+  catch (ex) { res.status(400).json({ error: ex.message }); }
+});
+
 const notat = (v) => String(v ?? '').trim().slice(0, 500) || null;
 
 // Endre en tildeling: { category, points?, reason?, note? }. Samme regler som
 // ved tildeling. `note` er en valgfri grunn til endringen, bare for loggen.
 router.patch('/:id', (req, res) => {
+  // En importert rad («tidligere») kan bare endres i antall – den kan ikke bli
+  // til en vanlig kategori, og en vanlig tildeling kan ikke bli importert.
+  const nå = db.prepare('SELECT category_key FROM demerits WHERE id = ? AND deleted_at IS NULL').get(Number(req.params.id));
+  if (!nå) return res.status(404).json({ error: 'Fant ikke tildelingen' });
+  const importert = nå.category_key === IMPORT_CATEGORY.key;
+  if (importert !== (req.body?.category === IMPORT_CATEGORY.key)) {
+    return res.status(400).json({ error: importert ? 'Importerte prikker kan bare endres i antall.' : 'Velg en kategori.' });
+  }
   let d;
-  try { d = parseDemerit(req.body || {}); }
+  try { d = parseDemerit(req.body || {}, { allowImport: importert }); }
   catch (ex) { return res.status(400).json({ error: ex.message }); }
   const r = updateDemerit(Number(req.params.id), req.auth.sub, d, notat(req.body?.note));
   if (r === false) return res.status(404).json({ error: 'Fant ikke tildelingen' });

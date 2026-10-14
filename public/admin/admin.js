@@ -2839,9 +2839,11 @@ const PRIKK_SORTER = [
 ];
 
 async function renderPrikker(main) {
-  header(main, 'Prikkesystem', 'Prikker for brudd på internatreglene');
+  header(main, 'Prikkesystem', 'Prikker for brudd på internatreglene',
+    '<button class="btn btn-ghost" id="prikkImport" style="height:40px;padding:0 16px;font-size:14px">Importer tidligere prikker</button>');
   const page = el(`<div class="page"></div>`);
   main.appendChild(page);
+  main.querySelector('#prikkImport').addEventListener('click', () => elever && importerPrikkerModal(elever, lastPåNytt));
 
   let elever;
   try { elever = (await api('/api/demerits/students')).students; }
@@ -2928,6 +2930,7 @@ async function tildelPrikkerModal(elev, onLagret, eksisterende = null) {
   let kategorier;
   try { kategorier = await hentPrikkKategorier(); } catch (ex) { toast(ex.message); return; }
   const endre = !!eksisterende;
+  if (eksisterende?.category === TIDLIGERE) return endreTidligereModal(elev, eksisterende, onLagret);
   const rad = (c) => `
     <label style="display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border:1.5px solid var(--line-2);border-radius:12px;cursor:pointer;margin-top:8px">
       <input type="radio" name="prikkKat" value="${c.key}" ${eksisterende?.category === c.key ? 'checked' : ''} style="width:19px;height:19px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy)" />
@@ -3019,7 +3022,7 @@ function prikkHendelseHTML(h) {
   const tildeling = (x) => `${prikkTekst(x.points)} – ${esc(x.categoryLabel)}`;
   let tittel, detaljer = [];
   if (h.action === 'opprettet') {
-    tittel = `Ga ${tildeling(h.after)}`;
+    tittel = `${h.after.category === TIDLIGERE ? 'Importerte' : 'Ga'} ${tildeling(h.after)}`;
     if (h.after.reason) detaljer.push(`Begrunnelse: «${esc(h.after.reason)}»`);
   } else if (h.action === 'slettet') {
     tittel = `Slettet ${tildeling(h.before)}`;
@@ -3083,7 +3086,7 @@ async function prikkHistorikkModal(elev, onEndret) {
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:700;line-height:1.35">${esc(x.categoryLabel)}</div>
           ${x.reason ? `<div style="font-size:14px;color:var(--slate);margin-top:3px;line-height:1.45;white-space:pre-wrap">${esc(x.reason)}</div>` : ''}
-          <div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">Tildelt av <b style="color:var(--slate)">${x.givenBy ? esc(x.givenBy) : 'ukjent (slettet konto)'}</b> · ${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.updatedAt ? ' · endret' : ''}</div>
+          ${x.category === TIDLIGERE ? '' : `<div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:4px">Tildelt av <b style="color:var(--slate)">${x.givenBy ? esc(x.givenBy) : 'ukjent (slettet konto)'}</b> · ${formatDateLong(localDate(x.createdAt))} kl. ${formatTime(x.createdAt)}${x.updatedAt ? ' · endret' : ''}</div>`}
         </div>
         <button type="button" class="btn btn-ghost" data-endre="${x.id}" style="${liten}">Endre</button>
         <button type="button" class="btn btn-ghost" data-slett="${x.id}" title="Slett tildelingen" style="${liten};color:var(--red-ink)"><span style="width:16px;height:16px;display:block">${nav.trash}</span></button>
@@ -3103,6 +3106,168 @@ async function prikkHistorikkModal(elev, onEndret) {
     }));
   }
   last();
+}
+
+
+// Prikker fra papirlista før appen ble tatt i bruk, importert fra Excel. De
+// står som én post per elev: «Opptjente prikker før appen ble tatt i bruk».
+const TIDLIGERE = 'tidligere';
+
+// Importvinduet: last ned mal → last opp → se over koblingen mot elevene →
+// importer. Rader der navnet ikke ble funnet, kan kobles til riktig elev for
+// hånd, eller hoppes over. Ingenting lagres før «Importer».
+function importerPrikkerModal(elever, onFerdig) {
+  const sortert = [...elever].sort((a, b) => a.fullName.localeCompare(b.fullName, 'nb'));
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="width:680px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Importer tidligere prikker</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">Prikker fra før appen ble tatt i bruk</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:18px 26px 8px">
+        <p style="margin:0;font-size:14px;color:var(--muted-2);line-height:1.55">Arket har to kolonner: <b>Navn</b> og <b>Prikker</b>, én elev per rad. Hver elev får én post i historikken, merket «Opptjente prikker før appen ble tatt i bruk». Importerer du på nytt, oppdateres antallet i stedet for å legges til.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px">
+          <button type="button" class="btn btn-ghost" id="impMal" style="height:42px;padding:0 16px;font-size:14px">Last ned mal</button>
+          <input type="file" id="impFil" accept=".xlsx,.csv" style="font-size:14px;flex:1;min-width:200px" />
+          <button type="button" class="btn btn-primary" id="impLes" style="height:42px;padding:0 18px;font-size:14px">Les arket</button>
+        </div>
+        <p id="impErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none;line-height:1.5"></p>
+      </div>
+      <div id="impForhånd"></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3;position:sticky;bottom:0;background:#fff">
+        <span id="impAntall" style="margin-right:auto;font-size:14px;font-weight:700;color:var(--slate)"></span>
+        <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+        <button id="impLagre" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px" disabled>Importer</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', close);
+  bg.querySelector('#cancel').addEventListener('click', close);
+  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  const err = bg.querySelector('#impErr');
+  const visFeil = (m) => { err.textContent = m; err.style.display = m ? 'block' : 'none'; };
+
+  bg.querySelector('#impMal').addEventListener('click', () => {
+    downloadBlob('tidligere-prikker-mal.xlsx', buildXlsx({
+      rows: [['Navn', 'Prikker'].map((v) => ({ v, s: 1 }))],
+      sheetName: 'Prikker',
+      cols: [30, 10],
+    }));
+  });
+
+  let rader = [];  // fra serveren, med valgt elev-id per rad (null = hoppes over)
+  function tegn() {
+    const box = bg.querySelector('#impForhånd');
+    if (!rader.length) { box.innerHTML = ''; return; }
+    const valg = (r) => `<select data-rad="${r.row}" class="field field-sm" style="height:38px;font-size:13.5px;max-width:260px">
+        <option value="">Hopp over</option>
+        ${sortert.map((e) => `<option value="${e.id}" ${r.userId === e.id ? 'selected' : ''}>${esc(e.fullName)}${e.className ? ` (${esc(e.className)})` : ''}</option>`).join('')}
+      </select>`;
+    const ukjente = rader.filter((r) => r.error).length;
+    box.innerHTML = `
+      ${ukjente ? `<div style="margin:6px 26px 4px;padding:10px 14px;background:var(--amber-bg);border-radius:10px;color:var(--amber-ink);font-size:13.5px;font-weight:600">${ukjente} ${ukjente === 1 ? 'navn' : 'navn'} ble ikke koblet til en elev. Velg riktig elev i lista, eller la raden stå på «Hopp over».</div>` : ''}
+      <div class="th" style="grid-template-columns:52px 1fr 1fr 80px;margin-top:8px"><span>Rad</span><span>I arket</span><span>Elev</span><span style="text-align:right">Prikker</span></div>
+      ${rader.map((r) => `
+        <div class="tr" style="grid-template-columns:52px 1fr 1fr 80px;gap:10px;${r.error && !r.userId ? 'background:#fffaf0' : ''}">
+          <span style="color:var(--muted-2);font-weight:700;font-size:13.5px">${r.row}</span>
+          <span style="min-width:0"><span style="font-weight:700;font-size:14.5px">${esc(r.name)}</span>
+            ${r.error ? `<span style="display:block;font-size:12.5px;color:var(--amber-ink);font-weight:600;margin-top:2px">${esc(r.error)}</span>` : ''}
+            ${r.existing != null ? `<span style="display:block;font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:2px">Har ${prikkTall(r.existing)} importert fra før – erstattes</span>` : ''}</span>
+          <span style="min-width:0">${valg(r)}</span>
+          <span style="text-align:right;font-weight:800;font-size:15px">${prikkTall(r.points)}</span>
+        </div>`).join('')}`;
+    box.querySelectorAll('[data-rad]').forEach((s) => s.addEventListener('change', () => {
+      const r = rader.find((x) => x.row === Number(s.dataset.rad));
+      r.userId = s.value ? Number(s.value) : null;
+      tellOpp();
+    }));
+    tellOpp();
+  }
+  function tellOpp() {
+    const med = rader.filter((r) => r.userId);
+    const ids = med.map((r) => r.userId);
+    const dobbel = ids.length !== new Set(ids).size;
+    bg.querySelector('#impAntall').textContent = med.length
+      ? `${med.length} ${med.length === 1 ? 'elev' : 'elever'} · ${prikkTekst(med.reduce((s, r) => s + r.points, 0))}`
+      : '';
+    visFeil(dobbel ? 'Samme elev er valgt på flere rader. Hver elev kan bare stå én gang.' : '');
+    const knapp = bg.querySelector('#impLagre');
+    knapp.disabled = !med.length || dobbel;
+    knapp.textContent = med.length ? `Importer ${med.length}` : 'Importer';
+  }
+
+  bg.querySelector('#impLes').addEventListener('click', async () => {
+    const fil = bg.querySelector('#impFil').files[0];
+    if (!fil) return visFeil('Velg en Excel-fil (.xlsx).');
+    const knapp = bg.querySelector('#impLes'); knapp.disabled = true; knapp.textContent = 'Leser…';
+    visFeil('');
+    try {
+      const res = await fetch('/api/demerits/import/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+        body: fil, credentials: 'same-origin',
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Kunne ikke lese arket.');
+      rader = d.rows.map((r) => ({ ...r, userId: r.student?.id ?? null }));
+      tegn();
+    } catch (ex) { rader = []; tegn(); visFeil(ex.message); }
+    knapp.disabled = false; knapp.textContent = 'Les arket';
+  });
+
+  bg.querySelector('#impLagre').addEventListener('click', async () => {
+    const items = rader.filter((r) => r.userId).map((r) => ({ userId: r.userId, points: r.points }));
+    const knapp = bg.querySelector('#impLagre'); knapp.disabled = true;
+    try {
+      const r = await api('/api/demerits/import', { method: 'POST', body: { items } });
+      close();
+      const deler = [r.created && `${r.created} nye`, r.updated && `${r.updated} oppdatert`, r.unchanged && `${r.unchanged} uendret`].filter(Boolean);
+      toast(`Importert: ${deler.join(', ')}`);
+      await onFerdig?.();
+    } catch (ex) { visFeil(ex.message); knapp.disabled = false; }
+  });
+}
+
+// Importerte prikker kan bare endres i antall – de har ingen kategori å bytte
+// til og ingen begrunnelse.
+function endreTidligereModal(elev, x, onLagret) {
+  const bg = el(`
+    <div class="modal-bg"><div class="modal" style="width:440px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid #eef0f3">
+        <div><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Endre tidligere prikker</div>
+          <div style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(elev.fullName)}</div></div>
+        <button id="close" style="background:none;border:none;cursor:pointer;color:var(--muted-2)"><span style="width:22px;height:22px;display:block">${icon.x}</span></button>
+      </div>
+      <div style="padding:18px 26px 20px">
+        <p style="margin:0 0 14px;font-size:14px;color:var(--muted-2);line-height:1.5">Opptjente prikker før appen ble tatt i bruk.</p>
+        <label class="field-label" for="tAntall">Antall prikker</label>
+        <input id="tAntall" class="field field-sm" inputmode="decimal" value="${prikkTall(x.points)}" style="max-width:160px" />
+        <label class="field-label" for="tNotat" style="margin-top:16px">Hvorfor endres den? (valgfritt)</label>
+        <input id="tNotat" class="field field-sm" maxlength="500" placeholder="Vises bare i endringsloggen" />
+        <p id="tErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 26px 22px;border-top:1px solid #eef0f3">
+        <button id="cancel" class="btn btn-ghost" style="height:46px;padding:0 22px;font-size:14.5px">Avbryt</button>
+        <button id="save" class="btn btn-primary" style="height:46px;padding:0 22px;font-size:14.5px">Lagre endringen</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#close').addEventListener('click', close);
+  bg.querySelector('#cancel').addEventListener('click', close);
+  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  bg.querySelector('#save').addEventListener('click', async () => {
+    const err = bg.querySelector('#tErr'); err.style.display = 'none';
+    const knapp = bg.querySelector('#save'); knapp.disabled = true;
+    try {
+      const r = await api(`/api/demerits/${x.id}`, { method: 'PATCH', body: { category: TIDLIGERE, points: bg.querySelector('#tAntall').value, note: bg.querySelector('#tNotat').value } });
+      close();
+      toast(r.changed ? 'Endringen er lagret' : 'Ingenting å endre');
+      await onLagret?.();
+    } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; knapp.disabled = false; }
+  });
 }
 
 // Selvstendig modul som monteres på Innstillinger-siden.
