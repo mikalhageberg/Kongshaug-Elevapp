@@ -16,6 +16,13 @@
     "production": {
       "autoIncrement": true,
       "channel": "production"
+    },
+    "staging": {
+      "distribution": "internal",
+      "channel": "staging",
+      "env": {
+        "APP_VARIANT": "staging"
+      }
     }
   },
   "submit": {
