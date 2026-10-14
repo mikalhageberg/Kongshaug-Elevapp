@@ -16,16 +16,23 @@ import { readXlsxGrid } from '../xlsxReader.js';
 import { parseDutyXlsx, parseDutyTemplate } from '../dutyParser.js';
 
 export function createDutyRouter(kind) {
-  const { navn, ledetekst, hasTasks } = kindOf(kind);
+  const { navn, ledetekst, hasTasks, bareEgne } = kindOf(kind);
   const router = Router();
   router.use(requireAuth);
+
+  // Uken slik denne brukeren får se den. For internatvask (bareEgne) får en
+  // elev bare sine egne rader – filtreringen skjer her, så heller ikke eldre
+  // appversjoner kan vise hvem andre som har tjeneste samme uke.
+  const synlig = (req, week) => (bareEgne && !isRealAdmin(req.auth)
+    ? { ...week, students: week.students.filter((s) => s.id === req.auth.sub) }
+    : week);
 
   // ELEV + ADMIN: hvem har tjeneste. ?from=YYYY-MM-DD (blir rundet til mandag)
   // og ?weeks=N (1–26) styrer utsnittet. Uten parametre: uken vi er i nå.
   router.get('/', (req, res) => {
     const from = isDateString(req.query.from) ? weekStartOf(req.query.from) : currentWeekStart();
     const weeks = Math.min(26, Math.max(1, Number(req.query.weeks) || 1));
-    res.json({ currentWeek: weekInfo(currentWeekStart()), weeks: dutyWeeks(kind, from, weeks) });
+    res.json({ currentWeek: weekInfo(currentWeekStart()), weeks: dutyWeeks(kind, from, weeks).map((w) => synlig(req, w)) });
   });
 
   // ELEV: min egen tjeneste – denne uken og neste. Hjemskjermen bruker denne.
@@ -33,8 +40,8 @@ export function createDutyRouter(kind) {
     const thisWeek = currentWeekStart();
     const nextWeek = shiftWeek(thisWeek, 1);
     res.json({
-      thisWeek: hasDuty(kind, req.auth.sub, thisWeek) ? dutyWeek(kind, thisWeek) : null,
-      nextWeek: hasDuty(kind, req.auth.sub, nextWeek) ? dutyWeek(kind, nextWeek) : null,
+      thisWeek: hasDuty(kind, req.auth.sub, thisWeek) ? synlig(req, dutyWeek(kind, thisWeek)) : null,
+      nextWeek: hasDuty(kind, req.auth.sub, nextWeek) ? synlig(req, dutyWeek(kind, nextWeek)) : null,
     });
   });
 
@@ -178,7 +185,7 @@ export function createDutyRouter(kind) {
         }
       }
       signDuty(kind, duty.id, { method, byUserId: req.auth.sub });
-      res.json({ week: dutyWeek(kind, duty.weekStart) });
+      res.json({ week: synlig(req, dutyWeek(kind, duty.weekStart)) });
     });
 
     // ADMIN: angre en signatur (feiltrykk, eller jobben var ikke gjort likevel).

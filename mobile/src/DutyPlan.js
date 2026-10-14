@@ -30,6 +30,9 @@ export const DUTY_KINDS = {
     // Internatvasken har oppgaver med beskrivelse og signering (se dormTasks.js
     // på serveren). Kjøkkentjenesten har bare navn på uken.
     hasTasks: true,
+    // Serveren sender bare elevens egne rader, så tomme uker betyr «ikke deg»,
+    // ikke «ingen satt opp». Planen viser derfor bare elevens egne uker.
+    bareEgne: true,
   },
 };
 
@@ -55,7 +58,7 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
   // beholdes, så eleven ser hullene i rundgangen.
   let last = 0;
   weeks.forEach((w, i) => { if (w.students.length) last = i; });
-  const upcoming = weeks.slice(1, last + 1);
+  const upcoming = weeks.slice(1, last + 1).filter((w) => !cfg.bareEgne || w.students.length);
   const mine = upcoming.find((w) => w.students.some((s) => s.id === user?.id));
   const minesNå = now.students.filter((s) => s.id === user?.id);
 
@@ -91,7 +94,7 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
             <Pressable key={s.dutyId || s.id} onPress={() => setÅpenOppgave({ duty: s, week: now, kanSignere: true })}>{rad}</Pressable>
           );
         }) : (
-          <Text style={styles.tom}>Ingen satt opp denne uken.</Text>
+          <Text style={styles.tom}>{cfg.bareEgne ? `Du har ikke ${cfg.liten} denne uken.` : 'Ingen satt opp denne uken.'}</Text>
         )}
       </Card>
 
@@ -128,7 +131,7 @@ export default function DutyPlan({ kind, user, style, showHeading = true }) {
       {upcoming.length ? (
         <>
           <Button
-            title={planOpen ? 'Vis mindre' : 'Vis hele planen'}
+            title={planOpen ? 'Vis mindre' : cfg.bareEgne ? 'Vis dine neste uker' : 'Vis hele planen'}
             color="#fff" textColor={C.slate} fontSize={14.5}
             onPress={() => setPlanOpen((o) => !o)}
             style={{ height: 46, marginTop: 10, borderWidth: 1.5, borderColor: '#d3dae2' }}

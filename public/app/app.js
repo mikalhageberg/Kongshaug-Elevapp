@@ -323,6 +323,9 @@ const DUTY_KINDS = {
     // finnes ingen biometri, så her signeres det med elevens eget passord –
     // serveren kontrollerer det mot passord-hashen (se routes/duty.js).
     hasTasks: true,
+    // Serveren sender bare elevens egne rader, så tomme uker betyr «ikke deg»,
+    // ikke «ingen satt opp». Planen viser derfor bare elevens egne uker.
+    bareEgne: true,
   },
 };
 
@@ -641,6 +644,8 @@ async function renderMenus(menusEl) {
   }
 }
 
+const planTekst = (cfg) => (cfg.bareEgne ? 'Vis dine neste uker' : 'Vis hele planen');
+
 // Ukestjeneste: denne uken i detalj, og hele planen framover. Samme visning for
 // kjøkkentjeneste (i «Middag») og internatvask (i «Internat»).
 async function renderDutyPlan(node, kind) {
@@ -654,7 +659,7 @@ async function renderDutyPlan(node, kind) {
   // midt i beholdes, så eleven ser hullene i rundgangen.
   let last = 0;
   weeks.forEach((w, i) => { if (w.students.length) last = i; });
-  const upcoming = weeks.slice(1, last + 1);
+  const upcoming = weeks.slice(1, last + 1).filter((w) => !cfg.bareEgne || w.students.length);
 
   // Når er eleven selv nestemann?
   const mine = upcoming.find((w) => w.students.some((s) => s.id === user.id));
@@ -671,14 +676,14 @@ async function renderDutyPlan(node, kind) {
           ${cfg.hasTasks && s.done ? '<span class="pill pill-green">Signert</span>' : ''}
           <span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.className || '')}</span>
         </div>`).join('')
-      : '<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">Ingen satt opp denne uken.</div>'}
+      : `<div style="padding:16px 18px;color:var(--muted-2);font-size:14px">${cfg.bareEgne ? `Du har ikke ${cfg.liten} denne uken.` : 'Ingen satt opp denne uken.'}</div>`}
     </div>
     ${cfg.hasTasks && minesNå.length ? `
       <div class="h1" style="font-size:16px;margin-top:20px">Dine oppgaver denne uken</div>
       <div id="mineOppgaver"></div>` : ''}
     ${mine ? `<div class="banner pill-grey" style="margin-top:10px;background:#e7edf5;color:var(--navy)">${icon.clock} ${cfg.neste}: uke ${mine.isoWeek} · ${formatWeekRange(mine.weekStart, mine.weekEnd)}</div>` : ''}
     ${upcoming.length ? `
-      <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">Vis hele planen</button>
+      <button class="btn btn-ghost" id="planToggle" style="width:100%;height:46px;margin-top:10px;font-size:14.5px">${planTekst(cfg)}</button>
       <div id="planList" style="display:none;margin-top:10px"></div>` : ''}`;
 
   // Oppgavekortene: hele beskrivelsen, og signering med passord. Biometri finnes
@@ -770,7 +775,7 @@ async function renderDutyPlan(node, kind) {
   toggle.addEventListener('click', () => {
     const open = listEl.style.display === 'block';
     listEl.style.display = open ? 'none' : 'block';
-    toggle.textContent = open ? 'Vis hele planen' : 'Vis mindre';
+    toggle.textContent = open ? planTekst(cfg) : 'Vis mindre';
   });
 }
 

@@ -44,7 +44,7 @@ export async function sendDutyReminders() {
     const ids = dutyUserIds(kind, weekStart);
     if (!ids.length) continue;
     targeted += ids.length;
-    const { varselTittel, navn } = kindOf(kind);
+    const { varselTittel, navn, bareEgne } = kindOf(kind);
     // Antallet føres opp selv om ingen av dem har appen installert – ellers
     // ville testknappen i admin sett ut som om uken var tom.
     per[navn] = ids.length;
@@ -56,7 +56,8 @@ export async function sendDutyReminders() {
 
     const r = await sendExpoPush(tokens, {
       title: varselTittel,
-      body: `Du har ${navn.toLowerCase()} i uke ${info.isoWeek} (${range}). Se hvem du har uken sammen med i appen.`,
+      // Internatvask viser bare elevens egne oppgaver, ikke de andre (se duty.js).
+      body: `Du har ${navn.toLowerCase()} i uke ${info.isoWeek} (${range}). ${bareEgne ? 'Se oppgavene dine i appen.' : 'Se hvem du har uken sammen med i appen.'}`,
     });
     sent += r.sent; failed += r.failed;
   }

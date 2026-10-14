@@ -27,6 +27,9 @@ export const KINDS = {
     varselTittel: 'Internatvask neste uke',
     ledetekst: 'internatvask',
     hasTasks: true,
+    // Elevene ser bare sine egne vaskeoppgaver, ikke hvem andre som vasker
+    // samme uke. Filtreres i routes/duty.js; administrasjonen ser alt.
+    bareEgne: true,
   },
 };
 
