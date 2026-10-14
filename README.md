@@ -613,6 +613,29 @@ superbruker sletter loggen. Først da er den borte for godt.
 API-et ligger på `/api/demerits`, tabellene heter `demerits`, `demerit_events`
 og `demerit_resets`.
 
+### Testapp mot staging
+
+Nye funksjoner kan prøves på en egen testserver (Railway-miljøet **Staging**,
+`kongshaug-elevapp-staging.up.railway.app`, med egen database) og en egen
+testapp, «Kongshaug TEST» (`no.kongshaug.elevapp.staging`), som installeres ved
+siden av den ekte appen. `mobile/app.config.js` gir testvarianten når
+`APP_VARIANT=staging` er satt; ellers er konfigurasjonen urørt.
+
+- **Server:** la Staging-tjenesten på Railway bygge fra funksjonsgrenen.
+- **JS-endringer i testappen:**
+  `cd mobile && APP_VARIANT=staging eas update --channel staging --message "…"`.
+  Går bare til testkanalen, aldri til elevene.
+- **Bygge testappen på nytt** (trengs etter en endring i `eas.json`, en ny
+  innebygd modul eller lignende): legg midlertidig til en profil i `eas.json`
+  på funksjonsgrenen –
+  `"staging": { "distribution": "internal", "channel": "staging", "env": { "APP_VARIANT": "staging" } }`
+  – og kjør `eas build --profile staging --platform ios`. **Profilen skal aldri
+  inn på main:** `eas.json` er med i fingeravtrykket, og en endret `eas.json`
+  gir produksjonsappen en ny kjøretidsversjon, slik at `eas update` ikke lenger
+  når de installerte appene. Sjekk alltid før en produksjonsoppdatering at
+  `npx expo-updates fingerprint:generate --platform ios` gir samme hash som
+  appen i butikken.
+
 ### Superbrukere og vanlige administratorer
 
 Administratorer er delt i to. **Superbrukere** kan i tillegg endre
