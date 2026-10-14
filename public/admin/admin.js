@@ -3763,14 +3763,22 @@ function missingLabel(d) {
   return `${d.missing} mangler${d.lateCount ? ` · ${d.lateCount} kommer sent` : ''}`;
 }
 
+// Tellerne øverst på brannlista er også statusfilter. Knappene skal se ut som
+// de gamle merkelappene, så nettleserens knappestil nulles ut.
+const SF_BTN = 'white-space:nowrap;border:none;font-family:inherit;cursor:pointer;touch-action:manipulation;transition:opacity .15s,box-shadow .15s';
+// Ringen rundt det aktive filteret får knappens egen farge.
+const SF_RING = { present: 'var(--navy)', away: 'var(--navy)', missing: 'var(--red-ink)', home: 'var(--muted-2)' };
+const SF_TEKST = { present: 'til stede', away: 'borte', missing: 'mangler' };
+const SF_TOM = { present: 'er til stede', away: 'er borte', missing: 'mangler' };
+
 async function renderBrannliste(main) {
   let d = await api('/api/firelist/overview').catch(() => null);
   header(main, `Brannliste — natt til ${d ? formatDateLong(shiftDate(d.nightDate, 1)) : ''}`, 'Klikk knappene i hver rad for å sette status manuelt',
     d ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span id="hcPresent" class="pill" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px;white-space:nowrap">Til stede: ${d.present} / ${d.total}</span>
-        <span id="hcAway" class="pill" style="background:#e7edf5;color:var(--navy);padding:10px 16px;white-space:nowrap">${d.away} borte</span>
-        <span id="hcMissing" class="pill pill-red" style="padding:10px 16px;white-space:nowrap">${missingLabel(d)}</span>
-        ${d.homeCount ? `<span id="hcHome" class="pill" style="background:#f2f4f6;color:var(--muted-2);padding:10px 16px;white-space:nowrap">${homeLabel(d.homeCount)}</span>` : ''}
+        <button type="button" id="hcPresent" data-sf="present" class="pill" title="Vis bare de som er til stede" style="background:var(--navy);color:#fff;font-size:15px;padding:10px 18px;${SF_BTN}">Til stede: ${d.present} / ${d.total}</button>
+        <button type="button" id="hcAway" data-sf="away" class="pill" title="Vis bare de som er borte" style="background:#e7edf5;color:var(--navy);padding:10px 16px;${SF_BTN}">${d.away} borte</button>
+        <button type="button" id="hcMissing" data-sf="missing" class="pill pill-red" title="Vis bare de som mangler" style="padding:10px 16px;${SF_BTN}">${missingLabel(d)}</button>
+        ${d.homeCount ? `<button type="button" id="hcHome" data-sf="home" class="pill" title="Vis bare hjemmeboerne" style="background:#f2f4f6;color:var(--muted-2);padding:10px 16px;${SF_BTN}">${homeLabel(d.homeCount)}</button>` : ''}
         <button class="btn btn-ghost" id="exportPdf" style="height:40px;padding:0 16px;font-size:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Eksporter PDF</button>
         <button class="btn btn-ghost" id="vaktQr" style="height:40px;padding:0 16px;font-size:14px"><span style="width:16px;height:16px;display:block">${nav.qr}</span>Vakt-kode</button>
       </div>` : '');
@@ -3782,6 +3790,9 @@ async function renderBrannliste(main) {
 
   const filters = ['Alle', ...d.dorms.map((x) => x.dorm)];
   let activeFilter = 'Alle';
+  // Statusfilteret fra tellerne øverst: null, 'present', 'away', 'missing' eller
+  // 'home'. Virker sammen med internatfilteret og søket, ikke i stedet for dem.
+  let statusFilter = null;
   // Søk på navn eller rom. Går på tvers av internatfilteret: den som leter
   // etter én elev skal ikke først måtte vite hvilket internat hun bor i.
   let query = '';
@@ -3865,12 +3876,37 @@ async function renderBrannliste(main) {
   const treffElev = (s) => !q() || s.fullName.toLocaleLowerCase('nb').includes(q()) || String(s.room ?? '').toLocaleLowerCase('nb') === q();
   const treffGjest = (g) => !q() || g.name.toLocaleLowerCase('nb').includes(q()) || (g.hostName || '').toLocaleLowerCase('nb').includes(q());
 
+  function tegnStatusKnapper() {
+    main.querySelectorAll('[data-sf]').forEach((b) => {
+      const på = b.dataset.sf === statusFilter;
+      b.setAttribute('aria-pressed', String(på));
+      b.style.opacity = statusFilter && !på ? '0.45' : '1';
+      b.style.boxShadow = på ? `0 0 0 2px #fff, 0 0 0 4px ${SF_RING[b.dataset.sf]}` : 'none';
+    });
+  }
+
   function draw() {
+    tegnStatusKnapper();
+    // Hjemmeboerne har ingen internat-kort, så det filteret viser bare sitt eget kort.
+    if (statusFilter === 'home') {
+      const kort = homeCardHTML();
+      grid.innerHTML = kort || `<div style="grid-column:1/-1;padding:28px 0;color:var(--muted-2);font-size:15px;font-weight:600">Ingen hjemmeboere${q() ? ` passer til «${esc(query.trim())}»` : ''}.</div>`;
+      return;
+    }
     let dorms = activeFilter === 'Alle' || q() ? d.dorms : d.dorms.filter((x) => x.dorm === activeFilter);
-    if (q()) {
+    // Gjester har ingen status, så de faller bort når et statusfilter er på.
+    if (q() || statusFilter) {
       dorms = dorms
-        .map((x) => ({ ...x, students: x.students.filter(treffElev), guests: (x.guests || []).filter(treffGjest) }))
+        .map((x) => ({
+          ...x,
+          students: x.students.filter((s) => treffElev(s) && (!statusFilter || s.status === statusFilter)),
+          guests: statusFilter ? [] : (x.guests || []).filter(treffGjest),
+        }))
         .filter((x) => x.students.length || x.guests.length);
+    }
+    if (statusFilter && !dorms.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:28px 0;color:var(--muted-2);font-size:15px;font-weight:600">Ingen elever ${SF_TOM[statusFilter]}${q() ? ` som passer til «${esc(query.trim())}»` : activeFilter !== 'Alle' ? ` på ${esc(activeFilter)}` : ''}.</div>`;
+      return;
     }
     if (q() && !dorms.length && !(d.homeDwellers || []).some(treffElev)) {
       grid.innerHTML = `<div style="grid-column:1/-1;padding:28px 0;color:var(--muted-2);font-size:15px;font-weight:600">Ingen elever eller gjester passer til «${esc(query.trim())}».</div>`;
@@ -3908,13 +3944,14 @@ async function renderBrannliste(main) {
       const orphanRows = guests.filter((g) => !hostIds.has(g.hostId)).map((g) => guestRowHTML(g, false)).join('');
       // Under søk teller overskriften treffene, ikke hele internatet – tallet
       // «3 av 12» ville ellers stått ved siden av én rad.
-      const teller = q() ? `${dorm.students.length + guests.length} treff` : `${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}`;
+      const teller = statusFilter ? `${dorm.students.length} ${SF_TEKST[statusFilter]}`
+        : q() ? `${dorm.students.length + guests.length} treff` : `${dorm.present} av ${dorm.total}${guests.length ? ` · ${guests.length} gjest${guests.length > 1 ? 'er' : ''}` : ''}`;
       return `
       <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#f7f8fa;border-bottom:1px solid var(--line)"><span style="font-size:19px;font-weight:800">${esc(dorm.dorm)}</span><span style="font-size:15px;font-weight:700;color:var(--muted-2)">${teller}</span></div>
         ${studentRows}${orphanRows}
       </div>`;
-    }).join('') + (activeFilter === 'Alle' || q() ? homeCardHTML() : '');
+    }).join('') + (!statusFilter && (activeFilter === 'Alle' || q()) ? homeCardHTML() : '');
     grid.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
       const uid = Number(b.dataset.uid);
       if (b.dataset.set === 'late') return lateArrivalModal(d.dorms.flatMap((x) => x.students).find((s) => s.id === uid));
@@ -4135,6 +4172,11 @@ async function renderBrannliste(main) {
     });
     bg.querySelector('#remove')?.addEventListener('click', () => lagre(null));
   }
+  // Trykk på en teller for å filtrere på statusen, trykk igjen for å vise alle.
+  main.querySelectorAll('[data-sf]').forEach((b) => b.addEventListener('click', () => {
+    statusFilter = statusFilter === b.dataset.sf ? null : b.dataset.sf;
+    draw();
+  }));
   const searchInput = search.querySelector('#fireSearch');
   searchInput.addEventListener('input', () => { query = searchInput.value; draw(); });
   searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchInput.value = ''; query = ''; draw(); } });
