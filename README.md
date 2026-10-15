@@ -556,11 +556,18 @@ og signeringen ligger på `POST {base}/duties/:id/sign` (admin angrer med
 ### Prikkesystem
 
 Prikker for brudd på internatreglene, etter skolens liste (romvask, innetid,
-gjester, snus osv.). Kategoriene og antallet prikker ligger i
-`server/src/demerits.js` – serveren avgjør selv hvor mange prikker en kategori
-gir, klienten sender bare hvilken. To unntak: **«Egendefinert»**, der den som
-tildeler skriver antallet, og **rusmidler**, som gir minst 15 men kan settes
-høyere. Halve prikker er lov.
+gjester, snus osv.). Kategoriene ligger i tabellen `demerit_categories`, og
+**superbrukere endrer dem under Innstillinger → Prikkekategorier**: navn,
+antall prikker, «kan settes høyere» (antallet er et minimum, som «15 +» for
+rusmidler), en kort merknad og rekkefølgen. Tabellen fylles med skolens
+opprinnelige liste første gang serveren starter. Serveren avgjør selv hvor
+mange prikker en kategori gir – klienten sender bare hvilken – unntatt
+**«Egendefinert»**, som er fast og der den som tildeler skriver antallet.
+Halve prikker er lov.
+
+En endring gjelder bare nye tildelinger: hver tildeling har sin egen kopi av
+navnet og antallet. En fjernet kategori kan ikke velges lenger, men prikker som
+er gitt for den, blir stående.
 
 Tildeling skjer i **to steg**, likt på adminsiden, brannlisten i nettleseren og
 i vaktappen: først krysser man av én eller flere hendelser og trykker «Neste»,

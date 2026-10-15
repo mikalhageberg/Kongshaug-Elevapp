@@ -7,7 +7,7 @@ import { isSuperAdmin, requireSuperAdmin } from '../permissions.js';
 import { hasActiveWatch } from '../fireWatch.js';
 import { readXlsxGrid } from '../xlsxReader.js';
 import {
-  DEMERIT_CATEGORIES, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, resetDemerits, clearDemeritLog, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
+  demeritCategories, saveDemeritCategories, IMPORT_CATEGORY, parseDemerit, parseImportSheet, importDemerits, resetDemerits, clearDemeritLog, addDemerit, updateDemerit, deleteDemerit, demeritsFor, demeritTotals, demeritHistory,
 } from '../demerits.js';
 
 const router = Router();
@@ -16,7 +16,7 @@ router.use(requireAuth);
 // Kategoriene. Åpen for alle innloggede: eleven ser de samme navnene i sin
 // egen oversikt, og lista er skolens regler – ikke noe hemmelig.
 router.get('/categories', (req, res) => {
-  res.json({ categories: DEMERIT_CATEGORIES });
+  res.json({ categories: demeritCategories() });
 });
 
 // ELEV: egne prikker, med begrunnelse – men ikke hvem som ga dem.
@@ -49,7 +49,7 @@ router.post('/', requireAdminOrReviewDemo, (req, res) => {
   // én { category, points } godtas fortsatt.
   const rå = Array.isArray(req.body?.items) ? req.body.items : [req.body || {}];
   if (!rå.length) return res.status(400).json({ error: 'Velg minst én hendelse.' });
-  if (rå.length > DEMERIT_CATEGORIES.length) return res.status(400).json({ error: 'For mange hendelser på én gang.' });
+  if (rå.length > demeritCategories().length) return res.status(400).json({ error: 'For mange hendelser på én gang.' });
   if (new Set(rå.map((x) => x?.category)).size !== rå.length) return res.status(400).json({ error: 'Samme hendelse er valgt flere ganger.' });
   let liste;
   try { liste = rå.map((x) => parseDemerit({ category: x?.category, points: x?.points, reason: req.body?.reason })); }
@@ -66,6 +66,14 @@ router.post('/', requireAdminOrReviewDemo, (req, res) => {
 
 // ── SUPERBRUKER ──────────────────────────────────────────────
 router.use(requireAdmin, requireSuperAdmin);
+
+// Endre prikkekategoriene (Innstillinger). Body: { categories: [{ key?, label,
+// points, allowMore, note }] } i ønsket rekkefølge. Gjelder bare nye
+// tildelinger – de som er gitt, beholder sitt navn og antall.
+router.put('/categories', (req, res) => {
+  try { res.json({ ok: true, categories: saveDemeritCategories(req.body?.categories) }); }
+  catch (ex) { res.status(400).json({ error: ex.message }); }
+});
 
 // Alle aktive elever med summen sin.
 router.get('/students', (req, res) => {

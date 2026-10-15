@@ -3478,6 +3478,99 @@ function endreTidligereModal(elev, x, onLagret) {
   });
 }
 
+// Prikkekategoriene, under Innstillinger (bare superbrukere ser siden).
+// Redigeres som en liste – navn, prikker, «kan settes høyere» og en kort
+// merknad – og lagres samlet med egen knapp. Endringene gjelder nye
+// tildelinger; prikker som er gitt, beholder navnet og antallet de fikk.
+// «Egendefinert» er fast og står alltid sist.
+function mountPrikkekategorier(container) {
+  const kort = el(`
+    <div class="kpi" style="padding:8px 24px 22px;margin-bottom:20px">
+      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Prikkekategorier</div>
+      <div style="font-size:13px;color:var(--muted-2);margin-bottom:12px;line-height:1.5">Hendelsene man kan velge når man tildeler prikker. Endringer gjelder bare nye tildelinger – prikker som allerede er gitt, beholder navnet og antallet de fikk. Kryss av «Kan settes høyere» når antallet er et minimum (f.eks. «15 +»).</div>
+      <div id="pkListe"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px;border-top:1px dashed var(--line-2);margin-top:4px">
+        <span style="flex:1;font-size:14px;font-weight:700;color:var(--muted-2)">Egendefinert</span>
+        <span style="font-size:13px;color:var(--muted-2)">Fast – den som tildeler skriver antallet selv</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost" id="pkNy" style="height:44px;padding:0 16px;font-size:14px">+ Legg til kategori</button>
+        <span style="flex:1"></span>
+        <span id="pkMsg" style="display:none;color:var(--green-ink);font-weight:700;font-size:14px">✓ Lagret</span>
+        <button type="button" class="btn btn-primary" id="pkLagre" style="height:44px;padding:0 20px;font-size:14px">Lagre kategoriene</button>
+      </div>
+      <p id="pkErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
+    </div>`);
+  container.appendChild(kort);
+  const liste = kort.querySelector('#pkListe');
+  let rader = [];  // { key, label, points (tekst), allowMore, note }
+
+  const ikonKnapp = (attr, tittel, innhold, farge = 'var(--muted-2)') => `<button type="button" ${attr} title="${tittel}" style="width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line-2);background:#fff;color:${farge};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:15px;font-weight:800">${innhold}</button>`;
+
+  function tegn() {
+    liste.innerHTML = rader.map((r, i) => `
+      <div data-i="${i}" style="display:grid;grid-template-columns:1fr 86px auto;gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #f0f2f4">
+        <input data-f="label" class="field field-sm" value="${esc(r.label)}" placeholder="Navn på hendelsen" maxlength="200" style="height:42px" />
+        <input data-f="points" class="field field-sm" value="${esc(r.points)}" inputmode="decimal" placeholder="Prikker" title="Prikker" style="height:42px;text-align:center" />
+        <div style="display:flex;gap:6px">
+          ${ikonKnapp(`data-opp="${i}" ${i === 0 ? 'disabled' : ''}`, 'Flytt opp', '↑')}
+          ${ikonKnapp(`data-ned="${i}" ${i === rader.length - 1 ? 'disabled' : ''}`, 'Flytt ned', '↓')}
+          ${ikonKnapp(`data-slett="${i}"`, 'Fjern kategorien', '✕', 'var(--red-ink)')}
+        </div>
+        <input data-f="note" class="field field-sm" value="${esc(r.note || '')}" placeholder="Merknad (valgfritt), f.eks. «Nulltoleranse!»" maxlength="200" style="height:38px;font-size:13.5px" />
+        <label style="grid-column:2/4;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--slate);cursor:pointer;white-space:nowrap">
+          <input data-f="allowMore" type="checkbox" ${r.allowMore ? 'checked' : ''} style="width:17px;height:17px;accent-color:var(--navy)" />Kan settes høyere
+        </label>
+      </div>`).join('') || '<div style="padding:14px 0;color:var(--muted-2);font-size:14px">Ingen kategorier – bare «Egendefinert» kan velges.</div>';
+    liste.querySelectorAll('[data-i]').forEach((rad) => {
+      const r = rader[Number(rad.dataset.i)];
+      rad.querySelectorAll('[data-f]').forEach((f) => f.addEventListener(f.type === 'checkbox' ? 'change' : 'input', () => {
+        r[f.dataset.f] = f.type === 'checkbox' ? f.checked : f.value;
+      }));
+    });
+    const flytt = (i, d) => { [rader[i], rader[i + d]] = [rader[i + d], rader[i]]; tegn(); };
+    liste.querySelectorAll('[data-opp]').forEach((b) => b.addEventListener('click', () => flytt(Number(b.dataset.opp), -1)));
+    liste.querySelectorAll('[data-ned]').forEach((b) => b.addEventListener('click', () => flytt(Number(b.dataset.ned), 1)));
+    liste.querySelectorAll('[data-slett]').forEach((b) => b.addEventListener('click', () => {
+      const r = rader[Number(b.dataset.slett)];
+      if (r.key && !confirm(`Fjerne «${r.label}»?\n\nDen kan ikke velges ved nye tildelinger. Prikker som allerede er gitt for den, blir stående.`)) return;
+      rader.splice(Number(b.dataset.slett), 1); tegn();
+    }));
+  }
+
+  async function last() {
+    try {
+      const k = (await api('/api/demerits/categories')).categories.filter((c) => !c.custom);
+      rader = k.map((c) => ({ key: c.key, label: c.label, points: prikkTall(c.points), allowMore: c.minPoints != null, note: c.note || '' }));
+      tegn();
+    } catch (ex) { liste.innerHTML = `<p style="color:var(--red-ink)">${esc(ex.message)}</p>`; }
+  }
+
+  kort.querySelector('#pkNy').addEventListener('click', () => {
+    rader.push({ key: null, label: '', points: '1', allowMore: false, note: '' });
+    tegn();
+    liste.querySelector(`[data-i="${rader.length - 1}"] [data-f="label"]`).focus();
+  });
+
+  kort.querySelector('#pkLagre').addEventListener('click', async () => {
+    const err = kort.querySelector('#pkErr'); err.style.display = 'none';
+    const knapp = kort.querySelector('#pkLagre'); knapp.disabled = true;
+    try {
+      await api('/api/demerits/categories', {
+        method: 'PUT',
+        body: { categories: rader.map((r) => ({ key: r.key, label: r.label, points: r.points, allowMore: r.allowMore, note: r.note })) },
+      });
+      prikkKategorier = null;  // tildelingsdialogen henter dem på nytt
+      await last();
+      const msg = kort.querySelector('#pkMsg'); msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 2500);
+    } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; }
+    knapp.disabled = false;
+  });
+
+  last();
+}
+
 // Selvstendig modul som monteres på Innstillinger-siden.
 function mountMenuManager(container) {
   const card = el(`
@@ -3909,7 +4002,7 @@ async function renderVarsler(main) {
 }
 
 async function renderSettings(main) {
-  header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post, lagringstid');
+  header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post, lagringstid, prikkekategorier');
   const page = el(`<div class="page" style="max-width:720px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
   main.appendChild(page);
 
@@ -4074,6 +4167,8 @@ async function renderSettings(main) {
       notificationRetentionDays: Number(val('notificationRetentionDays').value),
     };
   };
+
+  mountPrikkekategorier(page);
 
   page.querySelector('#save').addEventListener('click', async () => {
     const btn = page.querySelector('#save'); btn.disabled = true;

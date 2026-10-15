@@ -20,7 +20,10 @@
 import db from './db.js';
 import { cellText, isBlankRow, normName, q, readTemplateHeader, throwRowErrors } from './sheetTemplate.js';
 
-export const DEMERIT_CATEGORIES = [
+// Skolens opprinnelige liste (Prikkekategorier.xlsx). Brukes bare til å fylle
+// tabellen demerit_categories første gang – deretter er det tabellen som
+// gjelder, og superbrukerne endrer den under Innstillinger.
+const START_KATEGORIER = [
   { key: 'kjokkentjeneste', label: 'Møtte ikke til kjøkkentjeneste', points: 2 },
   { key: 'romvask', label: 'Ikke tatt romvask', points: 1 },
   { key: 'internatvask', label: 'Ikke tatt internatvask', points: 2 },
@@ -40,17 +43,78 @@ export const DEMERIT_CATEGORIES = [
   { key: 'snus', label: 'Snus', points: 1 },
   { key: 'royking', label: 'Røyking', points: 2 },
   // «15 +» i arket: minst 15, men den som tildeler kan sette mer.
-  {
-    key: 'rusmidler', label: 'Alkohol og andre rusmidler', points: 15, minPoints: 15,
-    note: 'Nulltoleranse! Se internatreglementet §5.',
-  },
-  // Den som tildeler oppgir antallet selv.
-  { key: 'egendefinert', label: 'Egendefinert', points: null, custom: true },
+  { key: 'rusmidler', label: 'Alkohol og andre rusmidler', points: 15, allowMore: true, note: 'Nulltoleranse! Se internatreglementet §5.' },
 ];
 
+// Den som tildeler oppgir antallet selv. Fast, alltid sist – kan ikke endres
+// eller fjernes under Innstillinger.
+const EGENDEFINERT = { key: 'egendefinert', label: 'Egendefinert', points: null, custom: true };
+
+if (!db.prepare('SELECT COUNT(*) AS n FROM demerit_categories').get().n) {
+  const ins = db.prepare('INSERT INTO demerit_categories (key, label, points, allow_more, note, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+  db.transaction(() => START_KATEGORIER.forEach((c, i) => ins.run(c.key, c.label, c.points, c.allowMore ? 1 : 0, c.note || null, i)))();
+}
+
+// Kategoriene slik klientene får dem: { key, label, points, minPoints?, note?,
+// custom? }. «Kan settes høyere» sendes som minPoints, samme form som før
+// kategoriene ble redigerbare – appene som er ute, forstår bare den.
+export function demeritCategories() {
+  const rader = db.prepare('SELECT key, label, points, allow_more, note FROM demerit_categories ORDER BY sort_order, id').all();
+  return [
+    ...rader.map((r) => ({
+      key: r.key,
+      label: r.label,
+      points: r.points,
+      ...(r.allow_more ? { minPoints: r.points } : {}),
+      ...(r.note ? { note: r.note } : {}),
+    })),
+    EGENDEFINERT,
+  ];
+}
+
+// Superbruker: erstatt hele lista. items = [{ key?, label, points, allowMore,
+// note }] i ønsket rekkefølge. Rader med kjent key beholder den; nye får en
+// key laget av navnet. Kategorier som ikke er med, fjernes – tildelinger som
+// allerede er gitt, beholder sitt navn og antall.
+export const saveDemeritCategories = db.transaction((items) => {
+  if (!Array.isArray(items)) throw new Error('Ugyldig liste.');
+  if (items.length > 100) throw new Error('Høyst 100 kategorier.');
+  const finnes = new Set(db.prepare('SELECT key FROM demerit_categories').all().map((r) => r.key));
+  // Nøklene som beholdes, settes av først, så en ny kategori aldri tar en
+  // nøkkel som en senere rad i lista skal beholde.
+  const beholdes = new Set(items.map((it) => it?.key).filter((k) => finnes.has(k)));
+  const brukt = new Set([EGENDEFINERT.key, IMPORT_CATEGORY.key]);
+  const navn = new Set();
+  const rader = items.map((it, i) => {
+    const label = String(it?.label ?? '').trim();
+    if (!label) throw new Error(`Kategori ${i + 1} mangler navn.`);
+    if (label.length > 200) throw new Error(`«${label.slice(0, 40)}…» er for langt (høyst 200 tegn).`);
+    const lnorm = normName(label);
+    if (navn.has(lnorm)) throw new Error(`«${label}» står flere ganger.`);
+    navn.add(lnorm);
+    let points;
+    try { points = parsePoints(it?.points); } catch (ex) { throw new Error(`«${label}»: ${ex.message.toLowerCase()}`); }
+    if (points == null) throw new Error(`«${label}» mangler antall prikker.`);
+    if (points > MAX_POINTS) throw new Error(`«${label}»: høyst ${MAX_POINTS} prikker.`);
+    const note = String(it?.note ?? '').trim().slice(0, 200) || null;
+    let key = beholdes.has(it?.key) && !brukt.has(it.key) ? it.key : null;
+    if (!key) {
+      const base = normName(label).replace(/ /g, '-').slice(0, 40) || 'kategori';
+      key = base;
+      for (let n = 2; brukt.has(key) || beholdes.has(key); n++) key = `${base}-${n}`;
+    }
+    brukt.add(key);
+    return { key, label, points, allowMore: it?.allowMore ? 1 : 0, note, sort: i };
+  });
+  db.prepare('DELETE FROM demerit_categories').run();
+  const ins = db.prepare('INSERT INTO demerit_categories (key, label, points, allow_more, note, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+  for (const r of rader) ins.run(r.key, r.label, r.points, r.allowMore, r.note, r.sort);
+  return demeritCategories();
+});
+
 // Prikker eleven hadde fra papirlista før appen ble tatt i bruk. Kommer bare
-// inn via Excel-importen – kategorien står ikke i DEMERIT_CATEGORIES og kan
-// derfor ikke velges i tildelingsmenyen. Én slik rad per elev: en ny import
+// inn via Excel-importen – kategorien står ikke blant demeritCategories() og
+// kan derfor ikke velges i tildelingsmenyen. Én slik rad per elev: en ny import
 // endrer den som finnes (og logger endringen) i stedet for å legge til enda en.
 export const IMPORT_CATEGORY = {
   key: 'tidligere',
@@ -73,8 +137,11 @@ export function parseDemerit({ category, points, reason }, { allowImport = false
     if (n > MAX_IMPORT_POINTS) throw new Error(`Høyst ${MAX_IMPORT_POINTS} prikker.`);
     return { categoryKey: IMPORT_CATEGORY.key, categoryLabel: IMPORT_CATEGORY.label, points: n, reason: null };
   }
-  const cat = DEMERIT_CATEGORIES.find((c) => c.key === category);
-  if (!cat) throw new Error('Velg en kategori.');
+  if (!category) throw new Error('Velg en kategori.');
+  const cat = demeritCategories().find((c) => c.key === category);
+  // Kategorien kan ha blitt fjernet under Innstillinger mens tildelingen stod
+  // åpen.
+  if (!cat) throw new Error('En av hendelsene finnes ikke lenger. Lukk tildelingen og åpne den på nytt.');
 
   let p = cat.points;
   if (cat.custom || cat.minPoints != null) {

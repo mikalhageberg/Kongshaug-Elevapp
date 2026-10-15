@@ -328,6 +328,21 @@ db.exec(`
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_demerit_resets_user ON demerit_resets(user_id);
+
+  -- Prikkekategoriene, redigerbare for superbrukere under Innstillinger. Fylles
+  -- med skolens opprinnelige liste første gang (demerits.js). «Egendefinert»
+  -- står ikke her – den er fast og ligger i koden. Nøkkelen (key) endres aldri;
+  -- tildelingene har sin egen kopi av navn og prikker, så en endring her gjelder
+  -- bare nye tildelinger.
+  CREATE TABLE IF NOT EXISTS demerit_categories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    key        TEXT    NOT NULL UNIQUE,
+    label      TEXT    NOT NULL,
+    points     REAL    NOT NULL,
+    allow_more INTEGER NOT NULL DEFAULT 0,   -- 1 = «minst», den som tildeler kan sette flere
+    note       TEXT,                         -- kort merknad, vist i rødt under navnet
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 // Migreringer: legg til nye kolonner i eldre databaser som ble laget før feltene fantes.

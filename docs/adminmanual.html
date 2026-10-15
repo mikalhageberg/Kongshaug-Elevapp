@@ -265,7 +265,7 @@
     <div class="row"><span class="n">10</span><span class="d"><span class="t">Internat</span> <span class="desc">– vaskeoppgaver, turnus, signaturer og prikkesystemet</span></span></div>
     <div class="row"><span class="n">11</span><span class="d"><span class="t">Øvekonkurranse</span> <span class="desc">– periode, frysing, av/på, stilling, dokumentasjon</span></span></div>
     <div class="row"><span class="n">12</span><span class="d"><span class="t">Varsler</span> <span class="desc">– push til elevenes og vaktens telefoner</span></span></div>
-    <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid</span></span></div>
+    <div class="row"><span class="n">13</span><span class="d"><span class="t">Innstillinger</span> <span class="desc">– frister, tidsvinduer, e-post, lagringstid, prikkekategorier</span></span></div>
     <div class="row"><span class="n">14</span><span class="d"><span class="t">Rutiner gjennom året</span> <span class="desc">– daglig, ukentlig, skolestart og skoleslutt</span></span></div>
     <div class="row"><span class="n">15</span><span class="d"><span class="t">Feilsøking og vanlige spørsmål</span></span></div>
     <div class="row"><span class="n">16</span><span class="d"><span class="t">Hurtigreferanse</span> <span class="desc">– hvem gjør hva, hvor</span></span></div>
@@ -863,7 +863,7 @@
   <p class="note"><strong>✓ grønn</strong> = signert &nbsp;·&nbsp; <strong>○ gul</strong> = uken har vært eller pågår uten signatur &nbsp;·&nbsp; <strong>· grå prikk</strong> = satt opp, men uken har ikke begynt &nbsp;·&nbsp; <strong>–</strong> = ingen satt opp.</p>
 
   <h3>10.5 Prikkesystemet – hvem ser hva</h3>
-  <p>Brudd på internatreglene gir prikker etter skolens faste liste. Hver forseelse har et fast antall prikker – fra en halv prikk for manglende X eller B på brannlisten til 15 eller flere for alkohol og andre rusmidler. I tillegg finnes <strong>«Egendefinert»</strong>, der du skriver antallet selv.</p>
+  <p>Brudd på internatreglene gir prikker etter skolens liste. Hver forseelse har et fast antall prikker – fra en halv prikk for manglende X eller B på brannlisten til 15 eller flere for alkohol og andre rusmidler. I tillegg finnes <strong>«Egendefinert»</strong>, der du skriver antallet selv. Superbrukere endrer lista under Innstillinger (13.5).</p>
   <table>
     <thead><tr><th style="width:26%">Hvem</th><th>Kan</th></tr></thead>
     <tbody>
@@ -1135,6 +1135,24 @@
   </table>
   <p><strong>«Kjør sletting nå»</strong> kjører begge oppryddingene umiddelbart. Sletting er endelig – dataen kan ikke hentes tilbake.</p>
   <p class="note">Endrer dere periodene, husk å oppdatere skolens personvernerklæring så den sier det samme.</p>
+
+  <h3>13.5 Prikkekategorier</h3>
+  <p>Hendelsene man kan velge når man tildeler prikker (10.6). Hver kategori har:</p>
+  <table>
+    <thead><tr><th style="width:30%">Felt</th><th>Betydning</th></tr></thead>
+    <tbody>
+    <tr><td class="k">Navn</td><td>Det som står i tildelingen og hos eleven. To kategorier kan ikke hete det samme.</td></tr>
+    <tr><td class="k">Prikker</td><td>Hvor mange prikker hendelsen gir. Hele eller halve, f.eks. 0,5 eller 1,5.</td></tr>
+    <tr><td class="k">Kan settes høyere</td><td>Antallet er et minimum («15 +»). Den som tildeler får et tallfelt, forhåndsutfylt med antallet, og kan skrive mer – men ikke mindre.</td></tr>
+    <tr><td class="k">Merknad</td><td>Valgfri, kort tekst som står i rødt under navnet i tildelingen, f.eks. «Nulltoleranse! Se internatreglementet §5.»</td></tr>
+    </tbody>
+  </table>
+  <p>Pilene ↑ ↓ endrer rekkefølgen, slik den vises i tildelingen. <strong>✕</strong> fjerner en kategori, og <strong>«+ Legg til kategori»</strong> lager en ny. Ingenting endres før du trykker <strong>«Lagre kategoriene»</strong>.</p>
+  <div class="box">
+    <span class="h">Endringer gjelder bare nye tildelinger</span>
+    <p>Hver tildeling har sin egen kopi av navnet og antallet. Endrer du «Snus» fra 1 til 2 prikker, får elever som allerede har fått prikker for snus, beholde sin ene. En fjernet kategori kan ikke velges lenger, men prikkene som er gitt for den, blir stående i historikken.</p>
+  </div>
+  <p class="note"><strong>«Egendefinert»</strong> er fast og står alltid sist – den kan ikke endres eller fjernes.</p>
 </section>
 
 <!-- ═══════════════ 14 RUTINER ═══════════════ -->
@@ -1267,6 +1285,7 @@
     <tr><td class="k">gi en elev prikker</td><td>Brannliste → 🕘 på raden → Tildel prikker, eller Internat → Prikkesystem → Tildel prikker</td></tr>
     <tr><td class="k">se, endre eller slette en elevs prikker</td><td>Internat → Prikkesystem → Se historikk</td></tr>
     <tr><td class="k">legge inn prikker fra papirlista</td><td>Internat → Prikkesystem → Importer tidligere prikker</td></tr>
+    <tr><td class="k">endre prikkekategoriene</td><td>Innstillinger → Prikkekategorier → Lagre kategoriene</td></tr>
     <tr><td class="k">sende en beskjed til alle elever</td><td>Varsler → Send til alle nå</td></tr>
     <tr><td class="k">endre fristen for andakt</td><td>Innstillinger → Andakt</td></tr>
     </tbody>
