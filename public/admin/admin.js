@@ -3488,8 +3488,15 @@ function endreTidligereModal(elev, x, onLagret) {
 // av feltet man skriver i. En ny rad lagres først når den har fått et navn.
 function mountPrikkekategorier(container, status) {
   const kort = el(`
-    <div class="kpi" style="padding:8px 24px 22px;margin-bottom:20px">
-      <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Prikkekategorier</div>
+    <div class="kpi" style="padding:8px 24px 8px;margin-bottom:20px">
+      <button type="button" id="pkVeksle" aria-expanded="false" aria-controls="pkInnhold" style="display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;padding:14px 0 12px;margin:0;font-family:inherit;color:inherit;text-align:left;cursor:pointer">
+        <span style="flex:1;min-width:0">
+          <span style="display:block;font-size:17px;font-weight:800">Prikkekategorier</span>
+          <span id="pkAntall" style="display:block;font-size:13px;color:var(--muted-2);margin-top:2px">Laster …</span>
+        </span>
+        <span id="pkPil" style="flex:0 0 auto;display:flex;color:var(--muted-2);transition:transform .15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button>
+      <div id="pkInnhold" hidden style="padding-bottom:14px">
       <div style="font-size:13px;color:var(--muted-2);margin-bottom:12px;line-height:1.5">Hendelsene man kan velge når man tildeler prikker. Endringer gjelder bare nye tildelinger – prikker som allerede er gitt, beholder navnet og antallet de fikk. Kryss av «Kan settes høyere» når antallet er et minimum (f.eks. «15 +»).</div>
       <div id="pkListe"></div>
       <div style="display:flex;align-items:center;gap:12px;padding:12px 0 2px;border-top:1px dashed var(--line-2);margin-top:4px">
@@ -3499,9 +3506,25 @@ function mountPrikkekategorier(container, status) {
       <div style="margin-top:16px">
         <button type="button" class="btn btn-ghost" id="pkNy" style="height:44px;padding:0 16px;font-size:14px">+ Legg til kategori</button>
       </div>
+      </div>
     </div>`);
   container.appendChild(kort);
   const liste = kort.querySelector('#pkListe');
+
+  // Lista er lang, så kortet er lukket som standard og viser bare antallet.
+  // Et trykk på overskriften folder det ut.
+  const veksle = kort.querySelector('#pkVeksle');
+  veksle.addEventListener('click', () => {
+    const åpen = veksle.getAttribute('aria-expanded') !== 'true';
+    veksle.setAttribute('aria-expanded', String(åpen));
+    kort.querySelector('#pkInnhold').hidden = !åpen;
+    kort.querySelector('#pkPil').style.transform = åpen ? 'rotate(180deg)' : '';
+  });
+  const visAntall = () => {
+    const n = rader.filter((r) => r.label.trim()).length;
+    kort.querySelector('#pkAntall').textContent = `${n} ${n === 1 ? 'kategori' : 'kategorier'} + Egendefinert · trykk for å ${veksle.getAttribute('aria-expanded') === 'true' ? 'lukke' : 'se og endre'}`;
+  };
+  veksle.addEventListener('click', visAntall);
   let rader = [];  // { key, label, points (tekst), allowMore, note }
 
   // Sender radene som har navn, i rekkefølgen de står. Nye rader får
@@ -3520,6 +3543,7 @@ function mountPrikkekategorier(container, status) {
   const ikonKnapp = (attr, tittel, innhold, farge = 'var(--muted-2)') => `<button type="button" ${attr} title="${tittel}" style="width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line-2);background:#fff;color:${farge};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:15px;font-weight:800">${innhold}</button>`;
 
   function tegn() {
+    visAntall();
     liste.innerHTML = rader.map((r, i) => `
       <div data-i="${i}" style="display:grid;grid-template-columns:1fr 86px auto;gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #f0f2f4">
         <input data-f="label" class="field field-sm" value="${esc(r.label)}" placeholder="Navn på hendelsen" maxlength="200" style="height:42px" />
@@ -3538,6 +3562,7 @@ function mountPrikkekategorier(container, status) {
       const r = rader[Number(rad.dataset.i)];
       rad.querySelectorAll('[data-f]').forEach((f) => f.addEventListener(f.type === 'checkbox' ? 'change' : 'input', () => {
         r[f.dataset.f] = f.type === 'checkbox' ? f.checked : f.value;
+        if (f.dataset.f === 'label') visAntall();
         lagring.endret(f.type === 'checkbox');
       }));
     });
