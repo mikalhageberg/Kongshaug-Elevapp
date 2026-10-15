@@ -3480,10 +3480,13 @@ function endreTidligereModal(elev, x, onLagret) {
 
 // Prikkekategoriene, under Innstillinger (bare superbrukere ser siden).
 // Redigeres som en liste – navn, prikker, «kan settes høyere» og en kort
-// merknad – og lagres samlet med egen knapp. Endringene gjelder nye
-// tildelinger; prikker som er gitt, beholder navnet og antallet de fikk.
-// «Egendefinert» er fast og står alltid sist.
-function mountPrikkekategorier(container) {
+// merknad – og lagres automatisk (statusbanneret øverst på siden, se
+// lagStatus). Endringene gjelder nye tildelinger; prikker som er gitt,
+// beholder navnet og antallet de fikk. «Egendefinert» er fast og står sist.
+//
+// Lista tegnes ikke på nytt etter en lagring – da ville markøren hoppet ut
+// av feltet man skriver i. En ny rad lagres først når den har fått et navn.
+function mountPrikkekategorier(container, status) {
   const kort = el(`
     <div class="kpi" style="padding:8px 24px 22px;margin-bottom:20px">
       <div style="font-size:17px;font-weight:800;margin:18px 0 2px">Prikkekategorier</div>
@@ -3493,17 +3496,26 @@ function mountPrikkekategorier(container) {
         <span style="flex:1;font-size:14px;font-weight:700;color:var(--muted-2)">Egendefinert</span>
         <span style="font-size:13px;color:var(--muted-2)">Fast – den som tildeler skriver antallet selv</span>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+      <div style="margin-top:16px">
         <button type="button" class="btn btn-ghost" id="pkNy" style="height:44px;padding:0 16px;font-size:14px">+ Legg til kategori</button>
-        <span style="flex:1"></span>
-        <span id="pkMsg" style="display:none;color:var(--green-ink);font-weight:700;font-size:14px">✓ Lagret</span>
-        <button type="button" class="btn btn-primary" id="pkLagre" style="height:44px;padding:0 20px;font-size:14px">Lagre kategoriene</button>
       </div>
-      <p id="pkErr" style="color:var(--red-ink);font-size:14px;font-weight:600;margin:12px 0 0;display:none"></p>
     </div>`);
   container.appendChild(kort);
   const liste = kort.querySelector('#pkListe');
   let rader = [];  // { key, label, points (tekst), allowMore, note }
+
+  // Sender radene som har navn, i rekkefølgen de står. Nye rader får
+  // nøkkelen sin fra svaret – serveren beholder rekkefølgen, så svaret kan
+  // legges rett over de radene som ble sendt.
+  const lagring = status.lagrer(async () => {
+    const sendt = rader.filter((r) => r.label.trim());
+    const svar = await api('/api/demerits/categories', {
+      method: 'PUT',
+      body: { categories: sendt.map((r) => ({ key: r.key, label: r.label, points: r.points, allowMore: r.allowMore, note: r.note })) },
+    });
+    svar.categories.filter((c) => !c.custom).forEach((c, i) => { if (sendt[i]) sendt[i].key = c.key; });
+    prikkKategorier = null;  // tildelingsdialogen henter dem på nytt
+  }, { ventetid: 900 });
 
   const ikonKnapp = (attr, tittel, innhold, farge = 'var(--muted-2)') => `<button type="button" ${attr} title="${tittel}" style="width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line-2);background:#fff;color:${farge};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:15px;font-weight:800">${innhold}</button>`;
 
@@ -3526,15 +3538,17 @@ function mountPrikkekategorier(container) {
       const r = rader[Number(rad.dataset.i)];
       rad.querySelectorAll('[data-f]').forEach((f) => f.addEventListener(f.type === 'checkbox' ? 'change' : 'input', () => {
         r[f.dataset.f] = f.type === 'checkbox' ? f.checked : f.value;
+        lagring.endret(f.type === 'checkbox');
       }));
     });
-    const flytt = (i, d) => { [rader[i], rader[i + d]] = [rader[i + d], rader[i]]; tegn(); };
+    const flytt = (i, d) => { [rader[i], rader[i + d]] = [rader[i + d], rader[i]]; tegn(); lagring.endret(true); };
     liste.querySelectorAll('[data-opp]').forEach((b) => b.addEventListener('click', () => flytt(Number(b.dataset.opp), -1)));
     liste.querySelectorAll('[data-ned]').forEach((b) => b.addEventListener('click', () => flytt(Number(b.dataset.ned), 1)));
     liste.querySelectorAll('[data-slett]').forEach((b) => b.addEventListener('click', () => {
       const r = rader[Number(b.dataset.slett)];
       if (r.key && !confirm(`Fjerne «${r.label}»?\n\nDen kan ikke velges ved nye tildelinger. Prikker som allerede er gitt for den, blir stående.`)) return;
       rader.splice(Number(b.dataset.slett), 1); tegn();
+      if (r.label.trim()) lagring.endret(true);
     }));
   }
 
@@ -3550,22 +3564,6 @@ function mountPrikkekategorier(container) {
     rader.push({ key: null, label: '', points: '1', allowMore: false, note: '' });
     tegn();
     liste.querySelector(`[data-i="${rader.length - 1}"] [data-f="label"]`).focus();
-  });
-
-  kort.querySelector('#pkLagre').addEventListener('click', async () => {
-    const err = kort.querySelector('#pkErr'); err.style.display = 'none';
-    const knapp = kort.querySelector('#pkLagre'); knapp.disabled = true;
-    try {
-      await api('/api/demerits/categories', {
-        method: 'PUT',
-        body: { categories: rader.map((r) => ({ key: r.key, label: r.label, points: r.points, allowMore: r.allowMore, note: r.note })) },
-      });
-      prikkKategorier = null;  // tildelingsdialogen henter dem på nytt
-      await last();
-      const msg = kort.querySelector('#pkMsg'); msg.style.display = 'inline';
-      setTimeout(() => { msg.style.display = 'none'; }, 2500);
-    } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; }
-    knapp.disabled = false;
   });
 
   last();
@@ -4001,6 +3999,63 @@ async function renderVarsler(main) {
   });
 }
 
+// Automatisk lagring med ett felles statusbanner – brukt på Innstillinger.
+//
+// Hver del av siden får sin egen «lagrer» (lagStatus().lagrer(fn)). En lagrer
+// venter litt etter siste endring før den lagrer, så hver tast ikke blir et
+// kall, og kjører aldri to lagringer samtidig: kommer det en endring mens en
+// lagring pågår, lagres det på nytt rett etterpå. Banneret viser summen av
+// alle: grått «Lagrer …» så lenge noe venter eller pågår, rødt når serveren
+// avviste noe (med meldingen), ellers grønt.
+function lagStatus() {
+  const banner = el(`<div role="status" aria-live="polite" style="position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;margin:0 0 18px;padding:9px 14px;border-radius:12px;font-size:13.5px;font-weight:700;transition:background .15s,color .15s"></div>`);
+  const lagrere = new Set();
+  function tegn() {
+    const alle = [...lagrere];
+    const feil = alle.find((l) => l.feil)?.feil;
+    const [bg, fg, tekst] = alle.some((l) => l.venter || l.kjører)
+      ? ['#eef1f5', 'var(--slate)', 'Lagrer …']
+      : feil ? ['var(--red-bg)', 'var(--red-ink)', `Ikke lagret: ${feil}`]
+        : ['var(--green-bg)', 'var(--green-ink)', '✓ Alle endringer er lagret'];
+    banner.style.background = bg; banner.style.color = fg; banner.textContent = tekst;
+  }
+  tegn();
+
+  function lagrer(fn, { ventetid = 700 } = {}) {
+    const l = { venter: false, kjører: false, feil: null, timer: null, igjen: false, ferdig: null };
+    lagrere.add(l);
+    async function kjør() {
+      l.timer = null;
+      if (l.kjører) { l.igjen = true; return; }
+      l.venter = false; l.kjører = true; tegn();
+      try { await fn(); l.feil = null; }
+      catch (ex) { l.feil = ex.message || 'Noe gikk galt'; }
+      l.kjører = false;
+      if (l.igjen) { l.igjen = false; return kjør(); }
+      tegn();
+      l.ferdig?.(); l.ferdig = null;
+    }
+    return {
+      // Endring: lagre om litt (eller med en gang, for avkrysninger og knapper).
+      endret(straks = false) {
+        l.venter = true; tegn();
+        clearTimeout(l.timer);
+        l.timer = setTimeout(kjør, straks ? 0 : ventetid);
+      },
+      // Lagre det som venter nå, og vent til det er gjort. Brukes før
+      // «Send test nå» o.l., som skal bruke det som står i feltene.
+      async nå() {
+        if (!l.venter && !l.kjører) return;
+        const ferdig = new Promise((r) => { const f = l.ferdig; l.ferdig = () => { f?.(); r(); }; });
+        if (l.timer) { clearTimeout(l.timer); kjør(); }
+        await ferdig;
+        if (l.feil) throw new Error(l.feil);
+      },
+    };
+  }
+  return { banner, lagrer };
+}
+
 async function renderSettings(main) {
   header(main, 'Innstillinger', 'Tidspunkter for andakt og brannliste, e-post, lagringstid, prikkekategorier');
   const page = el(`<div class="page" style="max-width:720px"><div id="body" style="color:var(--muted-2)">Laster…</div></div>`);
@@ -4130,10 +4185,7 @@ async function renderSettings(main) {
         <button class="btn btn-ghost" id="runRetention" style="height:44px;padding:0 18px;font-size:14px">Kjør sletting nå</button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px">
-      <span id="msg" style="color:var(--green-ink);font-weight:700;display:none">Lagret ✓</span>
-      <button class="btn btn-primary" id="save" style="height:48px;padding:0 26px">Lagre endringer</button>
-    </div>`;
+`;
 
   const collectBody = () => {
     const val = (n) => page.querySelector(`[name=${n}]`);
@@ -4168,22 +4220,21 @@ async function renderSettings(main) {
     };
   };
 
-  mountPrikkekategorier(page);
+  // Automatisk lagring: tekst- og tallfelt lagres litt etter siste tast,
+  // avkrysninger og klokkeslett med en gang de endres. Ingen lagreknapp.
+  const status = lagStatus();
+  page.prepend(status.banner);
+  const innstillinger = status.lagrer(() => api('/api/settings', { method: 'PUT', body: collectBody() }));
+  const skjema = page.querySelector('#body');
+  skjema.addEventListener('input', (e) => { if (e.target.name && e.target.type !== 'checkbox') innstillinger.endret(); });
+  skjema.addEventListener('change', (e) => { if (e.target.name) innstillinger.endret(true); });
 
-  page.querySelector('#save').addEventListener('click', async () => {
-    const btn = page.querySelector('#save'); btn.disabled = true;
-    try {
-      await api('/api/settings', { method: 'PUT', body: collectBody() });
-      const msg = page.querySelector('#msg'); msg.style.display = 'inline';
-      setTimeout(() => { msg.style.display = 'none'; }, 2500);
-    } catch (ex) { toast(ex.message); }
-    finally { btn.disabled = false; }
-  });
+  mountPrikkekategorier(page, status);
 
   page.querySelector('#testEmail').addEventListener('click', async () => {
     const btn = page.querySelector('#testEmail'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Sender…';
     try {
-      await api('/api/settings', { method: 'PUT', body: collectBody() }); // lagre mottaker/tid først
+      await innstillinger.nå(); // det som står i feltene skal gjelde
       const r = await api('/api/settings/test-email', { method: 'POST' });
       toast('Test-e-post sendt til ' + r.recipient);
     } catch (ex) { toast(ex.message); }
@@ -4195,7 +4246,7 @@ async function renderSettings(main) {
     if (!confirm(`Slette all historikk eldre enn ${dager} dager nå? Dette kan ikke angres.`)) return;
     const btn = page.querySelector('#runRetention'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Rydder…';
     try {
-      await api('/api/settings', { method: 'PUT', body: collectBody() }); // lagre periodene først
+      await innstillinger.nå(); // det som står i feltene skal gjelde
       const r = await api('/api/settings/run-retention', { method: 'POST' });
       const nullet = r.scrubbed.fire + r.scrubbed.andakt;
       // Null på begge betyr at alt allerede er ryddet – ikke at noe gikk galt.
@@ -4214,7 +4265,7 @@ async function renderSettings(main) {
   page.querySelector('#testKitchen').addEventListener('click', async () => {
     const btn = page.querySelector('#testKitchen'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Sender…';
     try {
-      await api('/api/settings', { method: 'PUT', body: collectBody() });
+      await innstillinger.nå();
       const r = await api('/api/settings/test-kitchen-email', { method: 'POST' });
       toast('Test-e-post sendt til ' + r.recipient);
     } catch (ex) { toast(ex.message); }
