@@ -588,9 +588,9 @@ Hvem ser hva:
   er til stede eller borte). Vakten får samme kategorier, men **aldri** se hvor
   mange prikker eleven har fra før – svaret på en tildeling har ingen sum.
   Tildeling krever kveldens vakt, som resten av vaktappen.
-- **Alle administratorer i nettleseren**: den siste knappen på hver rad på
-  brannlisten (⋯, eller 🕘 når eleven har merket «kommer etter fristen») gir
-  det samme valget. Her trengs ingen vakt – adminsiden er en arbeidsplass man
+- **Alle administratorer i nettleseren**: klokkeknappen (🕘) ytterst på hver
+  rad på brannlisten gir alltid valget «Utvid fristen» eller «Tildel prikker»,
+  uansett elevens status. Her trengs ingen vakt – adminsiden er en arbeidsplass man
   er logget inn på – men heller ikke her vises hvor mange prikker eleven har.
 - **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
   tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.

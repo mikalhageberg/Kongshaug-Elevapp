@@ -4621,9 +4621,8 @@ async function renderBrannliste(main) {
               ${statusBtn(s.id, 'present', icon.check, 'var(--green)', s.status === 'present', 'Sett til stede' + timeTitle)}
               ${statusBtn(s.id, 'away', icon.home, 'var(--navy)', s.status === 'away', 'Sett borte')}
               ${statusBtn(s.id, 'clear', icon.x, 'var(--red)', s.status === 'missing', 'Fjern (ikke registrert)')}
-              ${statusBtn(s.id, 'late', s.lateArrival ? nav.clock : nav.more, 'var(--amber-ink)', !!s.lateArrival,
-                s.lateArrival ? 'Kommer etter fristen – endre fristen eller tildel prikker'
-                  : s.status === 'missing' ? 'Utvid fristen eller tildel prikker' : 'Tildel prikker')}
+              ${statusBtn(s.id, 'late', nav.clock, 'var(--amber-ink)', !!s.lateArrival,
+                s.lateArrival ? 'Kommer etter fristen – endre fristen eller tildel prikker' : 'Utvid fristen eller tildel prikker')}
             </div>
           </div>${own}`;
       }).join('');
@@ -4761,13 +4760,13 @@ async function renderBrannliste(main) {
   // Dialogen for «kommer etter fristen»: enten et klokkeslett, eller ukjent.
   // Merket er en beskjed på raden, ikke en status – eleven står som mangler
   // til hun faktisk registrerer seg – så det har sin egen rute, ikke status.
-  // Knappen ytterst på raden: utvide fristen («kommer etter fristen») eller
-  // tildele prikker. Fristen gjelder bare elever som mangler eller alt har
-  // merket – de andre går rett til prikkene. Alle administratorer kan tildele
-  // herfra, men ingen ser hvor mange prikker eleven har fra før.
+  // Klokkeknappen ytterst på raden: utvide fristen («kommer etter fristen»)
+  // eller tildele prikker. Begge valgene står alltid der, uansett status –
+  // klokken var fristknappen før prikkene kom, og den skal fortsatt finnes
+  // der man er vant til den. Alle administratorer kan tildele herfra, men
+  // ingen ser hvor mange prikker eleven har fra før.
   function fristEllerPrikker(s) {
     if (!s) return;
-    if (!(s.lateArrival || s.status === 'missing')) return tildelPrikkerModal(s);
     const bg = el(`
       <div class="modal-bg"><div class="modal" style="width:400px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 26px 14px">
