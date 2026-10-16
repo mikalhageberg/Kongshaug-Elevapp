@@ -62,7 +62,7 @@ function renderLogin() {
     <div class="screen fadein" style="justify-content:center">
       <div class="pad" style="padding:0 26px">
         <div style="display:flex;align-items:center;gap:11px;margin-bottom:26px">
-          <div style="width:44px;height:44px;border-radius:12px;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff">${icon.home}</div>
+          <div style="width:44px;height:44px;border-radius:12px;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff"><span style="width:22px;height:22px;display:block">${icon.home}</span></div>
           <div><div style="font-size:19px;font-weight:800;line-height:1.1">Kongshaug</div><div style="font-size:13px;font-weight:700;color:var(--muted-2)">Musikkgymnas</div></div>
         </div>
         <div class="h1" style="font-size:28px">Logg inn</div>
@@ -185,14 +185,14 @@ async function renderDashboard() {
     <div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:16px">
       <div class="card" data-go="/brannliste" style="cursor:pointer">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-          <div style="width:50px;height:50px;border-radius:15px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center">${icon.flame}</div>
+          <div style="width:50px;height:50px;border-radius:15px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center"><span style="width:26px;height:26px;display:block">${icon.flame}</span></div>
           <div style="flex:1"><div style="font-size:18px;font-weight:800">Brannliste i kveld</div><div id="fireSub" class="sub" style="color:var(--muted-2);font-weight:600">Meld deg til stede</div></div>
         </div>
         <div id="fireStatus"><span class="pill pill-grey">Laster…</span></div>
       </div>
       <div class="card" data-go="/andakt" style="cursor:pointer">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-          <div style="width:50px;height:50px;border-radius:15px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center">${icon.book}</div>
+          <div style="width:50px;height:50px;border-radius:15px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center"><span style="width:26px;height:26px;display:block">${icon.book}</span></div>
           <div style="flex:1"><div style="font-size:18px;font-weight:800">Andakt i dag</div><div class="sub" style="color:var(--muted-2);font-weight:600">Skann på storskjerm</div></div>
         </div>
         <div id="andaktStatus"><span class="pill pill-grey">Laster…</span></div>
@@ -459,13 +459,13 @@ async function fireForm(body, status) {
     try {
       coords = await getPosition();
       geobox.innerHTML = `<div class="banner pill-green" style="padding:16px;border-radius:18px">
-        <div style="width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.pin}</div>
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:22px;height:22px;display:block">${icon.pin}</span></div>
         <div style="flex:1"><div style="font-size:16px;font-weight:800">Posisjon funnet</div><div style="font-size:13px;font-weight:600">Bekreftes mot skolens område</div></div></div>`;
       btn.disabled = false;
       hint.textContent = `Meld deg til stede før kl. ${win.closesAt}.`;
     } catch (ex) {
       geobox.innerHTML = `<div class="banner pill-red" style="padding:16px;border-radius:18px">
-        <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.x}</div>
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:22px;height:22px;display:block">${icon.x}</span></div>
         <div style="flex:1"><div style="font-size:16px;font-weight:800">${ex.message}</div></div></div>`;
       hint.textContent = 'Du må gi tilgang til posisjon for å melde deg til stede.';
     }
@@ -480,7 +480,7 @@ async function fireForm(body, status) {
       btn.disabled = false; btn.innerHTML = `${icon.check} Jeg er til stede`;
       if (ex.code === 'offsite') {
         geobox.innerHTML = `<div class="banner pill-red" style="padding:16px;border-radius:18px">
-          <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${icon.x}</div>
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:22px;height:22px;display:block">${icon.x}</span></div>
           <div style="flex:1"><div style="font-size:16px;font-weight:800">Du er ikke på skolens område</div><div style="font-size:13px;font-weight:600">Kan ikke registrere herfra</div></div></div>`;
         btn.disabled = true;
         hint.textContent = 'Du må være innenfor skolens område for å melde deg til stede.';
