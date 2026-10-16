@@ -599,7 +599,8 @@ Hvem ser hva:
   rad på brannlisten gir alltid valget «Utvid fristen» eller «Tildel prikker»,
   uansett elevens status. Her trengs ingen vakt – adminsiden er en arbeidsplass man
   er logget inn på – men heller ikke her vises hvor mange prikker eleven har.
-- **Eleven**: **Internat → «Se mine prikker»** i appen viser summen og hver
+- **Eleven**: **Internat → «Se mine prikker»**, både i appen og i
+  nettleserversjonen (`/app/#/internat/prikker`), viser summen og hver
   tildeling med kategori, dato og begrunnelse – men ikke hvem som ga den.
 
 **Tidligere prikker** (fra papirlista før appen) importeres med **Importer

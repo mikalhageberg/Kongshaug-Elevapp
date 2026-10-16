@@ -50,6 +50,7 @@ function render() {
   if (route.startsWith('brannliste')) return renderBrannliste();
   if (route.startsWith('andakt')) return renderAndakt();
   if (route.startsWith('middag')) return renderMiddag();
+  if (route.startsWith('internat/prikker')) return renderMinePrikker();
   if (route.startsWith('internat')) return renderInternat();
   return renderDashboard();
 }
@@ -791,10 +792,58 @@ async function renderInternat() {
   body.innerHTML = `<div class="pad">
     <div class="h1" style="font-size:24px">Internat</div>
     <div class="sub" style="font-weight:700;color:var(--muted-2)">${formatDateLong(ymd(new Date()))}</div>
+    <a href="#/internat/prikker" class="btn btn-ghost" style="width:100%;height:52px;margin-top:18px;font-size:16px;color:var(--navy);text-decoration:none">Se mine prikker</a>
     <div id="duty" style="margin-top:20px"></div>
   </div>`;
 
   renderDutyPlan(body.querySelector('#duty'), 'dorm');
+}
+
+// ── Mine prikker ─────────────────────────────────────────────
+// Samme oversikt som «Se mine prikker» i mobilappen: summen øverst, og hver
+// tildeling med hendelse, prikker, dato og begrunnelse. Hvem som ga prikken,
+// sendes ikke til eleven (se server/src/demerits.js).
+const prikkTall = (n) => String(Math.round(n * 2) / 2).replace('.', ',');
+
+// SQLite-tid («2026-10-14 18:36:40», UTC) → «2026-10-14» i lokal tid.
+function lokalDato(iso) {
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z');
+  return ymd(d);
+}
+
+async function renderMinePrikker() {
+  root.innerHTML = '';
+  const screen = el(`<div class="screen fadein"><div id="body" style="flex:1;overflow:auto" class="noscroll"></div></div>`);
+  const body = screen.querySelector('#body');
+  screen.appendChild(tabbar('internat'));
+  root.appendChild(screen);
+  body.appendChild(subHeader('Mine prikker', '/internat'));
+  const pad = el(`<div class="pad"><p class="sub">Laster …</p></div>`);
+  body.appendChild(pad);
+
+  let d;
+  try { d = await api('/api/demerits/me'); }
+  catch (ex) { pad.innerHTML = `<p class="sub" style="color:var(--red-ink)">${esc(ex.message)}</p>`; return; }
+
+  const har = d.total > 0;
+  pad.innerHTML = `
+    <div style="text-align:center;padding:22px 12px;border-radius:20px;background:${har ? 'var(--amber-bg)' : '#eef1f5'};color:${har ? 'var(--amber-ink)' : 'var(--slate)'}">
+      <div style="font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.1">${prikkTall(d.total)}</div>
+      <div style="font-size:14px;font-weight:700;margin-top:2px">${d.total === 1 ? 'prikk' : 'prikker'} totalt</div>
+    </div>
+    ${d.items.length ? `
+      <div style="font-size:11px;font-weight:800;color:var(--muted-2);letter-spacing:.5px;margin:24px 0 8px">OVERSIKT</div>
+      ${d.items.map((x) => `
+        <div class="card" style="display:flex;gap:12px;align-items:flex-start;padding:14px;margin-bottom:8px;border-radius:14px">
+          <span style="flex:0 0 auto;min-width:40px;height:28px;padding:0 9px;border-radius:999px;background:var(--amber-bg);color:var(--amber-ink);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800">${prikkTall(x.points)}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15.5px;font-weight:700;line-height:1.35">${esc(x.categoryLabel)}</div>
+            ${x.reason ? `<div style="font-size:14px;color:var(--slate);margin-top:4px;line-height:1.45;white-space:pre-wrap">${esc(x.reason)}</div>` : ''}
+            ${x.category === 'tidligere' ? '' : `<div style="font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:6px">${formatDateLong(lokalDato(x.createdAt))} kl. ${formatTime(x.createdAt)}</div>`}
+          </div>
+        </div>`).join('')}`
+    : '<p class="sub" style="text-align:center;margin-top:24px;font-weight:600">Du har ingen prikker. Bra jobba!</p>'}
+    <p class="sub" style="font-size:13px;margin-top:18px;line-height:1.5">Mener du at en prikk er feil? Ta det opp med internatleder.</p>`;
 }
 
 // ── Middag ───────────────────────────────────────────────────
