@@ -43,7 +43,9 @@ export function zonedNow(date = new Date(), timeZone = config.school.timeZone) {
   const dateKey = new Intl.DateTimeFormat('en-CA', {
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(date);
-  return { hhmm: `${hour}:${minute}`, minutes: Number(hour) * 60 + Number(minute), dateKey };
+  // date er selve tidspunktet: fireWindow-funksjonene regner ut skolens tid
+  // selv og må ha en Date, ikke dette objektet.
+  return { hhmm: `${hour}:${minute}`, minutes: Number(hour) * 60 + Number(minute), dateKey, date };
 }
 
 // Ren avgjørelse: skal denne e-posten sendes nå? Skilt ut for å kunne testes
@@ -72,7 +74,7 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
       // en dato-nøkkel ville sperret for natten som nettopp ble avsluttet.
       due: () => {
         if (!s.fireEmailEnabled || !s.fireEmailRecipient) return null;
-        const sist = sinceLastClose(now);
+        const sist = sinceLastClose(now.date);
         if (!sist) return null;
         const etter = sist.minutesSince - s.fireEmailDelayMinutes;
         if (etter < 0 || etter > grace) return null;
@@ -105,7 +107,7 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
       // samme grunn. «Sist sendt» lagres derfor som natten, ikke som datoen.
       due: () => {
         if (!s.watchPushEnabled) return null;
-        const sist = sinceLastClose(now);
+        const sist = sinceLastClose(now.date);
         if (!sist) return null;
         const etter = sist.minutesSince - s.watchPushDelayMinutes;
         if (etter < 0 || etter > grace) return null;
@@ -132,7 +134,16 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
   for (const job of jobs) {
     // Jobber med egen due() bestemmer selv når de er klare, og hva «sist sendt»
     // skal settes til. De øvrige følger et klokkeslett og merkes med dagens dato.
-    const merke = job.due ? job.due() : (isDue({ ...job.cfg, lastSent: getLastSent(job.key) }, now) ? now.dateKey : null);
+    // En feil her skal bare stoppe denne jobben – ikke de andre, og ikke i det
+    // stille. (Brannliste-jobben kastet en gang på hvert tick, og tok med seg
+    // kjøkken-e-posten og alle push-varslene uten at noe ble logget.)
+    let merke;
+    try {
+      merke = job.due ? job.due() : (isDue({ ...job.cfg, lastSent: getLastSent(job.key) }, now) ? now.dateKey : null);
+    } catch (ex) {
+      log.error(`  ✉  ${job.navn}: klarte ikke å avgjøre om den skal sendes: ${ex.message}`);
+      continue;
+    }
     if (!merke) continue;
     // Merk som sendt FØR utsending: feiler sendingen, vil vi ikke at neste tick
     // 30 sekunder senere skal prøve igjen og igjen resten av vinduet.
@@ -150,5 +161,5 @@ export async function runOnce(now = zonedNow(), log = console, grace = GRACE_MIN
 
 export function startEmailSchedulers() {
   console.log(`  ✉  E-postplanlegger startet · tidssone ${config.school.timeZone} · klokka er nå ${zonedNow().hhmm} der`);
-  setInterval(() => { runOnce().catch(() => {}); }, CHECK_INTERVAL_MS);
+  setInterval(() => { runOnce().catch((ex) => console.error(`  ✉  E-postplanleggeren feilet: ${ex.message}`)); }, CHECK_INTERVAL_MS);
 }
