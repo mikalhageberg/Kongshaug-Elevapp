@@ -21,12 +21,21 @@ const STATUSER = [
   { key: 'clear', tegn: '✕', farge: C.red, tittel: 'Fjern' },
 ];
 
+// Tellerne øverst er også filtre. Tekstene brukes i internatkortene og når
+// filteret ikke gir treff.
+const STATUS_TEKST = { present: 'til stede', away: 'borte', missing: 'mangler' };
+const STATUS_TOM = { present: 'er til stede', away: 'er borte', missing: 'mangler' };
+
 export default function BrannlisteAdminScreen({ onNeedWatch }) {
   const [d, setD] = useState(null);
   const [feil, setFeil] = useState('');
   const [filter, setFilter] = useState('Alle');
   // Søk på navn eller rom, på tvers av internatfilteret.
   const [sok, setSok] = useState('');
+  // Statusfilteret fra tellerne øverst: null, 'present', 'away' eller 'missing'.
+  // Virker sammen med internatfilteret og søket, slik som på adminsiden.
+  const [statusFilter, setStatusFilter] = useState(null);
+  const velgStatus = (k) => setStatusFilter((f) => (f === k ? null : k));
   const [opprop, setOpprop] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Eleven knappen ble trykket på, mens serveren svarer. Uten den ser raden
@@ -119,9 +128,14 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
   const treffElev = (s) => !q || s.fullName.toLocaleLowerCase('nb').includes(q) || String(s.room ?? '').toLocaleLowerCase('nb') === q;
   const treffGjest = (g) => !q || g.name.toLocaleLowerCase('nb').includes(q) || (g.hostName || '').toLocaleLowerCase('nb').includes(q);
   let vist = filter === 'Alle' || q ? d.dorms : d.dorms.filter((x) => x.dorm === filter);
-  if (q) {
+  // Gjester har ingen status, så de faller bort når et statusfilter er på.
+  if (q || statusFilter) {
     vist = vist
-      .map((x) => ({ ...x, students: x.students.filter(treffElev), guests: (x.guests || []).filter(treffGjest) }))
+      .map((x) => ({
+        ...x,
+        students: x.students.filter((s) => treffElev(s) && (!statusFilter || s.status === statusFilter)),
+        guests: statusFilter ? [] : (x.guests || []).filter(treffGjest),
+      }))
       .filter((x) => x.students.length || x.guests.length);
   }
 
@@ -135,9 +149,12 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
         <Text style={styles.date}>Natt til {formatDateLong(shiftDate(d.nightDate, 1))}</Text>
 
         <View style={styles.tall}>
-          <Tall stor tekst={`${d.present} / ${d.total}`} under="til stede" bg={C.navy} fg="#fff" />
-          <Tall tekst={String(d.away)} under="borte" bg="#e7edf5" fg={C.navy} />
-          <Tall tekst={String(d.missing)} under="mangler" merk={d.lateCount ? `${d.lateCount} kommer sent` : ''} bg={d.missing ? C.redBg : '#e7edf5'} fg={d.missing ? C.redInk : C.navy} />
+          <Tall stor tekst={`${d.present} / ${d.total}`} under="til stede" bg={C.navy} fg="#fff" ring={C.green}
+            aktiv={statusFilter === 'present'} dempet={statusFilter && statusFilter !== 'present'} onPress={() => velgStatus('present')} />
+          <Tall tekst={String(d.away)} under="borte" bg="#e7edf5" fg={C.navy}
+            aktiv={statusFilter === 'away'} dempet={statusFilter && statusFilter !== 'away'} onPress={() => velgStatus('away')} />
+          <Tall tekst={String(d.missing)} under="mangler" merk={d.lateCount ? `${d.lateCount} kommer sent` : ''} bg={d.missing ? C.redBg : '#e7edf5'} fg={d.missing ? C.redInk : C.navy}
+            aktiv={statusFilter === 'missing'} dempet={statusFilter && statusFilter !== 'missing'} onPress={() => velgStatus('missing')} />
         </View>
 
         <Button title="Opprop ved evakuering" onPress={startOpprop} style={{ marginTop: 16, height: 60 }} fontSize={19} />
@@ -166,7 +183,11 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
           ))}
         </ScrollView>
 
-        {q && !vist.length ? (
+        {statusFilter && !vist.length ? (
+          <Text style={styles.ingenTreff}>
+            Ingen elever {STATUS_TOM[statusFilter]}{q ? ` som passer til «${sok.trim()}»` : filter !== 'Alle' ? ` på ${filter}` : ''}.
+          </Text>
+        ) : q && !vist.length ? (
           <Text style={styles.ingenTreff}>Ingen elever eller gjester passer til «{sok.trim()}».</Text>
         ) : null}
 
@@ -178,7 +199,8 @@ export default function BrannlisteAdminScreen({ onNeedWatch }) {
               <View style={styles.dormTopp}>
                 <Text style={styles.dormNavn}>{dorm.dorm}</Text>
                 <Text style={styles.dormTall}>
-                  {q ? `${dorm.students.length + gjester.length} treff` : `${dorm.present} av ${dorm.total}${gjester.length ? ` · ${gjester.length} gjest${gjester.length > 1 ? 'er' : ''}` : ''}`}
+                  {statusFilter ? `${dorm.students.length} ${STATUS_TEKST[statusFilter]}`
+                    : q ? `${dorm.students.length + gjester.length} treff` : `${dorm.present} av ${dorm.total}${gjester.length ? ` · ${gjester.length} gjest${gjester.length > 1 ? 'er' : ''}` : ''}`}
                 </Text>
               </View>
               {dorm.students.map((s) => (
@@ -535,13 +557,23 @@ function Valg({ verdi, modus, onVelg, tittel, children }) {
   );
 }
 
-function Tall({ tekst, under, merk, bg, fg, stor }) {
+// Trykk på en teller for å vise bare de elevene, trykk igjen for å vise alle.
+// Den aktive får en ring i sin egen farge (grønn på den mørkeblå, der
+// tekstfargen ikke ville synes), og de andre tones ned.
+function Tall({ tekst, under, merk, bg, fg, ring, stor, aktiv, dempet, onPress }) {
   return (
-    <View style={[styles.tallBoks, { backgroundColor: bg, flex: stor ? 1.5 : 1 }]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!aktiv }}
+      accessibilityHint={aktiv ? 'Viser alle elever igjen' : `Viser bare de som er ${under}`}
+      style={[styles.tallBoks, { backgroundColor: bg, flex: stor ? 1.5 : 1, opacity: dempet ? 0.45 : 1 },
+        aktiv && { borderColor: ring || fg }]}
+    >
       <Text style={[styles.tallStor, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit>{tekst}</Text>
       <Text style={[styles.tallUnder, { color: fg }]}>{under}</Text>
       {merk ? <Text style={styles.tallMerk} numberOfLines={1} adjustsFontSizeToFit>{merk}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -614,7 +646,8 @@ const styles = StyleSheet.create({
   },
   velgAntall: { fontSize: 14, fontWeight: '800', color: C.ink, minWidth: 74 },
   tall: { flexDirection: 'row', gap: 9, marginTop: 18 },
-  tallBoks: { borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center' },
+  // Kanten er alltid der, gjennomsiktig, så boksen ikke hopper når den velges.
+  tallBoks: { borderRadius: 16, paddingVertical: 11, paddingHorizontal: 7, alignItems: 'center', borderWidth: 3, borderColor: 'transparent' },
   tallStor: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   tallUnder: { fontSize: 12.5, fontWeight: '700', marginTop: 3, opacity: 0.85 },
   tallMerk: { fontSize: 11, fontWeight: '700', color: C.amberInk, marginTop: 2 },
