@@ -9,7 +9,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const go = (hash) => { location.hash = hash; };
 function toast(msg) {
   document.querySelector('.toast')?.remove();
-  const t = el(`<div class="toast" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a2230;color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;z-index:60">${msg}</div>`);
+  const t = el(`<div class="toast" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a2230;color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;z-index:60">${esc(msg)}</div>`);
   document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
 }
 const initials = (n) => n.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -261,7 +261,7 @@ function page(active, renderMain) {
         </nav>
         <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,.06)">
           <div style="width:38px;height:38px;border-radius:50%;background:#e5b769;color:#3a2c0a;display:flex;align-items:center;justify-content:center;font-weight:800">${initials(user.fullName)}</div>
-          <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#fff">${user.fullName}</div><div style="font-size:12px">Administrator</div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#fff">${esc(user.fullName)}</div><div style="font-size:12px">Administrator</div></div>
           <button id="logout" title="Logg ut" style="background:none;border:none;color:#9fb0c6;padding:4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
         </div>
       </aside>
@@ -360,7 +360,7 @@ async function renderDashboard(main) {
           <div><div style="font-size:16px;font-weight:800;color:var(--red-ink)">Ikke registrert på brannlisten i kveld</div><div style="font-size:13px;color:#b0574d;font-weight:600">${missing.length} elever · viktig for brannsikkerheten</div></div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr">
-        ${missing.length ? missing.map((s, i) => `<div style="display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid #f2eeee;${i % 2 === 0 ? 'border-right:1px solid #f2eeee' : ''}"><span class="dot" style="background:var(--red)"></span><span style="font-size:15px;font-weight:700;flex:1">${s.fullName}</span><span style="font-size:13px;color:var(--muted-2);font-weight:600">${s.dorm} · rom ${s.room ?? '–'}</span></div>`).join('')
+        ${missing.length ? missing.map((s, i) => `<div style="display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid #f2eeee;${i % 2 === 0 ? 'border-right:1px solid #f2eeee' : ''}"><span class="dot" style="background:var(--red)"></span><span style="font-size:15px;font-weight:700;flex:1">${esc(s.fullName)}</span><span style="font-size:13px;color:var(--muted-2);font-weight:600">${esc(s.dorm)} · rom ${esc(s.room ?? '–')}</span></div>`).join('')
           : '<div style="padding:22px;color:var(--green-ink);font-weight:700">Alle elever er registrert 🎉</div>'}
       </div>
     </div>`;
@@ -487,12 +487,12 @@ async function renderUserList(main, cfg) {
       ${rows.map((u) => `
         <div class="tr" style="grid-template-columns:${cols};gap:12px;${u.active ? '' : 'opacity:.62'}${selected.has(u.id) ? ';background:#f4f6fa' : ''}">
           <div><input type="checkbox" data-sel="${u.id}" ${selected.has(u.id) ? 'checked' : ''} ${u.id === user.id ? 'disabled' : ''} style="width:18px;height:18px;cursor:pointer" /></div>
-          <div style="font-size:14.5px;font-weight:700">${u.fullName}${u.id === user.id ? ' <span style="font-size:11px;font-weight:700;color:var(--muted-2)">(deg)</span>' : ''}</div>
-          <div style="font-size:14px;color:var(--slate)">${u.username}</div>
-          ${isStudent ? `<div style="font-size:14px;color:var(--slate)">${u.className || '–'}</div>
+          <div style="font-size:14.5px;font-weight:700">${esc(u.fullName)}${u.id === user.id ? ' <span style="font-size:11px;font-weight:700;color:var(--muted-2)">(deg)</span>' : ''}</div>
+          <div style="font-size:14px;color:var(--slate)">${esc(u.username)}</div>
+          ${isStudent ? `<div style="font-size:14px;color:var(--slate)">${esc(u.className || '–')}</div>
           <div style="font-size:14px;color:var(--slate)">${u.homeDweller
             ? '<span class="pill" style="background:#f2f4f6;color:var(--muted-2)">Hjemmeboer</span>'
-            : (u.dorm || '–') + (u.room ? ' · ' + u.room : '')}</div>`
+            : esc((u.dorm || '–') + (u.room ? ' · ' + u.room : ''))}</div>`
           : `<div>${u.superadmin
               ? '<span class="pill" style="background:#e7edf5;color:var(--navy)">Superbruker</span>'
               : '<span style="font-size:13px;color:var(--muted-2);font-weight:600">Administrator</span>'}</div>`}
@@ -1079,7 +1079,7 @@ function nyttSkoleårModal(alleBrukere, onSaved) {
       ${sortert.map((u) => `
         <div class="tr" data-rad="${u.id}" style="grid-template-columns:${cols};gap:12px;padding:9px 18px;${u.active ? '' : 'opacity:.62'}">
           <div style="font-size:14px;font-weight:700">${esc(u.fullName)}</div>
-          <div style="font-size:14px;color:var(--slate)">${u.className || '–'}</div>
+          <div style="font-size:14px;color:var(--slate)">${esc(u.className || '–')}</div>
           <div>${u.active ? '<span class="pill pill-green">Aktiv</span>' : '<span class="pill pill-grey">Deaktivert</span>'}</div>
           <div>${valg(u)}</div>
         </div>`).join('') || '<div style="padding:18px;color:var(--muted-2)">Ingen elever finnes fra før.</div>'}`;
@@ -1298,7 +1298,7 @@ async function renderAndakt(main) {
       list.innerHTML = (data.checkins || []).map((c) => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #f2f4f6">
           <span style="width:30px;height:30px;border-radius:50%;background:${c.status === 'late' ? 'var(--amber-bg)' : 'var(--green-bg)'};color:${c.status === 'late' ? 'var(--amber)' : 'var(--green)'};display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px">${c.status === 'late' ? icon.warn : icon.check}</span></span>
-          <span style="flex:1;min-width:0;font-size:14.5px;font-weight:700">${c.fullName}</span>
+          <span style="flex:1;min-width:0;font-size:14.5px;font-weight:700">${esc(c.fullName)}</span>
           <span style="font-size:12.5px;color:var(--muted-2);font-weight:700">${c.status === 'late' ? 'For sent · ' : ''}${formatTime(c.checkedAt)}</span>
           ${andCtrl(c.id, c.status)}
         </div>`).join('') || '<div style="padding:26px;color:var(--muted-2)">Ingen har registrert oppmøte ennå.</div>';
@@ -1306,8 +1306,8 @@ async function renderAndakt(main) {
       list.innerHTML = (data.absentList || []).map((s) => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #f2f4f6">
           <span style="width:30px;height:30px;border-radius:50%;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px">${icon.x}</span></span>
-          <span style="flex:1;min-width:0;font-size:14.5px;font-weight:700">${s.fullName}</span>
-          <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${[s.className, s.dorm].filter(Boolean).join(' · ') || ''}</span>
+          <span style="flex:1;min-width:0;font-size:14.5px;font-weight:700">${esc(s.fullName)}</span>
+          <span style="font-size:12.5px;color:var(--muted-2);font-weight:600">${esc([s.className, s.dorm].filter(Boolean).join(' · '))}</span>
           ${andCtrl(s.id, null)}
         </div>`).join('') || '<div style="padding:26px;color:var(--green-ink);font-weight:700">Alle elever har registrert oppmøte 🎉</div>';
     }

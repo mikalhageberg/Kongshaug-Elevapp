@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from './config.js';
+import db from './db.js';
 
 const COOKIE_NAME = 'kongshaug_session';
 const BCRYPT_ROUNDS = 12;
@@ -92,12 +93,23 @@ export function requireAuth(req, res, next) {
   const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
   const token = bearer || req.cookies?.[COOKIE_NAME] || req.query?.token;
   if (!token) return res.status(401).json({ error: 'Ikke innlogget' });
+  let auth;
   try {
-    req.auth = jwt.verify(token, config.jwtSecret);
-    next();
+    auth = jwt.verify(token, config.jwtSecret);
   } catch {
     return res.status(401).json({ error: 'Ugyldig eller utløpt sesjon' });
   }
+  // Tokenet alene er ikke nok. En app-sesjon varer opptil ett år, og en konto
+  // som deaktiveres, slettes eller får ny rolle skal miste tilgangen med én
+  // gang – ikke når tokenet utløper av seg selv. Rollen i tokenet må derfor
+  // stemme med databasen. Unntaket er reviewer-kontoens lånte adminmodus, der
+  // rollen er overstyrt med vilje (se signToken og requireAdminOrReviewDemo).
+  const user = db.prepare('SELECT role, active FROM users WHERE id = ?').get(auth.sub);
+  if (!user || !user.active || (!auth.reviewMode && user.role !== auth.role)) {
+    return res.status(401).json({ error: 'Ugyldig eller utløpt sesjon' });
+  }
+  req.auth = auth;
+  next();
 }
 
 // Er sesjonen en ekte administrator? Reviewer-kontoens lånte adminmodus
