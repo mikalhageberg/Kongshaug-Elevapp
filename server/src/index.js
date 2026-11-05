@@ -26,12 +26,16 @@ import { bootstrapSuperadmins } from './permissions.js';
 import { startEmailSchedulers } from './emailScheduler.js';
 import { startRetentionScheduler } from './retention.js';
 import { startAndaktArchiveScheduler } from './andaktArchive.js';
+import { startHealthLog, requestMonitor } from './healthLog.js';
 
 await ensureBootstrapAdmin();
 bootstrapSuperadmins();
 
 const app = express();
 app.disable('x-powered-by');
+// Teller forespørsler og logger trege – se healthLog.js. Står først, så
+// tiden måles for hele behandlingen.
+app.use(requestMonitor);
 // Hele systemet bruker UTF-8. express.json og res.json setter allerede
 // «charset=utf-8», og databasen (SQLite) lagrer tekst som UTF-8.
 app.use(express.json({ limit: '100kb' }));
@@ -114,6 +118,7 @@ app.listen(config.port, () => {
   console.log(`  → Admin:    http://localhost:${config.port}/admin/`);
   console.log(`  → Nedlasting: http://localhost:${config.port}/distribusjon`);
   console.log(`  (skolens område: ${config.school.lat}, ${config.school.lng} · radius ${config.school.radiusMeters} m)\n`);
+  startHealthLog();
   startEmailSchedulers();
   startRetentionScheduler();
   startAndaktArchiveScheduler();
